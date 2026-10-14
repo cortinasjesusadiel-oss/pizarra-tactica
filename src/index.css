@@ -23,12 +23,13 @@ body { background: var(--bg); color: var(--fg); overscroll-behavior: none; -webk
 .app {
   height: 100%;
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto 1fr auto auto auto;
   grid-template-columns: minmax(0, 1fr);
   padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
 }
-.app > .selbar, .app > .animbar { grid-row: 3; }
-.app > .tools { grid-row: 4; }
+.app > .selbar { grid-row: 3; }
+.app > .animbar { grid-row: 4; }
+.app > .tools { grid-row: 5; }
 
 button {
   font: inherit;
@@ -125,3 +126,18 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .saveform input { flex: 1 1 200px; }
 .muted { color: var(--muted); }
 .small { font-size: 12.5px; margin: 0; }
+
+.steps { display: flex; gap: 4px; flex: none; }
+.steps button { min-width: 36px; padding: 6px 0; font-variant-numeric: tabular-nums; }
+.steps button.on { background: var(--accent); border-color: var(--accent); color: #0b1a10; }
+.material { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.material button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px; white-space: normal; }
+.material svg { border-radius: 6px; }
+.session { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--panel-2); }
+.session summary { cursor: pointer; display: flex; flex-direction: column; gap: 2px; list-style: none; }
+.session summary::-webkit-details-marker { display: none; }
+.session[open] summary { margin-bottom: 8px; }
+.session > p { margin: 0 0 8px; }
+.blocks { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.blocks .row { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; }
+.blocks .row.static { border: 1px dashed var(--line); border-radius: 8px; font-size: 14px; }

@@ -2,7 +2,21 @@
 
 export type PitchKind = 'full' | 'half' | 'grid'
 export type Team = 'home' | 'away' | 'neutral'
-export type TokenKind = 'player' | 'ball' | 'cone'
+export type TokenKind = 'player' | 'ball' | 'cone' | 'pole' | 'hurdle' | 'ring' | 'ladder' | 'minigoal' | 'goal' | 'mannequin' | 'flag'
+
+// Material de entrenamiento que se puede poner en la pizarra.
+export const EQUIPMENT: { kind: TokenKind; name: string }[] = [
+  { kind: 'cone', name: 'Cono' },
+  { kind: 'pole', name: 'Pica' },
+  { kind: 'hurdle', name: 'Valla' },
+  { kind: 'ring', name: 'Aro' },
+  { kind: 'ladder', name: 'Escalera' },
+  { kind: 'mannequin', name: 'Maniquí' },
+  { kind: 'minigoal', name: 'Miniportería' },
+  { kind: 'goal', name: 'Portería' },
+  { kind: 'flag', name: 'Banderín' },
+]
+export const KIND_NAME = (k: TokenKind) => (k === 'player' ? 'Jugador' : k === 'ball' ? 'Balón' : EQUIPMENT.find((e) => e.kind === k)?.name ?? '')
 export type DrawTool = 'pass' | 'run' | 'dribble' | 'zone' | 'free'
 export type Tool = 'move' | DrawTool | 'erase'
 export type Pt = [number, number]
@@ -14,6 +28,7 @@ export interface Token {
   label: string
   x: number
   y: number
+  rot?: number
 }
 
 export interface Drawing {
@@ -80,6 +95,7 @@ export const player = (team: Team, label: string, x: number, y: number): Token =
 })
 export const ballAt = (x: number, y: number): Token => ({ id: uid(), kind: 'ball', team: 'neutral', label: '', x, y })
 export const coneAt = (x: number, y: number): Token => ({ id: uid(), kind: 'cone', team: 'neutral', label: '', x, y })
+export const item = (kind: TokenKind, x: number, y: number, rot = 0): Token => ({ id: uid(), kind, team: 'neutral', label: '', x, y, rot })
 export const line = (type: DrawTool, points: Pt[]): Drawing => ({
   id: uid(), type, color: DEFAULT_COLOR[type], width: 0.4, points,
 })

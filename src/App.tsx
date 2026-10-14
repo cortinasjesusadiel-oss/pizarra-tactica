@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
-  COLORS, DEFAULT_COLOR, PITCH, TOOL_NAME, ballAt, coneAt, player, posAt, uid,
-  type Board, type DrawTool, type Drawing, type PitchKind, type Pt, type Team, type Token, type Tool,
+  COLORS, DEFAULT_COLOR, EQUIPMENT, KIND_NAME, PITCH, TOOL_NAME, ballAt, item, player, posAt, uid,
+  type Board, type TokenKind, type DrawTool, type Drawing, type PitchKind, type Pt, type Team, type Token, type Tool,
 } from './model'
 import { Pitch } from './Pitch'
-import { DrawingShape, Markers, TokenShape } from './Shapes'
+import { DrawingShape, Equipment, Markers, TokenShape } from './Shapes'
+import { SESSIONS } from './sessions'
 import { TEMPLATES, emptyBoard } from './templates'
 import { deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay } from './storage'
 import { exportPng } from './exportPng'
@@ -39,7 +40,7 @@ export default function App() {
   const [selected, setSelected] = useState<string | null>(null)
   const [live, setLive] = useState<Drawing | null>(null)
   const [penSeen, setPenSeen] = useState(false)
-  const [sheet, setSheet] = useState<'templates' | 'plays' | null>(null)
+  const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | null>(null)
   const [showHint, setShowHint] = useState(hint)
   const [toast, setToast] = useState<string | null>(null)
 
@@ -324,12 +325,12 @@ export default function App() {
     force((x) => x + 1)
   }
 
-  const addToken = (kind: 'home' | 'away' | 'ball' | 'cone') => {
+  const addToken = (kind: 'home' | 'away' | TokenKind) => {
     const jitter = () => (Math.random() - 0.5) * 4
     const cx = W / 2 + jitter(), cy = H / 2 + jitter()
     let t: Token
     if (kind === 'ball') t = ballAt(cx, cy)
-    else if (kind === 'cone') t = coneAt(cx, cy)
+    else if (kind !== 'home' && kind !== 'away') t = item(kind, cx, cy)
     else {
       const used = new Set(board.tokens.filter((x) => x.team === kind).map((x) => x.label))
       let n = 1
@@ -381,11 +382,12 @@ export default function App() {
           ))}
         </div>
         <button onClick={() => setSheet('templates')}>Plantillas</button>
+        <button onClick={() => setSheet('sessions')}>Sesiones</button>
         <span className="sep" />
         <button className="chip home" onClick={() => addToken('home')} aria-label="Añadir jugador local">+ Local</button>
         <button className="chip away" onClick={() => addToken('away')} aria-label="Añadir jugador rival">+ Rival</button>
         <button onClick={() => addToken('ball')}>+ Balón</button>
-        <button onClick={() => addToken('cone')}>+ Cono</button>
+        <button onClick={() => setSheet('material')}>+ Material</button>
         <span className="sep" />
         <button onClick={undo} disabled={!past.current.length} aria-label="Deshacer">↶</button>
         <button onClick={redo} disabled={!future.current.length} aria-label="Rehacer">↷</button>
@@ -429,9 +431,9 @@ export default function App() {
         {toast && <div className="toast" role="status">{toast}</div>}
       </main>
 
-      {sel && !playing ? (
+      {sel && !playing && (
         <div className="selbar">
-          <span className="muted">{sel.kind === 'player' ? 'Jugador' : sel.kind === 'ball' ? 'Balón' : 'Cono'}</span>
+          <span className="muted">{KIND_NAME(sel.kind)}</span>
           {sel.kind === 'player' && (
             <>
               <label className="field">
@@ -447,15 +449,22 @@ export default function App() {
               </div>
             </>
           )}
+          {sel.kind !== 'player' && sel.kind !== 'ball' && (
+            <button onClick={() => updateSel({ rot: ((sel.rot ?? 0) + 45) % 360 })}>Girar 45°</button>
+          )}
           <button className="danger" onClick={removeSelected}>Eliminar</button>
         </div>
-      ) : (
-        <div className="animbar">
+      )}
+      <div className="animbar">
           {frames ? (
             <>
               <button className="primary" onClick={play} aria-label={playing ? 'Pausa' : 'Reproducir'}>{playing ? '❚❚ Pausa' : '▶ Reproducir'}</button>
               <button onClick={prevStep} disabled={cur === 0} aria-label="Paso anterior">‹</button>
-              <span className="stepno">Paso {cur + 1} / {nFrames}</span>
+              <div className="steps" role="group" aria-label="Pasos de la animación">
+                {frames.map((_, i) => (
+                  <button key={i} className={i === cur ? 'on' : ''} aria-label={`Ir al paso ${i + 1}`} onClick={() => { stopAnim(); setStep(i) }}>{i + 1}</button>
+                ))}
+              </div>
               <button onClick={nextStep} disabled={cur >= nFrames - 1} aria-label="Paso siguiente">›</button>
               <span className="sep" />
               <input id="step-note" className="noteinput" placeholder="Explica este paso" value={frames[cur].note} onChange={(e) => setNote(e.target.value)} />
@@ -464,12 +473,11 @@ export default function App() {
             </>
           ) : (
             <>
-              <span className="muted small">Para animar: coloca las fichas y pulsa “+ Paso”. Después muévelas a su nueva posición.</span>
+              <span className="muted small">Para animar: coloca las fichas en su posición inicial y pulsa “+ Paso”. Después mueve las fichas a donde van en ese paso.</span>
               <button onClick={addStep}>+ Paso</button>
             </>
           )}
-        </div>
-      )}
+      </div>
 
       <footer className="tools">
         <div className="seg big" role="group" aria-label="Herramienta">
@@ -507,6 +515,56 @@ export default function App() {
             </section>
           ))}
           <p className="muted small">▶ = jugada animada paso a paso.</p>
+        </Sheet>
+      )}
+      {sheet === 'material' && (
+        <Sheet title="Material de entrenamiento" onClose={() => setSheet(null)}>
+          <div className="material">
+            {EQUIPMENT.map((e) => (
+              <button key={e.kind} onClick={() => { addToken(e.kind); setSheet(null) }}>
+                <svg viewBox={e.kind === 'goal' ? '-4.5 -4.5 9 9' : e.kind === 'ladder' ? '-2.4 -2.4 4.8 4.8' : '-1.4 -1.4 2.8 2.8'} width="44" height="44" aria-hidden="true">
+                  <rect x="-10" y="-10" width="20" height="20" fill="var(--pitch)" />
+                  <Equipment kind={e.kind} r={1.1} />
+                </svg>
+                <span>{e.name}</span>
+              </button>
+            ))}
+          </div>
+          <p className="muted small">Toca un elemento para ponerlo en el centro del campo. Luego arrástralo y usa “Girar 45°” para orientarlo.</p>
+        </Sheet>
+      )}
+      {sheet === 'sessions' && (
+        <Sheet title="Sesiones sugeridas" onClose={() => setSheet(null)}>
+          <p className="muted small">Sesiones de fútbol 11 de adultos. MD-3 significa 3 días antes del partido. Toca un bloque con ▶ para abrir su ejercicio animado.</p>
+          {SESSIONS.map((ses) => (
+            <details key={ses.id} className="session">
+              <summary>
+                <b>{ses.name}</b>
+                <span className="muted small">{ses.day} · {ses.blocks.reduce((a, x) => a + x.minutes, 0)} min</span>
+              </summary>
+              <p className="small">{ses.goal}</p>
+              <ol className="blocks">
+                {ses.blocks.map((bl, i) => {
+                  const tpl = TEMPLATES.find((t) => t.id === bl.template)
+                  return (
+                    <li key={i}>
+                      {tpl ? (
+                        <button className="row" onClick={() => { load(tpl.build()); setSheet(null); if (tpl.animated) setPlaying(true) }}>
+                          <span><span className="anim-badge">▶</span><b>{bl.title}</b> · {bl.minutes} min</span>
+                          <span className="muted small">{bl.tips}</span>
+                        </button>
+                      ) : (
+                        <div className="row static">
+                          <span><b>{bl.title}</b> · {bl.minutes} min</span>
+                          <span className="muted small">{bl.tips}</span>
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
+              </ol>
+            </details>
+          ))}
         </Sheet>
       )}
       {sheet === 'plays' && <PlaysSheet board={board} onOpen={(b) => { load(b); setSheet(null) }} onClose={() => setSheet(null)} onSaved={() => setToast('Jugada guardada')} />}

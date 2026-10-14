@@ -9,7 +9,9 @@ Pizarra táctica de fútbol 11 pensada para el móvil y el S Pen, con plantillas
 - Trazos: pase, carrera, conducción (línea ondulada), zona y dibujo libre, en 4 colores.
 - S Pen: en modo Mover, el lápiz mueve la ficha que toca y dibuja si toca el césped; con una herramienta de dibujo elegida, siempre dibuja. El dedo mueve fichas. La presión cambia el grosor. El botón lateral borra. Se ignora la palma mientras el lápiz está apoyado.
 - Animación por pasos: reproducir, pausa, paso anterior y siguiente, explicación de cada paso. Puedes crear tus propias animaciones con “+ Paso”.
-- Plantillas: 4 enfrentamientos de sistemas, 5 ABP (córner a favor animado, córner en contra con defensa mixta, falta frontal con barrera, falta lateral animada y saque de banda largo) y 3 ejercicios (rondo 4 contra 2 y salida de balón, ambos animados, y posesión con comodines).
+- Plantillas: 4 enfrentamientos de sistemas, 5 ABP animadas (córner a favor, córner en contra con defensa mixta, falta frontal con amago, falta lateral y saque de banda largo) y 9 ejercicios (8 animados: circuito de calentamiento, rondo 4 contra 2, tercer hombre, salida de balón, 6 contra 6 con presión tras pérdida, presión alta, contraataque 3 contra 2 y ataque por banda; más posesión con comodines).
+- Material de entrenamiento: conos, picas, vallas, aros, escalera, maniquíes, miniporterías, porterías y banderines, con giro de 45°.
+- Sesiones sugeridas (`src/sessions.ts`): 6 sesiones de fútbol 11 de adultos con bloques, minutos y consignas, enlazadas a los ejercicios animados.
 - Instalable como app en el móvil y funciona sin conexión.
 - Deshacer y rehacer, jugadas guardadas en el dispositivo y exportar a PNG (en Android abre el menú de compartir).
 
