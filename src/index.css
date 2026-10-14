@@ -7,8 +7,9 @@
   --muted: #98a89d;
   --accent: #4fd18b;
   --danger: #ff6b5e;
-  --pitch: #2f7d46;
-  --pitch-2: #2a7240;
+  --pitch: #3a8a4c;
+  --pitch-2: #327a42;
+  --pitch-out: #2b6a3a;
   --home: #ffd23f;
   --away: #5bb6ff;
   --neutral: #f4f4f4;
@@ -100,6 +101,7 @@ button.danger { color: var(--danger); }
 .hint p { margin: 0; }
 .hint button { align-self: flex-end; }
 .toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--accent); border-radius: 999px; padding: 8px 16px; font-size: 14px; }
+.videoready { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; padding: 8px 10px 8px 14px; z-index: 5; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
 
 .field { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 input {
@@ -141,3 +143,4 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .blocks { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
 .blocks .row { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; }
 .blocks .row.static { border: 1px dashed var(--line); border-radius: 8px; font-size: 14px; }
+button.toggle.on { border-color: var(--accent); color: var(--accent); }

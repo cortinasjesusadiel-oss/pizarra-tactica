@@ -3,8 +3,9 @@ import {
   COLORS, DEFAULT_COLOR, EQUIPMENT, KIND_NAME, PITCH, TOOL_NAME, ballAt, item, player, posAt, uid,
   type Board, type TokenKind, type DrawTool, type Drawing, type PitchKind, type Pt, type Team, type Token, type Tool,
 } from './model'
-import { Pitch } from './Pitch'
-import { DrawingShape, Equipment, Markers, TokenShape } from './Shapes'
+import { Equipment, Markers } from './Shapes'
+import { Scene } from './Scene'
+import { SEG_MS, shownStep } from './motion'
 import { SESSIONS } from './sessions'
 import { TEMPLATES, emptyBoard } from './templates'
 import { deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay } from './storage'
@@ -13,8 +14,6 @@ import { exportPng } from './exportPng'
 const PAD = 3
 const DRAW_TOOLS: DrawTool[] = ['pass', 'run', 'dribble', 'zone', 'free']
 const TOOLS: Tool[] = ['move', ...DRAW_TOOLS, 'erase']
-const STEP_MS = 1300
-const PAUSE_MS = 1600
 
 type Action =
   | { kind: 'move'; id: string; dx: number; dy: number }
@@ -26,7 +25,8 @@ function hint(): boolean {
   try { return !localStorage.getItem('pizarra.ayuda.v2') } catch { return true }
 }
 
-const ease = (k: number) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2)
+const ease = (k: number) => k * k * (3 - 2 * k)
+const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export default function App() {
   const [board, setBoard] = useState<Board>(() => loadLast() ?? TEMPLATES.find((t) => t.animated)!.build())
@@ -43,12 +43,18 @@ export default function App() {
   const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | null>(null)
   const [showHint, setShowHint] = useState(hint)
   const [toast, setToast] = useState<string | null>(null)
+  const [zones, setZones] = useState(() => { try { return localStorage.getItem('pizarra.zonas') === '1' } catch { return false } })
+  const toggleZones = () => setZones((z) => { try { localStorage.setItem('pizarra.zonas', z ? '0' : '1') } catch { /* sin almacenamiento */ } return !z })
 
   // Animación
   const [step, setStep] = useState(0)
   const [playing, setPlaying] = useState(false)
-  const [tween, setTween] = useState<Record<string, Pt> | null>(null)
+  // Instante de la animación en pasos (1.5 = a mitad entre el paso 2 y el 3). null = quieto en `step`.
+  const [anim, setAnimState] = useState<number | null>(null)
+  const animRef = useRef<number | null>(null)
+  const setAnim = (s: number | null) => { animRef.current = s; setAnimState(s) }
   const raf = useRef(0)
+  const [video, setVideo] = useState<number | null>(null)
 
   const stage = useRef<HTMLDivElement>(null)
   const svg = useRef<SVGSVGElement>(null)
@@ -62,7 +68,7 @@ export default function App() {
   const frames = board.frames
   const nFrames = frames?.length ?? 0
   const cur = Math.min(step, Math.max(0, nFrames - 1))
-  const { w: W, h: H, r } = PITCH[board.pitch]
+  const { w: W, h: H } = PITCH[board.pitch]
   // Se gira el campo si así cabe más grande en la pantalla (móvil en vertical).
   const scaleH = Math.min(size.w / (W + 2 * PAD), size.h / (H + 2 * PAD))
   const scaleV = Math.min(size.w / (H + 2 * PAD), size.h / (W + 2 * PAD))
@@ -86,7 +92,9 @@ export default function App() {
 
   const stopAnim = useCallback(() => {
     cancelAnimationFrame(raf.current)
-    setTween(null)
+    if (animRef.current !== null) setStep(Math.round(animRef.current))
+    animRef.current = null
+    setAnimState(null)
     setPlaying(false)
   }, [])
 
@@ -131,44 +139,90 @@ export default function App() {
     setSelected(null)
   }, [selected, commit])
 
-  // Mueve las fichas del paso `from` al paso `to` con una transición suave.
-  const animateTo = useCallback((from: number, to: number, done?: () => void) => {
+  // Desliza las fichas desde donde están ahora hasta el paso `to`, pasando por los pasos intermedios.
+  const glide = (to: number) => {
     cancelAnimationFrame(raf.current)
-    const a = Object.fromEntries(board.tokens.map((t) => [t.id, posAt(board, t, from)]))
-    const z = Object.fromEntries(board.tokens.map((t) => [t.id, posAt(board, t, to)]))
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+    setPlaying(false)
+    const from = animRef.current ?? cur
+    if (from === to || reduced()) { setAnim(null); setStep(to); return }
+    const dur = Math.min(2200, Math.max(700, Math.abs(to - from) * 900))
     const t0 = performance.now()
     const tick = (now: number) => {
-      const k = reduce ? 1 : Math.min(1, (now - t0) / STEP_MS)
-      const e = ease(k)
-      setTween(Object.fromEntries(board.tokens.map((t) => {
-        const p = a[t.id], q = z[t.id]
-        return [t.id, [p[0] + (q[0] - p[0]) * e, p[1] + (q[1] - p[1]) * e] as Pt]
-      })))
-      if (k < 1) raf.current = requestAnimationFrame(tick)
-      else { setTween(null); setStep(to); done?.() }
+      const k = Math.min(1, (now - t0) / dur)
+      if (k < 1) { setAnim(from + (to - from) * ease(k)); raf.current = requestAnimationFrame(tick) }
+      else { setAnim(null); setStep(to) }
     }
     raf.current = requestAnimationFrame(tick)
-  }, [board])
+  }
 
-  // Reproducción automática: espera en cada paso y avanza al siguiente.
+  // Reproducción continua de principio a fin, sin paradas entre pasos.
+  const startPlay = (fromStart = false) => {
+    if (nFrames < 2) return
+    cancelAnimationFrame(raf.current)
+    setSelected(null)
+    const start = fromStart || cur >= nFrames - 1 ? 0 : (animRef.current ?? cur)
+    if (reduced()) { setAnim(null); setStep(nFrames - 1); return }
+    setPlaying(true)
+    setStep(Math.floor(start))
+    setAnim(start)
+    const t0 = performance.now() + (start === 0 ? 500 : 0)
+    const tick = (now: number) => {
+      const s = Math.min(nFrames - 1, start + Math.max(0, now - t0) / SEG_MS)
+      if (s < nFrames - 1) { setAnim(s); raf.current = requestAnimationFrame(tick) }
+      else { setAnim(null); setStep(nFrames - 1); setPlaying(false) }
+    }
+    raf.current = requestAnimationFrame(tick)
+  }
+  // Al abrir una plantilla animada se reproduce sola (cuando ya está cargada).
+  const [autoplay, setAutoplay] = useState(false)
+  const playRef = useRef(startPlay)
+  playRef.current = startPlay
   useEffect(() => {
-    if (!playing || tween) return
-    if (cur >= nFrames - 1) { setPlaying(false); return }
-    const t = setTimeout(() => animateTo(cur, cur + 1), cur === 0 ? 500 : PAUSE_MS)
-    return () => clearTimeout(t)
-  }, [playing, cur, nFrames, tween, animateTo])
+    if (!autoplay) return
+    setAutoplay(false)
+    playRef.current(true)
+  }, [autoplay, board])
 
   useEffect(() => () => cancelAnimationFrame(raf.current), [])
 
   const play = () => {
-    if (playing) { stopAnim(); return }
-    setSelected(null)
-    if (cur >= nFrames - 1) setStep(0)
-    setPlaying(true)
+    // Pausa: termina de llegar al paso que estaba en camino.
+    if (playing) { glide(Math.ceil((animRef.current ?? cur) - 1e-6)); return }
+    startPlay()
   }
-  const nextStep = () => { stopAnim(); if (cur < nFrames - 1) animateTo(cur, cur + 1) }
-  const prevStep = () => { stopAnim(); setStep(Math.max(0, cur - 1)) }
+  const nextStep = () => glide(Math.min(nFrames - 1, Math.floor((animRef.current ?? cur) + 1e-6) + 1))
+  const prevStep = () => glide(Math.max(0, Math.ceil((animRef.current ?? cur) - 1e-6) - 1))
+
+  // El vídeo se crea fotograma a fotograma; al terminar se ofrece compartir (WhatsApp, etc.) o guardar.
+  const [videoFile, setVideoFile] = useState<File | null>(null)
+  const doVideo = async () => {
+    if (!frames || video !== null) return
+    stopAnim()
+    setVideo(0)
+    try {
+      const { exportVideo } = await import('./exportVideo')
+      const res = await exportVideo(board, { zones, onProgress: setVideo })
+      if (res === 'unsupported') setToast('Este navegador no puede crear vídeo. Prueba con Chrome actualizado.')
+      else setVideoFile(res.file)
+    } catch {
+      setToast('No se pudo crear el vídeo')
+    } finally {
+      setVideo(null)
+    }
+  }
+  const shareVideo = async () => {
+    if (!videoFile) return
+    const { shareFile, saveFile } = await import('./exportVideo')
+    if (!(await shareFile(videoFile))) { saveFile(videoFile); setToast('Vídeo guardado') }
+    setVideoFile(null)
+  }
+  const saveVideo = async () => {
+    if (!videoFile) return
+    const { saveFile } = await import('./exportVideo')
+    saveFile(videoFile)
+    setToast('Vídeo guardado')
+    setVideoFile(null)
+  }
 
   const addStep = () => {
     stopAnim()
@@ -238,7 +292,7 @@ export default function App() {
     // Con el lápiz apoyado se ignora la palma de la mano.
     if (e.pointerType === 'touch' && penDown.current) return
     if (isPen && !penSeen) setPenSeen(true)
-    if (playing || tween) stopAnim()
+    if (playing || anim !== null) stopAnim()
     const tokenId = (e.target as Element).closest('[data-token]')?.getAttribute('data-token') ?? null
     const p = toBoard(e)
     // Botón lateral del S Pen (2) o goma del lápiz (32): borrar.
@@ -368,7 +422,8 @@ export default function App() {
     ? `${-PAD} ${-PAD} ${H + 2 * PAD} ${W + 2 * PAD}`
     : `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`
   const activeDraw = tool === 'move' || tool === 'erase' ? penTool : tool
-  const stepDrawings = frames && !tween ? frames[cur].drawings : []
+  const shown = anim !== null ? shownStep(board, anim) : cur
+  const stepDrawings = frames ? frames[cur].drawings : []
 
   return (
     <div className="app">
@@ -383,6 +438,7 @@ export default function App() {
         </div>
         <button onClick={() => setSheet('templates')}>Plantillas</button>
         <button onClick={() => setSheet('sessions')}>Sesiones</button>
+        <button className={zones ? 'toggle on' : 'toggle'} onClick={toggleZones} aria-pressed={zones}>Zonas</button>
         <span className="sep" />
         <button className="chip home" onClick={() => addToken('home')} aria-label="Añadir jugador local">+ Local</button>
         <button className="chip away" onClick={() => addToken('away')} aria-label="Añadir jugador rival">+ Rival</button>
@@ -408,18 +464,14 @@ export default function App() {
         >
           <Markers />
           <g ref={layer} transform={vertical ? `translate(${H} 0) rotate(90)` : undefined}>
-            <Pitch kind={board.pitch} />
-            {board.drawings.map((d) => <DrawingShape key={d.id} d={d} />)}
-            {stepDrawings.map((d) => <DrawingShape key={d.id} d={d} />)}
-            {live && <DrawingShape d={live} />}
-            {board.tokens.map((t) => {
-              const [x, y] = tween?.[t.id] ?? posAt(board, t, cur)
-              return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={vertical} />
-            })}
+            <Scene board={board} s={anim ?? cur} zones={zones} upright={vertical} selected={selected} live={live} />
           </g>
         </svg>
-        {frames && frames[cur].note && !showHint && (
-          <div className="note" aria-live="polite"><b>Paso {cur + 1}.</b> {frames[cur].note}</div>
+        {frames && frames[shown].note && !showHint && (
+          <div className="note" aria-live="polite"><b>Paso {shown + 1}.</b> {frames[shown].note}</div>
+        )}
+        {video !== null && (
+          <div className="toast" role="status">Creando vídeo… {Math.round(video * 100)}%</div>
         )}
         {showHint && (
           <div className="hint" role="note">
@@ -429,6 +481,14 @@ export default function App() {
           </div>
         )}
         {toast && <div className="toast" role="status">{toast}</div>}
+        {videoFile && (
+          <div className="videoready" role="dialog" aria-label="Vídeo listo">
+            <b>Vídeo listo</b>
+            <button className="primary" onClick={shareVideo}>Compartir</button>
+            <button onClick={saveVideo}>Guardar</button>
+            <button onClick={() => setVideoFile(null)} aria-label="Cerrar">✕</button>
+          </div>
+        )}
       </main>
 
       {sel && !playing && (
@@ -462,7 +522,7 @@ export default function App() {
               <button onClick={prevStep} disabled={cur === 0} aria-label="Paso anterior">‹</button>
               <div className="steps" role="group" aria-label="Pasos de la animación">
                 {frames.map((_, i) => (
-                  <button key={i} className={i === cur ? 'on' : ''} aria-label={`Ir al paso ${i + 1}`} onClick={() => { stopAnim(); setStep(i) }}>{i + 1}</button>
+                  <button key={i} className={i === shown ? 'on' : ''} aria-label={`Ir al paso ${i + 1}`} onClick={() => glide(i)}>{i + 1}</button>
                 ))}
               </div>
               <button onClick={nextStep} disabled={cur >= nFrames - 1} aria-label="Paso siguiente">›</button>
@@ -470,6 +530,7 @@ export default function App() {
               <input id="step-note" className="noteinput" placeholder="Explica este paso" value={frames[cur].note} onChange={(e) => setNote(e.target.value)} />
               <button onClick={addStep}>+ Paso</button>
               <button onClick={removeStep}>Quitar paso</button>
+              <button onClick={doVideo} disabled={video !== null}>Exportar vídeo</button>
             </>
           ) : (
             <>
@@ -507,7 +568,7 @@ export default function App() {
               <h3>{g === 'ABP' ? 'Acciones a balón parado' : g}</h3>
               <div className="list">
                 {TEMPLATES.filter((t) => t.group === g).map((t) => (
-                  <button key={t.id} className="row" onClick={() => { load(t.build()); setSheet(null); if (t.animated) setPlaying(true) }}>
+                  <button key={t.id} className="row" onClick={() => { load(t.build()); setSheet(null); if (t.animated) setAutoplay(true) }}>
                     {t.animated && <span className="anim-badge">▶</span>}{t.name}
                   </button>
                 ))}
@@ -549,7 +610,7 @@ export default function App() {
                   return (
                     <li key={i}>
                       {tpl ? (
-                        <button className="row" onClick={() => { load(tpl.build()); setSheet(null); if (tpl.animated) setPlaying(true) }}>
+                        <button className="row" onClick={() => { load(tpl.build()); setSheet(null); if (tpl.animated) setAutoplay(true) }}>
                           <span><span className="anim-badge">▶</span><b>{bl.title}</b> · {bl.minutes} min</span>
                           <span className="muted small">{bl.tips}</span>
                         </button>
