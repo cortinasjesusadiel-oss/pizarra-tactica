@@ -24,10 +24,26 @@ export interface Drawing {
   points: Pt[]
 }
 
+// Un paso de una animación: solo guarda las fichas que se mueven en ese paso
+// y las flechas que explican lo que va a pasar a continuación.
+export interface Frame {
+  pos: Record<string, Pt>
+  drawings: Drawing[]
+  note: string
+}
+
 export interface Board {
   pitch: PitchKind
   tokens: Token[]
   drawings: Drawing[]
+  frames?: Frame[]
+}
+
+// Posición de una ficha en el paso `step`: la última posición definida hasta ese paso.
+export function posAt(b: Board, t: Token, step: number): Pt {
+  const f = b.frames
+  if (f) for (let i = Math.min(step, f.length - 1); i > 0; i--) if (f[i].pos[t.id]) return f[i].pos[t.id]
+  return [t.x, t.y]
 }
 
 export const PITCH: Record<PitchKind, { w: number; h: number; name: string; r: number }> = {

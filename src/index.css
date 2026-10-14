@@ -24,9 +24,10 @@ body { background: var(--bg); color: var(--fg); overscroll-behavior: none; -webk
   height: 100%;
   display: grid;
   grid-template-rows: auto 1fr auto auto;
+  grid-template-columns: minmax(0, 1fr);
   padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
 }
-.app > .selbar { grid-row: 3; }
+.app > .selbar, .app > .animbar { grid-row: 3; }
 .app > .tools { grid-row: 4; }
 
 button {
@@ -49,7 +50,7 @@ button:disabled { opacity: .4; cursor: default; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #0b1a10; }
 button.danger { color: var(--danger); }
 
-.top, .tools, .selbar {
+.top, .tools, .selbar, .animbar {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -60,7 +61,15 @@ button.danger { color: var(--danger); }
 }
 .top { border-bottom: 1px solid var(--line); }
 .tools { border-top: 1px solid var(--line); }
-.selbar { border-top: 1px solid var(--line); background: var(--panel-2); }
+.selbar, .animbar { border-top: 1px solid var(--line); background: var(--panel-2); }
+.stepno { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.noteinput { flex: 1 0 200px; min-width: 200px; }
+.note {
+  order: -1; flex: none; background: var(--panel); border-bottom: 1px solid var(--line); padding: 8px 14px;
+  font-size: 14px; line-height: 1.4;
+}
+.note b { color: var(--accent); }
+.anim-badge { color: var(--accent); margin-right: 8px; }
 .brand { font-size: 17px; letter-spacing: .02em; margin-right: 4px; color: var(--accent); }
 .sep { width: 1px; align-self: stretch; background: var(--line); flex: none; }
 .chip.home { box-shadow: inset 4px 0 0 var(--home); }
@@ -76,8 +85,8 @@ button.danger { color: var(--danger); }
 .colors button.on { border-color: var(--fg); box-shadow: 0 0 0 2px var(--bg) inset; }
 .pen { font-size: 12px; color: var(--accent); white-space: nowrap; }
 
-.stage { position: relative; min-height: 0; overflow: hidden; display: grid; place-items: center; background: var(--bg); }
-.board { width: 100%; height: 100%; touch-action: none; user-select: none; -webkit-user-select: none; display: block; }
+.stage { position: relative; min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: var(--bg); }
+.board { width: 100%; flex: 1; min-height: 0; touch-action: none; user-select: none; -webkit-user-select: none; display: block; }
 .board.tool-move .token { cursor: grab; }
 .board:not(.tool-move) { cursor: crosshair; }
 .board.tool-erase { cursor: cell; }
