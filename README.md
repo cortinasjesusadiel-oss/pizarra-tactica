@@ -1,4 +1,4 @@
-# Tiza
+# TacticalPro
 
 Pizarra táctica de fútbol 11 pensada para el móvil y el S Pen, con plantillas de sistemas, acciones a balón parado (ABP) y ejercicios.
 

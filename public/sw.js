@@ -1,5 +1,5 @@
 // Guarda la app en el dispositivo para que funcione sin conexión en el campo.
-const CACHE = 'tiza-v1'
+const CACHE = 'tacticalpro-v1'
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icon-192.png'])))

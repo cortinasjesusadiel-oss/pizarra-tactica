@@ -372,7 +372,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="top">
-        <strong className="brand">Tiza</strong>
+        <strong className="brand">TacticalPro</strong>
         <div className="seg" role="group" aria-label="Tipo de campo">
           {(Object.keys(PITCH) as PitchKind[]).map((k) => (
             <button key={k} className={board.pitch === k ? 'on' : ''} onClick={() => setPitch(k)}>
