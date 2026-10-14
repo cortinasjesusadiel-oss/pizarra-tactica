@@ -8,6 +8,8 @@ import { Scene } from './Scene'
 import { SEG_MS, shownStep } from './motion'
 import { SESSIONS } from './sessions'
 import { TEMPLATES, emptyBoard } from './templates'
+import { GROUPS } from './anim'
+import { TIPS } from './tips'
 import { deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay } from './storage'
 import { exportPng } from './exportPng'
 
@@ -40,7 +42,7 @@ export default function App() {
   const [selected, setSelected] = useState<string | null>(null)
   const [live, setLive] = useState<Drawing | null>(null)
   const [penSeen, setPenSeen] = useState(false)
-  const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | null>(null)
+  const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | null>(null)
   const [showHint, setShowHint] = useState(hint)
   const [toast, setToast] = useState<string | null>(null)
   const [zones, setZones] = useState(() => { try { return localStorage.getItem('pizarra.zonas') === '1' } catch { return false } })
@@ -438,6 +440,7 @@ export default function App() {
         </div>
         <button onClick={() => setSheet('templates')}>Plantillas</button>
         <button onClick={() => setSheet('sessions')}>Sesiones</button>
+        <button onClick={() => setSheet('tips')}>Consejos</button>
         <button className={zones ? 'toggle on' : 'toggle'} onClick={toggleZones} aria-pressed={zones}>Zonas</button>
         <span className="sep" />
         <button className="chip home" onClick={() => addToken('home')} aria-label="Añadir jugador local">+ Local</button>
@@ -563,18 +566,21 @@ export default function App() {
 
       {sheet === 'templates' && (
         <Sheet title="Plantillas" onClose={() => setSheet(null)}>
-          {(['Sistemas', 'ABP', 'Ejercicios'] as const).map((g) => (
-            <section key={g}>
-              <h3>{g === 'ABP' ? 'Acciones a balón parado' : g}</h3>
-              <div className="list">
-                {TEMPLATES.filter((t) => t.group === g).map((t) => (
-                  <button key={t.id} className="row" onClick={() => { load(t.build()); setSheet(null); if (t.animated) setAutoplay(true) }}>
-                    {t.animated && <span className="anim-badge">▶</span>}{t.name}
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
+          {GROUPS.map((g) => {
+            const list = TEMPLATES.filter((t) => t.group === g.id)
+            return (
+              <details key={g.id} className="session" open={g.id === 'Bloques'}>
+                <summary><b>{g.name}</b><span className="muted small">{list.length}</span></summary>
+                <div className="list">
+                  {list.map((t) => (
+                    <button key={t.id} className="row" onClick={() => { load(t.build()); setSheet(null); if (t.animated) setAutoplay(true) }}>
+                      {t.animated && <span className="anim-badge">▶</span>}{t.name}
+                    </button>
+                  ))}
+                </div>
+              </details>
+            )
+          })}
           <p className="muted small">▶ = jugada animada paso a paso.</p>
         </Sheet>
       )}
@@ -624,6 +630,25 @@ export default function App() {
                   )
                 })}
               </ol>
+            </details>
+          ))}
+        </Sheet>
+      )}
+      {sheet === 'tips' && (
+        <Sheet title="Consejos" onClose={() => setSheet(null)}>
+          <p className="muted small">Ideas prácticas de táctica, entrenamiento y gestión del grupo, inspiradas en entrenadores de referencia.</p>
+          {TIPS.map((g) => (
+            <details key={g.id} className="session">
+              <summary><b>{g.name}</b><span className="muted small">{g.tips.length} consejos</span></summary>
+              <ul className="tips">
+                {g.tips.map((t) => (
+                  <li key={t.title}>
+                    <b>{t.title}</b>
+                    <span>{t.text}</span>
+                    {t.source && <span className="muted small">{t.source}</span>}
+                  </li>
+                ))}
+              </ul>
             </details>
           ))}
         </Sheet>

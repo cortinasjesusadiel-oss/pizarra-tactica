@@ -8,10 +8,13 @@ Pizarra táctica de fútbol 11 pensada para el móvil y el S Pen, con plantillas
 - Fichas de jugadores local, rival y comodín, balón y conos. Tocar una ficha permite cambiar dorsal, equipo o eliminarla.
 - Trazos: pase, carrera, conducción (línea ondulada), zona y dibujo libre, en 4 colores.
 - S Pen: en modo Mover, el lápiz mueve la ficha que toca y dibuja si toca el césped; con una herramienta de dibujo elegida, siempre dibuja. El dedo mueve fichas. La presión cambia el grosor. El botón lateral borra. Se ignora la palma mientras el lápiz está apoyado.
-- Animación por pasos: reproducir, pausa, paso anterior y siguiente, explicación de cada paso. Puedes crear tus propias animaciones con “+ Paso”.
-- Plantillas: 4 enfrentamientos de sistemas, 5 ABP animadas (córner a favor, córner en contra con defensa mixta, falta frontal con amago, falta lateral y saque de banda largo) y 9 ejercicios (8 animados: circuito de calentamiento, rondo 4 contra 2, tercer hombre, salida de balón, 6 contra 6 con presión tras pérdida, presión alta, contraataque 3 contra 2 y ataque por banda; más posesión con comodines).
+- Animación continua y suave: las fichas siguen curvas que pasan por todos los pasos, sin paradas ni saltos. Reproducir, pausa, paso anterior y siguiente, explicación de cada paso. Puedes crear tus propias animaciones con “+ Paso”.
+- Exportar vídeo MP4 (1280×720, 30 imágenes por segundo) de cualquier jugada animada, con la explicación de cada paso. Se crea fotograma a fotograma, así sale fluido aunque el móvil vaya lento.
+- Plantillas (28, 23 animadas) en grupos: sistemas, bloques defensivos (bajo, medio, alto y repliegue), presión alta (al saque del portero con trampa en banda), transiciones (ataque-defensa y defensa-ataque), generar espacios (arrastre del 9, fijar y soltar, cambio de orientación, tercer hombre), ABP y ejercicios.
 - Material de entrenamiento: conos, picas, vallas, aros, escalera, maniquíes, miniporterías, porterías y banderines, con giro de 45°.
-- Sesiones sugeridas (`src/sessions.ts`): 6 sesiones de fútbol 11 de adultos con bloques, minutos y consignas, enlazadas a los ejercicios animados.
+- Sesiones sugeridas (`src/sessions.ts`): 9 sesiones de fútbol 11 de adultos con bloques, minutos y consignas, enlazadas a los ejercicios animados.
+- Consejos (`src/tips.ts`): 58 consejos breves sobre sistemas, ataque, defensa, ABP, entrenamiento, gestión del grupo y análisis.
+- Césped con corte profesional y botón Zonas para ver carriles y franjas del juego de posición.
 - Instalable como app en el móvil y funciona sin conexión.
 - Deshacer y rehacer, jugadas guardadas en el dispositivo y exportar a PNG (en Android abre el menú de compartir).
 

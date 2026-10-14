@@ -1,28 +1,9 @@
-import { type Board, type Token, type Pt, type Drawing, type Frame, player, ballAt, coneAt, item, line } from './model'
-
-export interface Template {
-  id: string
-  group: 'Sistemas' | 'ABP' | 'Ejercicios'
-  name: string
-  animated?: boolean
-  build: () => Board
-}
-
-// Ayuda para escribir animaciones: las fichas tienen nombre (`cast`) y cada paso dice a dónde se mueven.
-interface Step { note: string; move?: Record<string, Pt>; draw?: Drawing[] }
-function animate(pitch: Board['pitch'], cast: Record<string, Token>, steps: Step[], extra: Token[] = []): Board {
-  const frames: Frame[] = steps.map((s) => ({
-    note: s.note,
-    drawings: s.draw ?? [],
-    pos: Object.fromEntries(Object.entries(s.move ?? {}).map(([k, p]) => [cast[k].id, p])),
-  }))
-  return { pitch, tokens: [...extra, ...Object.values(cast)], drawings: [], frames }
-}
+import { type Board, type Pt, type Token, player, ballAt, coneAt, item, line } from './model'
+import { animate, press, type Template } from './anim'
+import { TACTICS } from './tactics'
 
 type P = [string, number, number]
 
-// Flecha roja discontinua: un jugador sale a presionar.
-const press = (p: Pt[]): Drawing => ({ ...line('run', p), color: '#ff6b5e' })
 
 const LINEUPS: Record<string, P[]> = {
   '4-3-3': [['1', 4, 34], ['2', 20, 58], ['4', 17, 42], ['5', 17, 26], ['3', 20, 10], ['6', 27, 34], ['8', 35, 46], ['10', 35, 22], ['7', 45, 58], ['9', 48, 34], ['11', 45, 10]],
@@ -197,7 +178,7 @@ const bandaAnim: Template = {
 }
 
 const presionAnim: Template = {
-  id: 'anim-presion', group: 'Ejercicios', animated: true, name: '6 contra 6: presión tras pérdida (5 segundos)',
+  id: 'anim-presion', group: 'Transiciones', animated: true, name: '6 contra 6: presión tras pérdida (5 segundos)',
   build: () => {
     const c = {
       h1: player('home', '1', 12, 8), h2: player('home', '2', 14, 22), h3: player('home', '3', 20, 15), h4: player('home', '4', 26, 7), h5: player('home', '5', 28, 24), h6: player('home', '6', 31, 15),
@@ -216,7 +197,7 @@ const presionAnim: Template = {
 }
 
 const tercerAnim: Template = {
-  id: 'anim-tercer', group: 'Ejercicios', animated: true, name: 'Tercer hombre para superar la presión',
+  id: 'anim-tercer', group: 'Generar espacios', animated: true, name: 'Tercer hombre para superar la presión',
   build: () => {
     const c = {
       a: player('home', 'A', 6, 22), bb: player('home', 'B', 18, 9), cc: player('home', 'C', 9, 27),
@@ -233,7 +214,7 @@ const tercerAnim: Template = {
 }
 
 const contraAnim: Template = {
-  id: 'anim-contra', group: 'Ejercicios', animated: true, name: 'Contraataque 3 contra 2',
+  id: 'anim-contra', group: 'Transiciones', animated: true, name: 'Contraataque 3 contra 2',
   build: () => {
     const c = {
       h1: player('home', '10', 6, 34), h2: player('home', '11', 6, 14), h3: player('home', '7', 6, 54),
@@ -270,7 +251,7 @@ const centroAnim: Template = {
 }
 
 const pressingAnim: Template = {
-  id: 'anim-pressing', group: 'Ejercicios', animated: true, name: 'Presión alta al saque de portería rival',
+  id: 'anim-pressing', group: 'Presión alta', animated: true, name: 'Presión alta al saque de portería rival',
   build: () => {
     const c = {
       gk: player('away', '1', 101, 34), c1: player('away', '', 91, 24), c2: player('away', '', 91, 44), l1: player('away', '', 82, 8), l2: player('away', '', 82, 60), pv: player('away', '', 84, 34),
@@ -312,6 +293,7 @@ export const TEMPLATES: Template[] = [
   lineup('4-3-3', '4-4-2'), lineup('4-2-3-1', '4-3-3'), lineup('3-5-2', '4-2-3-1'), lineup('4-4-2', '4-4-2'),
   cornerAnim, cornerContraAnim, faltaFrontalAnim, lateralAnim, bandaAnim,
   circuitoAnim, rondoAnim, tercerAnim, salidaAnim, presionAnim, pressingAnim, contraAnim, centroAnim, posesion,
+  ...TACTICS,
 ]
 
 export const emptyBoard = (pitch: Board['pitch'] = 'full'): Board => ({ pitch, tokens: [], drawings: [] })

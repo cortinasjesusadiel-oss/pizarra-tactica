@@ -1,5 +1,5 @@
 import { PITCH, type Board, type Drawing } from './model'
-import { sampleAt, shownStep } from './motion'
+import { drawStep, sampleAt } from './motion'
 import { Pitch } from './Pitch'
 import { DrawingShape, TokenShape } from './Shapes'
 
@@ -15,7 +15,7 @@ export function Scene({ board, s, zones, upright = false, selected = null, live 
   grass?: boolean
 }) {
   const { r } = PITCH[board.pitch]
-  const step = board.frames?.[shownStep(board, s)]
+  const step = board.frames?.[drawStep(board, s)]
   return (
     <>
       {grass && <Pitch kind={board.pitch} zones={zones} />}

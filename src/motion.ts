@@ -39,3 +39,9 @@ export const shownStep = (b: Board, s: number) => {
   const n = b.frames?.length ?? 0
   return n ? Math.max(0, Math.min(n - 1, Math.ceil(s - 1e-6))) : 0
 }
+
+// Flechas que se ven en el instante `s`: las del paso del que se sale, porque dibujan el movimiento que está ocurriendo.
+export const drawStep = (b: Board, s: number) => {
+  const n = b.frames?.length ?? 0
+  return n ? Math.max(0, Math.min(n - 1, Math.floor(s + 1e-6))) : 0
+}

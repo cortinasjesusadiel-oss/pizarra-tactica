@@ -92,4 +92,43 @@ export const SESSIONS: Session[] = [
       { title: 'Partido con ABP', minutes: 15, tips: 'Cada falta y córner se ejecuta como en el partido.' },
     ],
   },
+  {
+    id: 'ses-bloque-medio',
+    name: 'Bloque medio y basculación',
+    goal: 'Defender juntos en el centro del campo, deslizarse hacia el balón y saber cuándo replegar.',
+    day: 'MD-4',
+    blocks: [
+      { title: 'Rondo 4 contra 2', minutes: 10, template: 'anim-rondo', tips: 'Los dos defensores trabajan juntos: uno presiona y el otro tapa.' },
+      { title: 'Bloque medio: basculación', minutes: 15, template: 'blq-medio', tips: 'Primero andando y sin rival; luego con un rival moviendo el balón con la mano.' },
+      { title: 'Del bloque alto al bajo', minutes: 15, template: 'blq-repliegue', tips: 'El entrenador grita "arriba" o "atrás" y todo el bloque se mueve a la vez.' },
+      { title: 'Transición ataque-defensa', minutes: 15, template: 'tr-ataque-defensa', tips: '5 segundos de presión; si no se recupera, repliegue al bloque medio.' },
+      { title: 'Partido 10 contra 10', minutes: 15, tips: 'Punto extra si el bloque recupera sin que el rival pase del centro del campo.' },
+    ],
+  },
+  {
+    id: 'ses-presion-alta',
+    name: 'Presión alta a la salida rival',
+    goal: 'Robar el balón cerca de la portería rival cuando saca desde el portero.',
+    day: 'MD-3 · día de más intensidad',
+    blocks: [
+      { title: 'Activación con material', minutes: 10, template: 'anim-circuito', tips: 'Incluir cambios de dirección y arrancadas cortas.' },
+      { title: 'Bloque alto: saltos de presión', minutes: 15, template: 'blq-alto', tips: 'Ensayar la señal: pase al central o al lateral = todos saltan.' },
+      { title: 'Presión al saque del portero', minutes: 20, template: 'pa-salida-portero', tips: '11 contra 11 en medio campo. El rival saca siempre en corto; robo y gol en 10 segundos vale doble.' },
+      { title: 'Transición defensa-ataque', minutes: 12, template: 'tr-defensa-ataque', tips: 'Primer pase siempre hacia delante si es posible.' },
+      { title: 'Partido 9 contra 9', minutes: 12, tips: 'Los saques de portería del rival son en corto obligatorio.' },
+    ],
+  },
+  {
+    id: 'ses-espacios',
+    name: 'Generar espacios en ataque',
+    goal: 'Mover al rival para encontrar al compañero libre: arrastres, fijar y soltar, cambios de orientación.',
+    day: 'MD-3',
+    blocks: [
+      { title: 'Tercer hombre', minutes: 12, template: 'anim-tercer', tips: 'Rotar posiciones cada 2 minutos.' },
+      { title: 'Fijar y soltar 2 contra 1', minutes: 15, template: 'esp-fijar-soltar', tips: 'Conducir directo al defensor; soltar solo cuando él se comprometa.' },
+      { title: 'Arrastre del 9', minutes: 15, template: 'esp-arrastre', tips: 'El extremo arranca justo cuando el central persigue al 9.' },
+      { title: 'Cargar un lado y cambiar', minutes: 15, template: 'esp-cambio-orientacion', tips: 'Gol tras cambio de orientación vale doble.' },
+      { title: 'Partido con zonas', minutes: 12, tips: 'Activar las zonas en la pizarra para explicar carriles y amplitud.' },
+    ],
+  },
 ]

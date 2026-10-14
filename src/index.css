@@ -144,3 +144,5 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .blocks .row { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; }
 .blocks .row.static { border: 1px dashed var(--line); border-radius: 8px; font-size: 14px; }
 button.toggle.on { border-color: var(--accent); color: var(--accent); }
+.tips { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.tips li { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; background: var(--panel-2); border-radius: 10px; font-size: 14px; line-height: 1.4; }
