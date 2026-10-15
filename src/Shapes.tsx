@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { COLORS, DEFAULT_LOOK, type Drawing, type Look, type Pt, type Token } from './model'
 
 export function Markers() {
@@ -48,22 +49,41 @@ function wavy(p: Pt[], amp = 0.55, wave = 2.2): string {
   return smooth(out)
 }
 
-export function DrawingShape({ d, faded }: { d: Drawing; faded?: boolean }) {
-  const common = { 'data-draw': d.id, opacity: faded ? 0.6 : 1 }
-  const marker = `url(#ah-${d.color.slice(1)})`
-  const sw = d.width
+// `part` muestra solo un tramo del trazo, de 0 (inicio) a 1 (final): en la animación las flechas se van
+// borrando por detrás mientras ocurre el movimiento y las siguientes se dibujan desde su inicio.
+export function DrawingShape({ d, faded, part }: { d: Drawing; faded?: boolean; part?: [number, number] }) {
+  const mid = useId().replace(/:/g, '')
   const p = d.points
   if (p.length < 2) return null
+  const [from, to] = part ?? [0, 1]
+  if (to - from < 0.001) return null
+  const trimmed = from > 0.001 || to < 0.999
+  const opacity = (faded ? 0.6 : 1) * (d.type === 'zone' && trimmed ? to - from : 1)
+  const common = { 'data-draw': d.id, opacity }
+  const marker = `url(#ah-${d.color.slice(1)})`
+  const sw = d.width
   const a = p[0], b = p[p.length - 1]
+  const path = d.type === 'pass' ? `M${a[0]} ${a[1]} L${b[0]} ${b[1]}` : d.type === 'dribble' ? wavy(p) : smooth(p)
+  // Máscara que deja ver solo el tramo pedido (pathLength=1 hace que las medidas vayan de 0 a 1).
+  const mask = trimmed && d.type !== 'zone' ? `m${mid}` : undefined
+  const defs = mask && (
+    <defs>
+      <mask id={mask} maskUnits="userSpaceOnUse" x={-200} y={-200} width={600} height={600}>
+        <path d={path} pathLength={1} fill="none" stroke="#fff" strokeWidth={sw * 4 + 1.2} strokeLinecap="butt" strokeDasharray={`${to - from} 3`} strokeDashoffset={-from} />
+        {to > 0.999 && <circle cx={b[0]} cy={b[1]} r={sw * 3 + 0.8} fill="#fff" />}
+      </mask>
+    </defs>
+  )
+  const m = mask ? { mask: `url(#${mask})` } : {}
   switch (d.type) {
     case 'pass':
-      return <line {...common} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={d.color} strokeWidth={sw} strokeLinecap="round" markerEnd={marker} />
+      return <>{defs}<line {...common} {...m} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={d.color} strokeWidth={sw} strokeLinecap="round" markerEnd={marker} /></>
     case 'run':
-      return <path {...common} d={smooth(p)} fill="none" stroke={d.color} strokeWidth={sw} strokeDasharray={`${sw * 2.6} ${sw * 2}`} strokeLinecap="round" markerEnd={marker} />
+      return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw} strokeDasharray={`${sw * 2.6} ${sw * 2}`} strokeLinecap="round" markerEnd={marker} /></>
     case 'dribble':
-      return <path {...common} d={wavy(p)} fill="none" stroke={d.color} strokeWidth={sw * 0.85} strokeLinejoin="round" markerEnd={marker} />
+      return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw * 0.85} strokeLinejoin="round" markerEnd={marker} /></>
     case 'free':
-      return <path {...common} d={smooth(p)} fill="none" stroke={d.color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+      return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" /></>
     case 'zone': {
       const x = Math.min(a[0], b[0]), y = Math.min(a[1], b[1])
       return <rect {...common} x={x} y={y} width={Math.abs(b[0] - a[0])} height={Math.abs(b[1] - a[1])} fill={d.color} fillOpacity={0.18} stroke={d.color} strokeWidth={0.25} strokeDasharray="1 0.7" rx={0.4} />
@@ -86,7 +106,7 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK }: { t
   if (t.kind === 'ball')
     return (
       <g data-token={t.id} transform={`translate(${t.x} ${t.y})`} className="token">
-        <circle r={r * 1.4} fill="transparent" />
+        <circle r={r * 0.7} fill="transparent" />
         <circle r={r * 0.45} fill="#fff" stroke="#111" strokeWidth={r * 0.1} />
         {selected && <circle r={r * 0.85} fill="none" stroke="#fff" strokeWidth={0.2} strokeDasharray="0.6 0.4" />}
       </g>

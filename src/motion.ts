@@ -1,4 +1,4 @@
-import { posAt, type Board, type Pt, type Token } from './model'
+import { posAt, type Board, type Drawing, type Pt, type Token } from './model'
 
 // Posición continua de una ficha en el instante `s`, medido en pasos (1.5 = a mitad entre el paso 1 y el 2).
 // Los jugadores siguen una curva suave que pasa por todos los pasos (sin cambios bruscos de dirección):
@@ -27,21 +27,67 @@ export function sampleAt(b: Board, t: Token, s: number): Pt {
   ]
 }
 
+const smoothstep = (x: number) => { const c = Math.max(0, Math.min(1, x)); return c * c * (3 - 2 * c) }
+
 export const positionsAt = (b: Board, s: number): Record<string, Pt> =>
   Object.fromEntries(b.tokens.map((t) => [t.id, sampleAt(b, t, s)]))
 
-// Duración de cada tramo entre dos pasos, en milisegundos.
-export const SEG_MS = 1700
+// Ritmo de la reproducción y del vídeo: cuántos segundos dura cada paso en total y con qué velocidad se mueven
+// las fichas. El resto del paso las fichas están quietas, para leer la explicación y ver las flechas.
+export type Pace = { step: number; speed: Speed }
+export type Speed = 'lenta' | 'normal' | 'rapida'
+export const STEP_SECONDS = [5, 8, 10]
+export const SPEEDS: { id: Speed; name: string; move: number }[] = [
+  { id: 'lenta', name: 'Lenta', move: 3.6 },
+  { id: 'normal', name: 'Normal', move: 2.6 },
+  { id: 'rapida', name: 'Rápida', move: 1.7 },
+]
+export const DEFAULT_PACE: Pace = { step: 5, speed: 'normal' }
 
-// Paso cuya explicación y flechas se muestran en el instante `s`: mientras las fichas viajan hacia un paso,
-// ya se ven las flechas de ese paso.
-export const shownStep = (b: Board, s: number) => {
-  const n = b.frames?.length ?? 0
-  return n ? Math.max(0, Math.min(n - 1, Math.ceil(s - 1e-6))) : 0
+// Duración total de la animación en segundos: cada paso dura lo elegido, también el último.
+export const paceTotal = (n: number, p: Pace) => Math.max(1, n) * p.step
+
+// Instante `s` (en pasos) a los `t` segundos de empezar: primero las fichas quietas en el paso, luego el
+// movimiento hacia el siguiente, que arranca y frena con suavidad.
+export function paceAt(n: number, p: Pace, t: number): number {
+  if (n < 2) return 0
+  const move = Math.min(SPEEDS.find((x) => x.id === p.speed)?.move ?? 2.6, p.step - 1)
+  const hold = p.step - move
+  const i = Math.floor(t / p.step)
+  if (i >= n - 1) return n - 1
+  const r = t - i * p.step
+  return r < hold ? i : i + smoothstep((r - hold) / move)
 }
+
+// Paso cuya explicación se muestra en el instante `s`: la del paso de salida durante casi todo el movimiento y,
+// al llegar, la del paso siguiente. `fade` (0 a 1) funde la nueva sobre la anterior para que no haya corte.
+export const caption = (b: Board, s: number): { k: number; prev: number; fade: number } => {
+  const n = b.frames?.length ?? 0
+  if (!n) return { k: 0, prev: 0, fade: 1 }
+  const c = Math.max(0, Math.min(n - 1, s))
+  const i = Math.floor(c + 1e-6), u = c - i
+  if (u < 0.75 || i >= n - 1) return { k: i, prev: i, fade: 1 }
+  return { k: i + 1, prev: i, fade: (u - 0.75) / 0.25 }
+}
+export const shownStep = (b: Board, s: number) => caption(b, s).k
 
 // Flechas que se ven en el instante `s`: las del paso del que se sale, porque dibujan el movimiento que está ocurriendo.
 export const drawStep = (b: Board, s: number) => {
   const n = b.frames?.length ?? 0
   return n ? Math.max(0, Math.min(n - 1, Math.floor(s + 1e-6))) : 0
+}
+
+// Flechas que se ven en el instante `s` y qué tramo de cada una. Parado en un paso, se ven enteras las de ese paso.
+// Entre dos pasos, las flechas del paso que se deja se borran por detrás al ritmo del movimiento (el pase al ritmo
+// del balón) y, al final del tramo, las del paso siguiente se van dibujando. Así el vídeo no da saltos.
+export function drawParts(b: Board, s: number): { d: Drawing; part: [number, number] }[] {
+  const f = b.frames
+  if (!f?.length) return []
+  const i = drawStep(b, s)
+  const u = s - i
+  if (u < 1e-4 || i >= f.length - 1) return f[i].drawings.map((d) => ({ d, part: [0, 1] }))
+  const out: { d: Drawing; part: [number, number] }[] = f[i].drawings.map((d) => ({ d, part: [d.type === 'pass' ? u : smoothstep(u), 1] }))
+  const grow = smoothstep((u - 0.55) / 0.45)
+  if (grow > 0) for (const d of f[i + 1].drawings) out.push({ d, part: [0, grow] })
+  return out
 }

@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer'
 import { PITCH, type Board, type Look } from './model'
-import { SEG_MS, shownStep } from './motion'
+import { DEFAULT_PACE, caption, paceAt, paceTotal, type Pace } from './motion'
 import { Pitch } from './Pitch'
 import { Scene } from './Scene'
 import { Markers } from './Shapes'
@@ -16,8 +16,6 @@ const HEIGHT = 720
 const FPS = 30
 const CAPTION = 84
 const PAD = 3
-const HOLD_START = 1.2
-const HOLD_END = 2
 
 type Result = { file: File } | 'unsupported'
 
@@ -59,7 +57,7 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[
   return out
 }
 
-export interface ExportOpts { zones?: boolean; brand?: string; look?: Look; onProgress?: (k: number) => void }
+export interface ExportOpts { zones?: boolean; brand?: string; look?: Look; pace?: Pace; onProgress?: (k: number) => void }
 
 export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<Result> {
   const n = board.frames?.length ?? 0
@@ -93,12 +91,13 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
   })
   encoder.configure({ codec: picked.codec, width: WIDTH, height: HEIGHT, bitrate: 6e6, framerate: FPS })
 
-  const moving = ((n - 1) * SEG_MS) / 1000
-  const total = Math.round((HOLD_START + moving + HOLD_END) * FPS)
+  // Cada paso dura lo elegido (5, 8 o 10 s): quietos para leer y luego el movimiento al siguiente.
+  const pace = opts.pace ?? DEFAULT_PACE
+  const total = Math.round(paceTotal(n, pace) * FPS)
   for (let f = 0; f < total; f++) {
     if (failed) throw failed
     const sec = f / FPS
-    const s = Math.max(0, Math.min(n - 1, ((sec - HOLD_START) * 1000) / SEG_MS))
+    const s = paceAt(n, pace, sec)
     const markup = renderToStaticMarkup(createElement('g', null, createElement(Markers), createElement(Scene, { board, s, grass: false, look: opts.look })))
     const scene = await svgImage(markup, viewBox, bw, bh)
 
@@ -107,18 +106,24 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
     ctx.drawImage(grass, bx, by, bw, bh)
     ctx.drawImage(scene, bx, by, bw, bh)
 
-    // Explicación del paso arriba.
-    const k = shownStep(board, s)
-    const note = board.frames![k].note
-    ctx.fillStyle = '#4fd18b'
-    ctx.font = '700 22px system-ui, sans-serif'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(`PASO ${k + 1}/${n}`, 28, 28)
-    if (note) {
-      ctx.fillStyle = '#e8eee9'
-      ctx.font = '600 22px system-ui, sans-serif'
-      wrap(ctx, note, WIDTH - 56).slice(0, 2).forEach((l, i) => ctx.fillText(l, 28, 56 + i * 24))
+    // Explicación del paso arriba. Al cambiar de paso, el texto nuevo se funde sobre el anterior.
+    const cap = caption(board, s)
+    const drawCaption = (j: number, alpha: number) => {
+      ctx.globalAlpha = alpha
+      ctx.fillStyle = '#4fd18b'
+      ctx.font = '700 22px system-ui, sans-serif'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(`PASO ${j + 1}/${n}`, 28, 28)
+      const note = board.frames![j].note
+      if (note) {
+        ctx.fillStyle = '#e8eee9'
+        ctx.font = '600 22px system-ui, sans-serif'
+        wrap(ctx, note, WIDTH - 56).slice(0, 2).forEach((l, i) => ctx.fillText(l, 28, 56 + i * 24))
+      }
+      ctx.globalAlpha = 1
     }
+    if (cap.fade < 1) drawCaption(cap.prev, 1 - cap.fade)
+    drawCaption(cap.k, cap.fade)
 
     const frame = new VideoFrame(canvas, { timestamp: Math.round((f * 1e6) / FPS), duration: Math.round(1e6 / FPS) })
     encoder.encode(frame, { keyFrame: f % (FPS * 2) === 0 })

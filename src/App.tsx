@@ -5,7 +5,8 @@ import {
 } from './model'
 import { Equipment, Markers, TokenShape } from './Shapes'
 import { Scene } from './Scene'
-import { SEG_MS, shownStep } from './motion'
+import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, paceAt, shownStep, type Pace, type Speed } from './motion'
+import { carrier, movesFromArrows } from './steps'
 import { SESSIONS } from './sessions'
 import { TEMPLATES, emptyBoard } from './templates'
 import { GROUPS } from './anim'
@@ -19,7 +20,7 @@ const DRAW_TOOLS: DrawTool[] = ['pass', 'run', 'dribble', 'zone', 'free']
 const TOOLS: Tool[] = ['move', ...DRAW_TOOLS, 'erase']
 
 type Action =
-  | { kind: 'move'; id: string; dx: number; dy: number }
+  | { kind: 'move'; id: string; dx: number; dy: number; ball?: { id: string; ox: number; oy: number } }
   | { kind: 'draw'; drawing: Drawing }
   | { kind: 'erase' }
   | { kind: 'none' }
@@ -62,6 +63,7 @@ export default function App() {
   const stage = useRef<HTMLDivElement>(null)
   const svg = useRef<SVGSVGElement>(null)
   const layer = useRef<SVGGElement>(null)
+  const pendingSel = useRef<string | null | undefined>(undefined)
   const [size, setSize] = useState({ w: 1, h: 1 })
   const action = useRef<Action>({ kind: 'none' })
   const pointer = useRef<number | null>(null)
@@ -158,7 +160,17 @@ export default function App() {
     raf.current = requestAnimationFrame(tick)
   }
 
-  // Reproducción continua de principio a fin, sin paradas entre pasos.
+  // Ritmo elegido (segundos por paso y velocidad), guardado en el dispositivo. Vale para reproducir y para el vídeo.
+  const [pace, setPaceState] = useState<Pace>(() => {
+    try { return { ...DEFAULT_PACE, ...JSON.parse(localStorage.getItem('pizarra.ritmo') ?? '{}') } } catch { return DEFAULT_PACE }
+  })
+  const setPace = (patch: Partial<Pace>) => setPaceState((p) => {
+    const next = { ...p, ...patch }
+    try { localStorage.setItem('pizarra.ritmo', JSON.stringify(next)) } catch { /* sin almacenamiento */ }
+    return next
+  })
+
+  // Reproducción de principio a fin: en cada paso las fichas se paran para leer y luego van al siguiente.
   const startPlay = (fromStart = false) => {
     if (nFrames < 2) return
     cancelAnimationFrame(raf.current)
@@ -168,9 +180,10 @@ export default function App() {
     setPlaying(true)
     setStep(Math.floor(start))
     setAnim(start)
-    const t0 = performance.now() + (start === 0 ? 500 : 0)
+    // Si se reanuda a mitad, se sigue desde el inicio del paso en el que estaba.
+    const t0 = performance.now() - Math.floor(start) * pace.step * 1000
     const tick = (now: number) => {
-      const s = Math.min(nFrames - 1, start + Math.max(0, now - t0) / SEG_MS)
+      const s = Math.max(start, paceAt(nFrames, pace, (now - t0) / 1000))
       if (s < nFrames - 1) { setAnim(s); raf.current = requestAnimationFrame(tick) }
       else { setAnim(null); setStep(nFrames - 1); setPlaying(false) }
     }
@@ -228,7 +241,7 @@ export default function App() {
     setVideo(0)
     try {
       const ex = await import('./exportVideo')
-      const opts = { zones, brand: mark, look }
+      const opts = { zones, brand: mark, look, pace }
       let files: File[]
       if (image) files = [await ex.exportImage(items[0].board, { ...opts, s: cur })]
       else if (items.length === 1 && items[0].board.frames) {
@@ -264,14 +277,22 @@ export default function App() {
     try { await saveFiles(ready); setToast(ready.length > 1 ? 'Archivos guardados' : 'Archivo guardado'); setReady(null) } catch { setToast('No se pudo guardar') }
   }
 
+  // Paso nuevo: cada jugador va solo al final de su flecha (carrera o conducción) y el balón al final del pase.
+  // Las flechas dibujadas antes de tener pasos pasan a ser las del primer paso.
   const addStep = () => {
     stopAnim()
-    commit((b) => {
-      const f = b.frames ?? [{ pos: {}, drawings: [], note: '' }]
-      return { ...b, frames: [...f.slice(0, cur + 1), { pos: {}, drawings: [], note: '' }, ...f.slice(cur + 1)] }
+    const b = board
+    const isArrow = (d: Drawing) => d.type === 'pass' || d.type === 'run' || d.type === 'dribble'
+    const first = b.frames ? null : b.drawings.filter(isArrow)
+    const f = b.frames ?? [{ pos: {}, drawings: first!, note: '' }]
+    const pos = movesFromArrows({ ...b, frames: f }, cur, f[cur].drawings)
+    commit({
+      ...b,
+      drawings: first ? b.drawings.filter((d) => !isArrow(d)) : b.drawings,
+      frames: [...f.slice(0, cur + 1), { pos, drawings: [], note: '' }, ...f.slice(cur + 1)],
     })
     setStep(nFrames ? cur + 1 : 1)
-    setToast('Paso añadido: mueve las fichas a su nueva posición')
+    setToast(Object.keys(pos).length ? 'Paso añadido: cada ficha ya está al final de su flecha' : 'Paso añadido: mueve las fichas o dibuja flechas y pulsa + Paso')
   }
   const removeStep = () => {
     if (!frames) return
@@ -391,10 +412,14 @@ export default function App() {
 
     if (mode === 'move') {
       const t = board.tokens.find((x) => x.id === tokenId)
-      setSelected(t ? t.id : null)
+      // La barra de la ficha aparece al soltar: si apareciera ya, la pizarra se movería bajo el dedo.
+      pendingSel.current = t ? t.id : null
       if (t) {
         const [x, y] = posAt(board, t, cur)
-        action.current = { kind: 'move', id: t.id, dx: x - p[0], dy: y - p[1] }
+        // Si mueves al jugador que lleva el balón, el balón va pegado a él.
+        const ball = t.kind === 'player' && carrier(board, cur)?.id === t.id ? board.tokens.find((k) => k.kind === 'ball') : undefined
+        const bp = ball ? posAt(board, ball, cur) : null
+        action.current = { kind: 'move', id: t.id, dx: x - p[0], dy: y - p[1], ball: ball && bp ? { id: ball.id, ox: bp[0] - x, oy: bp[1] - y } : undefined }
       } else action.current = { kind: 'none' }
     } else if (mode === 'draw') {
       setSelected(null)
@@ -413,11 +438,13 @@ export default function App() {
     if (a.kind === 'move') {
       const [x, y] = toBoard(e)
       const nx = Math.max(-2, Math.min(W + 2, x + a.dx)), ny = Math.max(-2, Math.min(H + 2, y + a.dy))
+      const set: Record<string, Pt> = { [a.id]: [nx, ny] }
+      if (a.ball) set[a.ball.id] = [nx + a.ball.ox, ny + a.ball.oy]
       setBoard((b) => {
         // En el paso 0 se mueve la posición inicial; en los demás, solo la de ese paso.
         if (b.frames && cur > 0)
-          return { ...b, frames: b.frames.map((f, i) => (i === cur ? { ...f, pos: { ...f.pos, [a.id]: [nx, ny] } } : f)) }
-        return { ...b, tokens: b.tokens.map((t) => (t.id === a.id ? { ...t, x: nx, y: ny } : t)) }
+          return { ...b, frames: b.frames.map((f, i) => (i === cur ? { ...f, pos: { ...f.pos, ...set } } : f)) }
+        return { ...b, tokens: b.tokens.map((t) => (set[t.id] ? { ...t, x: set[t.id][0], y: set[t.id][1] } : t)) }
       })
     } else if (a.kind === 'draw') {
       const p = toBoard(e)
@@ -438,6 +465,7 @@ export default function App() {
     if (e.pointerType === 'pen') penDown.current = false
     const a = action.current
     action.current = { kind: 'none' }
+    if (pendingSel.current !== undefined) { setSelected(pendingSel.current); pendingSel.current = undefined }
     if (a.kind === 'draw') {
       setLive(null)
       const p = a.drawing.points
@@ -490,6 +518,7 @@ export default function App() {
     : `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`
   const activeDraw = tool === 'move' || tool === 'erase' ? penTool : tool
   const shown = anim !== null ? shownStep(board, anim) : cur
+  const cap = anim !== null ? caption(board, anim) : { k: cur, prev: cur, fade: 1 }
   const stepDrawings = frames ? frames[cur].drawings : []
 
   return (
@@ -535,7 +564,7 @@ export default function App() {
         >
           <Markers />
           <g ref={layer} transform={vertical ? `translate(${H} 0) rotate(90)` : undefined}>
-            <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} look={look} upright={vertical} selected={selected} live={live} />
+            <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} look={look} upright={vertical} selected={selected} live={live} ghost={anim === null && !playing} />
           </g>
         </svg>
         {frames && frames[shown].note && !showHint && (
@@ -605,6 +634,18 @@ export default function App() {
               <input id="step-note" className="noteinput" placeholder="Explica este paso" value={frames[cur].note} onChange={(e) => setNote(e.target.value)} />
               <button onClick={addStep}>+ Paso</button>
               <button onClick={removeStep}>Quitar paso</button>
+              <label className="pace">
+                <span className="muted small">Cada paso</span>
+                <select value={pace.step} onChange={(e) => setPace({ step: +e.target.value })} aria-label="Segundos por paso">
+                  {STEP_SECONDS.map((x) => <option key={x} value={x}>{x} s</option>)}
+                </select>
+              </label>
+              <label className="pace">
+                <span className="muted small">Velocidad</span>
+                <select value={pace.speed} onChange={(e) => setPace({ speed: e.target.value as Speed })} aria-label="Velocidad del movimiento">
+                  {SPEEDS.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                </select>
+              </label>
               <button onClick={doVideo} disabled={video !== null}>Exportar vídeo</button>
             </>
           ) : (
@@ -773,8 +814,12 @@ export default function App() {
       {sheet === 'plays' && <PlaysSheet board={board} onOpen={(b) => { load(b); setSheet(null) }} onClose={() => setSheet(null)} onSaved={() => setToast('Jugada guardada')} />}
       {present && (
         <div className="present" ref={presentRef} role="dialog" aria-label="Modo proyector">
-          {frames && frames[shown].note && (
-            <div className="present-note" aria-live="polite"><span><b>Paso {shown + 1}/{nFrames}</b> {frames[shown].note}</span></div>
+          {frames && frames.some((f) => f.note) && (
+            <div className="present-note" aria-live="polite">
+              {/* Al cambiar de paso el texto nuevo aparece fundido sobre el anterior, sin corte. */}
+              <span style={{ opacity: cap.fade }}><b>Paso {cap.k + 1}/{nFrames}</b> {frames[cap.k].note}</span>
+              {cap.fade < 1 && <span aria-hidden="true" style={{ opacity: 1 - cap.fade }}><b>Paso {cap.prev + 1}/{nFrames}</b> {frames[cap.prev].note}</span>}
+            </div>
           )}
           <svg viewBox={`${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`} className="present-board">
             <Markers />
