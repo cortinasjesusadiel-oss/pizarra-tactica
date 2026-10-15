@@ -1,14 +1,15 @@
 import { line, type Board, type Drawing, type Frame, type Pt, type Token } from './model'
+import { t } from './i18n'
 
 export const GROUPS = [
-  { id: 'Fundamentos', name: 'Fundamentos' },
-  { id: 'Sistemas', name: 'Sistemas' },
-  { id: 'Bloques', name: 'Bloques defensivos' },
-  { id: 'Presión alta', name: 'Presión alta' },
-  { id: 'Transiciones', name: 'Transiciones (A-D y D-A)' },
-  { id: 'Generar espacios', name: 'Generar espacios' },
-  { id: 'ABP', name: 'Acciones a balón parado' },
-  { id: 'Ejercicios', name: 'Ejercicios' },
+  { id: 'Fundamentos', name: t('Fundamentos') },
+  { id: 'Sistemas', name: t('Sistemas') },
+  { id: 'Bloques', name: t('Bloques defensivos') },
+  { id: 'Presión alta', name: t('Presión alta') },
+  { id: 'Transiciones', name: t('Transiciones (A-D y D-A)') },
+  { id: 'Generar espacios', name: t('Generar espacios') },
+  { id: 'ABP', name: t('Acciones a balón parado') },
+  { id: 'Ejercicios', name: t('Ejercicios') },
 ] as const
 
 export interface Template {

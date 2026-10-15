@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { PITCH, type PitchKind } from './model'
 import { LOGO, LOGO_RATIO } from './brandLogo'
 import type { LineKind, Mark } from './identity'
+import { t } from './i18n'
 
 const CHALK = 'rgba(255,255,255,.92)'
 const L = { fill: 'none', stroke: CHALK, strokeWidth: 0.22 }
@@ -30,7 +31,7 @@ function Zones({ kind, w, h }: { kind: PitchKind; w: number; h: number }) {
   const lanes = kind === 'grid' ? [6, 12, 18, 24] : [13.84, 24.84, 43.16, 54.16]
   const cols = kind === 'full' ? [16.5, 35, 52.5, 70, 88.5] : kind === 'half' ? [17.5, 36] : [10, 20, 30]
   const z = { stroke: 'rgba(255,255,255,.45)', strokeWidth: 0.15, strokeDasharray: '0.8 0.6' }
-  const names = ['Banda', 'Interior', 'Central', 'Interior', 'Banda']
+  const names = [t('Banda'), t('Interior'), t('Central'), t('Interior'), t('Banda')]
   const yb = [0, ...lanes, h]
   return (
     <g>

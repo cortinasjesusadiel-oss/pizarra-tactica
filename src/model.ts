@@ -1,3 +1,4 @@
+import { t } from './i18n'
 // Todas las coordenadas están en metros, con el equipo local atacando hacia la derecha (+x).
 
 export type PitchKind = 'full' | 'half' | 'grid'
@@ -6,17 +7,17 @@ export type TokenKind = 'player' | 'ball' | 'cone' | 'pole' | 'hurdle' | 'ring' 
 
 // Material de entrenamiento que se puede poner en la pizarra.
 export const EQUIPMENT: { kind: TokenKind; name: string }[] = [
-  { kind: 'cone', name: 'Cono' },
-  { kind: 'pole', name: 'Pica' },
-  { kind: 'hurdle', name: 'Valla' },
-  { kind: 'ring', name: 'Aro' },
-  { kind: 'ladder', name: 'Escalera' },
-  { kind: 'mannequin', name: 'Maniquí' },
-  { kind: 'minigoal', name: 'Miniportería' },
-  { kind: 'goal', name: 'Portería' },
-  { kind: 'flag', name: 'Banderín' },
+  { kind: 'cone', name: t('Cono') },
+  { kind: 'pole', name: t('Pica') },
+  { kind: 'hurdle', name: t('Valla') },
+  { kind: 'ring', name: t('Aro') },
+  { kind: 'ladder', name: t('Escalera') },
+  { kind: 'mannequin', name: t('Maniquí') },
+  { kind: 'minigoal', name: t('Miniportería') },
+  { kind: 'goal', name: t('Portería') },
+  { kind: 'flag', name: t('Banderín') },
 ]
-export const KIND_NAME = (k: TokenKind) => (k === 'player' ? 'Jugador' : k === 'ball' ? 'Balón' : EQUIPMENT.find((e) => e.kind === k)?.name ?? '')
+export const KIND_NAME = (k: TokenKind) => (k === 'player' ? t('Jugador') : k === 'ball' ? t('Balón') : EQUIPMENT.find((e) => e.kind === k)?.name ?? '')
 export type DrawTool = 'pass' | 'run' | 'dribble' | 'zone' | 'focus' | 'free'
 export type Tool = 'move' | DrawTool | 'erase'
 export type Pt = [number, number]
@@ -71,9 +72,9 @@ export function posAt(b: Board, t: Token, step: number): Pt {
 }
 
 export const PITCH: Record<PitchKind, { w: number; h: number; name: string; r: number }> = {
-  full: { w: 105, h: 68, name: 'Campo completo', r: 1.7 },
-  half: { w: 52.5, h: 68, name: 'Medio campo', r: 1.5 },
-  grid: { w: 40, h: 30, name: 'Espacio 40×30', r: 1.1 },
+  full: { w: 105, h: 68, name: t('Campo completo'), r: 1.7 },
+  half: { w: 52.5, h: 68, name: t('Medio campo'), r: 1.5 },
+  grid: { w: 40, h: 30, name: t('Espacio 40×30'), r: 1.1 },
 }
 
 export const COLORS = ['#ffffff', '#ffd23f', '#ff6b5e', '#5bb6ff']
@@ -88,14 +89,14 @@ export const DEFAULT_COLOR: Record<DrawTool, string> = {
 }
 
 export const TOOL_NAME: Record<Tool, string> = {
-  move: 'Mover',
-  pass: 'Pase',
-  run: 'Carrera',
-  dribble: 'Conducción',
-  zone: 'Zona',
-  focus: 'Foco',
-  free: 'Libre',
-  erase: 'Borrar',
+  move: t('Mover'),
+  pass: t('Pase'),
+  run: t('Carrera'),
+  dribble: t('Conducción'),
+  zone: t('Zona'),
+  focus: t('Foco'),
+  free: t('Libre'),
+  erase: t('Borrar'),
 }
 
 let seq = 0

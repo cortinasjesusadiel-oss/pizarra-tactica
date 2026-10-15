@@ -9,6 +9,7 @@ import { Markers } from './Shapes'
 import logoFull from './logoFull.webp'
 import type { EndView, Mark } from './identity'
 import { drawEndCard, drawMarkColumn, drawMarkRow, endDuration, fontsReady } from './identityDraw'
+import { t, t as i18n, tr } from './i18n'
 
 // Exporta la jugada animada a un vídeo MP4 fluido (30 imágenes por segundo).
 // Cada imagen se dibuja aparte con la posición exacta de cada ficha en ese instante, así no hay saltos
@@ -86,7 +87,7 @@ function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, t: num
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '6px'
-  ctx.fillText('APRENDE · PLANIFICA · ENTRENA', WIDTH / 2, HEIGHT * 0.4 + lh / 2 + 52 - (1 - b) * 12)
+  ctx.fillText(i18n('APRENDE · PLANIFICA · ENTRENA'), WIDTH / 2, HEIGHT * 0.4 + lh / 2 + 52 - (1 - b) * 12)
   if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '0px'
   ctx.textAlign = 'left'
   ctx.globalAlpha = 1
@@ -163,10 +164,10 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
       ctx.textAlign = 'left'
       ctx.fillStyle = '#4fd18b'
       ctx.font = `800 ${size}px system-ui, sans-serif`
-      const label = `PASO ${j + 1}/${n}`
+      const label = t('PASO {i}/{n}', { i: j + 1, n })
       ctx.fillText(label, x, y0)
       const indent = ctx.measureText(label).width + size * 0.6
-      const note = board.frames![j].note
+      const note = tr(board.frames![j].note)
       if (note) {
         ctx.fillStyle = '#ffffff'
         ctx.font = `700 ${size}px system-ui, sans-serif`
@@ -255,7 +256,7 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
       } catch (e) { lastError = e; opts.onProgress?.(0) }
     }
   }
-  throw lastError ?? new Error('sin codificador')
+  throw lastError ?? new Error(t('sin codificador'))
 }
 
 // Imagen PNG de una pizarra (siempre en horizontal), en el paso `s`.

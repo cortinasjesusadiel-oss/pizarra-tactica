@@ -2,6 +2,7 @@
 // Campo completo: nuestro equipo (amarillo) ataca hacia la derecha y defiende la portería de x=0.
 import { ballAt, line, player, type Pt, type Token } from './model'
 import { animate, press, type Step, type Template } from './anim'
+import { t } from './i18n'
 
 type Shape = Record<string, Pt>
 
@@ -81,32 +82,32 @@ const block = (id: string, name: string, cfg: BlockCfg, notes: string[]): Templa
   },
 })
 
-const bloqueBajo = block('blq-bajo', 'Bloque bajo: defender cerca del área', { d: 13, m: 24, a: 38, gx: 56 }, [
-  'Bloque bajo: el equipo defiende cerca de su área con las líneas muy juntas. Dejamos el balón al rival lejos de nuestra portería y cerramos el centro.',
-  'Pase al lateral: todo el bloque se desliza hacia esa banda (basculación). El lado contrario queda libre, pero está lejos del balón.',
-  'Vuelve al central y el bloque vuelve al centro. Nadie sale solo a presionar: si uno salta, deja un hueco detrás.',
-  'Cambio al otro central: bascular otra vez. Los delanteros tapan el pase al pivote para que el rival no juegue por dentro.',
-  'Balón en la otra banda. Unos 25 m entre la defensa y la delantera: no hay espacio entre líneas. Útil contra rivales mejores o para cuidar un resultado; el riesgo es defender muy cerca de la portería.',
+const bloqueBajo = block('blq-bajo', t('Bloque bajo: defender cerca del área'), { d: 13, m: 24, a: 38, gx: 56 }, [
+  t('Bloque bajo: el equipo defiende cerca de su área con las líneas muy juntas. Dejamos el balón al rival lejos de nuestra portería y cerramos el centro.'),
+  t('Pase al lateral: todo el bloque se desliza hacia esa banda (basculación). El lado contrario queda libre, pero está lejos del balón.'),
+  t('Vuelve al central y el bloque vuelve al centro. Nadie sale solo a presionar: si uno salta, deja un hueco detrás.'),
+  t('Cambio al otro central: bascular otra vez. Los delanteros tapan el pase al pivote para que el rival no juegue por dentro.'),
+  t('Balón en la otra banda. Unos 25 m entre la defensa y la delantera: no hay espacio entre líneas. Útil contra rivales mejores o para cuidar un resultado; el riesgo es defender muy cerca de la portería.'),
 ])
 
-const bloqueMedio = block('blq-medio', 'Bloque medio: esperar en el centro del campo', { d: 30, m: 42, a: 55, gx: 80, up: [0, -2, 3, 2, -2] }, [
-  'Bloque medio: los delanteros esperan cerca del centro del campo. Dejamos que los centrales rivales tengan el balón, pero no que avancen por dentro.',
-  'Pase al lateral: el bloque bascula hacia esa banda y retrocede un poco. El extremo se acerca al lateral rival sin lanzarse.',
-  'El balón vuelve atrás: el bloque sube unos metros, todos juntos. Los delanteros tapan al pivote con su cuerpo (sombra).',
-  'Cambio al otro central: bascular hacia el otro lado manteniendo las distancias entre todos.',
-  'Balón en la otra banda. Es el bloque más usado: equilibrio entre recuperar el balón y no dejar espacio a la espalda (unos 30 m de largo).',
+const bloqueMedio = block('blq-medio', t('Bloque medio: esperar en el centro del campo'), { d: 30, m: 42, a: 55, gx: 80, up: [0, -2, 3, 2, -2] }, [
+  t('Bloque medio: los delanteros esperan cerca del centro del campo. Dejamos que los centrales rivales tengan el balón, pero no que avancen por dentro.'),
+  t('Pase al lateral: el bloque bascula hacia esa banda y retrocede un poco. El extremo se acerca al lateral rival sin lanzarse.'),
+  t('El balón vuelve atrás: el bloque sube unos metros, todos juntos. Los delanteros tapan al pivote con su cuerpo (sombra).'),
+  t('Cambio al otro central: bascular hacia el otro lado manteniendo las distancias entre todos.'),
+  t('Balón en la otra banda. Es el bloque más usado: equilibrio entre recuperar el balón y no dejar espacio a la espalda (unos 30 m de largo).'),
 ])
 
-const bloqueAlto = block('blq-alto', 'Bloque alto: presionar en campo rival', { d: 48, m: 62, a: 78, gx: 92, press: true }, [
-  'Bloque alto: presionamos en campo rival con la defensa adelantada cerca del centro del campo. Queremos robar cerca de su portería.',
-  'Pase al lateral: el extremo salta a presionarle y el delantero tapa el pase de vuelta al central. Todo el equipo se acerca al balón.',
-  'Devuelve al central: el delantero de ese lado le presiona en curva para empujarle hacia la banda.',
-  'Cambio al otro central: salta el otro delantero. Los mediocentros vigilan a los interiores rivales.',
-  'Lateral presionado contra la banda. Riesgo: hay mucho espacio a la espalda de la defensa, por eso el portero juega adelantado y la presión tiene que ser de todos a la vez.',
+const bloqueAlto = block('blq-alto', t('Bloque alto: presionar en campo rival'), { d: 48, m: 62, a: 78, gx: 92, press: true }, [
+  t('Bloque alto: presionamos en campo rival con la defensa adelantada cerca del centro del campo. Queremos robar cerca de su portería.'),
+  t('Pase al lateral: el extremo salta a presionarle y el delantero tapa el pase de vuelta al central. Todo el equipo se acerca al balón.'),
+  t('Devuelve al central: el delantero de ese lado le presiona en curva para empujarle hacia la banda.'),
+  t('Cambio al otro central: salta el otro delantero. Los mediocentros vigilan a los interiores rivales.'),
+  t('Lateral presionado contra la banda. Riesgo: hay mucho espacio a la espalda de la defensa, por eso el portero juega adelantado y la presión tiene que ser de todos a la vez.'),
 ])
 
 const repliegue: Template = {
-  id: 'blq-repliegue', group: 'Bloques', animated: true, name: 'Del bloque alto al bajo: replegar juntos',
+  id: 'blq-repliegue', group: 'Bloques', animated: true, name: t('Del bloque alto al bajo: replegar juntos'),
   build: () => {
     const s0 = { home: h442(48, 62, 78, 29), away: r433(92), ball: at(r433(92).c1) }
     const a1 = r433(80), a2 = r433(62), a3 = r433(62)
@@ -115,10 +116,10 @@ const repliegue: Template = {
     const s3 = { home: h442(24, 36, 50, 39), away: { ...a3, n: [28, 39] as Pt, p: [55, 29] as Pt }, ball: at(a3.c2) }
     const all = [s0, s1, s2, s3]
     const notes = [
-      'Empezamos en bloque alto, presionando la salida del rival.',
-      'El rival supera la presión con un pase a su interior. Ya no se puede presionar arriba: todos corren hacia atrás a la vez y forman un bloque medio.',
-      'El rival avanza por la banda. El bloque se hunde hasta el área (bloque bajo) y bascula hacia el balón. Lo importante es replegar juntos, sin dejar huecos entre líneas.',
-      'El rival pasa hacia atrás: es la señal para salir. Todo el bloque sube a la vez y gana metros. Si sube solo uno, se rompe el equipo.',
+      t('Empezamos en bloque alto, presionando la salida del rival.'),
+      t('El rival supera la presión con un pase a su interior. Ya no se puede presionar arriba: todos corren hacia atrás a la vez y forman un bloque medio.'),
+      t('El rival avanza por la banda. El bloque se hunde hasta el área (bloque bajo) y bascula hacia el balón. Lo importante es replegar juntos, sin dejar huecos entre líneas.'),
+      t('El rival pasa hacia atrás: es la señal para salir. Todo el bloque sube a la vez y gana metros. Si sube solo uno, se rompe el equipo.'),
     ]
     const c = cast(s0.home, s0.away, s0.ball)
     return animate('full', c, all.map((f, i) => ({
@@ -132,7 +133,7 @@ const repliegue: Template = {
 // ---------- Presión alta a la salida del portero ----------
 
 const presionSalida: Template = {
-  id: 'pa-salida-portero', group: 'Presión alta', animated: true, name: 'Presión alta 4-4-2 al saque del portero: trampa en banda',
+  id: 'pa-salida-portero', group: 'Presión alta', animated: true, name: t('Presión alta 4-4-2 al saque del portero: trampa en banda'),
   build: () => {
     const c = cast(
       { h1: [40, 34], h3: [58, 10], h5: [58, 28], h4: [58, 40], h2: [58, 58], h11: [74, 14], h8: [72, 26], h6: [72, 42], h7: [74, 54], h10: [84, 28], h9: [84, 40] },
@@ -140,13 +141,13 @@ const presionSalida: Template = {
       [100.1, 34.5],
     )
     return animate('full', c, [
-      { note: 'Saque del portero rival. Nuestros delanteros se colocan entre los centrales y el pivote: dejamos que el portero pase al central, porque así la presión empieza hacia un lado.', draw: [line('pass', [[100.1, 34.5], [92.2, 47.6]])] },
-      { note: 'Pase al central: señal para saltar. El 9 presiona en curva, desde dentro, para que no pueda devolver al portero ni pasar al pivote. El 10 tapa al pivote.', move: { b: [92.2, 47.6], h9: [89, 43], h10: [87, 33], h7: [78, 56], h6: [73, 42], h8: [74, 30], h11: [72, 20], h3: [58, 16], h5: [58, 30], h4: [58, 42], h2: [60, 57], h1: [42, 38] }, draw: [press([[89, 43], [91, 46]]), line('pass', [[92.2, 47.6], [81.2, 62.6]])] },
-      { note: 'Al central solo le queda el pase al lateral, pegado a la banda. La banda es nuestra trampa: la línea de cal funciona como un defensor más.', move: { b: [81.2, 62.6], h9: [90.5, 52], h7: [79, 58.5], h6: [75.5, 47], h10: [86, 38], h2: [62, 57.5], h4: [60, 48], p: [87, 38] }, draw: [press([[79, 58.5], [80.4, 61.2]])] },
-      { note: 'Lateral encerrado: el 7 le presiona de frente, el 9 tapa el pase atrás, el 6 marca al interior y el 2 al extremo. Tiene que arriesgar un pase.', move: { h7: [80.4, 61.2], i2: [78.5, 46.5], w2: [65.5, 60.5] }, draw: [line('pass', [[81.2, 62.6], [77, 49.4]])] },
-      { note: 'El 6 se anticipa y roba el pase. Robo a unos 30 m de la portería rival.', move: { b: [77, 49.4], h6: [76.2, 49.6] }, draw: [line('pass', [[77, 49.4], [90, 44]]), line('run', [[90.5, 52], [90, 45]])] },
-      { note: 'Pase rápido al 9, que remata. Robar arriba es el camino más corto hacia el gol.', move: { b: [90, 44], h9: [89.6, 44.8] }, draw: [line('pass', [[90, 44], [104.7, 36]])] },
-      { note: 'Gol. La presión funciona si todos saltan a la vez cuando llega la señal (aquí, el pase al central).', move: { b: [104.7, 36], g: [103.5, 35] } },
+      { note: t('Saque del portero rival. Nuestros delanteros se colocan entre los centrales y el pivote: dejamos que el portero pase al central, porque así la presión empieza hacia un lado.'), draw: [line('pass', [[100.1, 34.5], [92.2, 47.6]])] },
+      { note: t('Pase al central: señal para saltar. El 9 presiona en curva, desde dentro, para que no pueda devolver al portero ni pasar al pivote. El 10 tapa al pivote.'), move: { b: [92.2, 47.6], h9: [89, 43], h10: [87, 33], h7: [78, 56], h6: [73, 42], h8: [74, 30], h11: [72, 20], h3: [58, 16], h5: [58, 30], h4: [58, 42], h2: [60, 57], h1: [42, 38] }, draw: [press([[89, 43], [91, 46]]), line('pass', [[92.2, 47.6], [81.2, 62.6]])] },
+      { note: t('Al central solo le queda el pase al lateral, pegado a la banda. La banda es nuestra trampa: la línea de cal funciona como un defensor más.'), move: { b: [81.2, 62.6], h9: [90.5, 52], h7: [79, 58.5], h6: [75.5, 47], h10: [86, 38], h2: [62, 57.5], h4: [60, 48], p: [87, 38] }, draw: [press([[79, 58.5], [80.4, 61.2]])] },
+      { note: t('Lateral encerrado: el 7 le presiona de frente, el 9 tapa el pase atrás, el 6 marca al interior y el 2 al extremo. Tiene que arriesgar un pase.'), move: { h7: [80.4, 61.2], i2: [78.5, 46.5], w2: [65.5, 60.5] }, draw: [line('pass', [[81.2, 62.6], [77, 49.4]])] },
+      { note: t('El 6 se anticipa y roba el pase. Robo a unos 30 m de la portería rival.'), move: { b: [77, 49.4], h6: [76.2, 49.6] }, draw: [line('pass', [[77, 49.4], [90, 44]]), line('run', [[90.5, 52], [90, 45]])] },
+      { note: t('Pase rápido al 9, que remata. Robar arriba es el camino más corto hacia el gol.'), move: { b: [90, 44], h9: [89.6, 44.8] }, draw: [line('pass', [[90, 44], [104.7, 36]])] },
+      { note: t('Gol. La presión funciona si todos saltan a la vez cuando llega la señal (aquí, el pase al central).'), move: { b: [104.7, 36], g: [103.5, 35] } },
     ])
   },
 }
@@ -154,7 +155,7 @@ const presionSalida: Template = {
 // ---------- Transiciones ----------
 
 const transAD: Template = {
-  id: 'tr-ataque-defensa', group: 'Transiciones', animated: true, name: 'Transición ataque-defensa: presión tras pérdida y repliegue',
+  id: 'tr-ataque-defensa', group: 'Transiciones', animated: true, name: t('Transición ataque-defensa: presión tras pérdida y repliegue'),
   build: () => {
     const c = cast(
       { h1: [22, 34], h3: [62, 8], h5: [45, 24], h4: [45, 46], h2: [60, 58], h6: [56, 34], h8: [72, 22], h11: [84, 8], h7: [82, 56], h10: [86, 30], h9: [89, 36] },
@@ -163,18 +164,18 @@ const transAD: Template = {
     )
     const block = h442(30, 42, 55, 45)
     return animate('full', c, [
-      { note: 'Atacamos en campo rival. El 8 intenta un pase al 10 entre líneas.', draw: [line('pass', [[72.9, 22.4], [85, 29.6]])] },
-      { note: 'Pérdida: un rival corta el pase. Empiezan los 5 segundos de presión tras pérdida.', move: { b: [79.6, 26.4], m1: [80.4, 26.9] }, draw: [press([[72, 22], [77.6, 25.2]]), press([[86, 30], [82.6, 28.4]]), press([[56, 34], [76, 30.5]])] },
-      { note: 'Contrapresión: los tres más cercanos (8, 10 y 6) rodean al que robó. El resto se junta para tapar los pases cortos. La defensa sube para no dejar espacio entre líneas.', move: { h8: [78, 25.2], h10: [82.6, 28.6], h6: [76, 30.5], h11: [80, 15], h3: [66, 14], h9: [86, 36], h7: [74, 48], h5: [50, 26], h4: [50, 42], h2: [60, 54] }, draw: [line('pass', [[79.6, 26.4], [72, 59.5]])] },
-      { note: 'El rival escapa con un cambio de orientación. Pasados los 5 segundos sin recuperar, toca replegar: todos corren hacia nuestra portería por el camino más corto.', move: { b: [72, 59.5], w2: [72.6, 60.2], m1: [80, 33] }, draw: [line('run', [[76, 30.5], [52, 36], block.h6]), line('run', [[78, 25.2], [56, 30], block.h8]), line('run', [[66, 14], [48, 22], block.h3])] },
-      { note: 'Repliegue a bloque medio: el equipo se junta detrás del balón e inclinado hacia su banda. Ya estamos ordenados otra vez.', move: { ...block, b: [63.1, 56.3], w2: [64, 56], m1: [70, 30], m2: [74, 34], m3: [70, 46], n: [52, 34], d1: [84, 16], d2: [86, 28], d3: [86, 40], d4: [84, 52], w1: [62, 10] }, draw: [press([block.h7, [60.5, 57]])] },
-      { note: 'Ahora el 7 sale a presionar al extremo con el 2 cubriendo detrás. Regla: si la presión tras pérdida no funciona en 5 segundos, se repliega.', move: { h7: [61, 57], h2: [34, 58], h6: [42, 46] } },
+      { note: t('Atacamos en campo rival. El 8 intenta un pase al 10 entre líneas.'), draw: [line('pass', [[72.9, 22.4], [85, 29.6]])] },
+      { note: t('Pérdida: un rival corta el pase. Empiezan los 5 segundos de presión tras pérdida.'), move: { b: [79.6, 26.4], m1: [80.4, 26.9] }, draw: [press([[72, 22], [77.6, 25.2]]), press([[86, 30], [82.6, 28.4]]), press([[56, 34], [76, 30.5]])] },
+      { note: t('Contrapresión: los tres más cercanos (8, 10 y 6) rodean al que robó. El resto se junta para tapar los pases cortos. La defensa sube para no dejar espacio entre líneas.'), move: { h8: [78, 25.2], h10: [82.6, 28.6], h6: [76, 30.5], h11: [80, 15], h3: [66, 14], h9: [86, 36], h7: [74, 48], h5: [50, 26], h4: [50, 42], h2: [60, 54] }, draw: [line('pass', [[79.6, 26.4], [72, 59.5]])] },
+      { note: t('El rival escapa con un cambio de orientación. Pasados los 5 segundos sin recuperar, toca replegar: todos corren hacia nuestra portería por el camino más corto.'), move: { b: [72, 59.5], w2: [72.6, 60.2], m1: [80, 33] }, draw: [line('run', [[76, 30.5], [52, 36], block.h6]), line('run', [[78, 25.2], [56, 30], block.h8]), line('run', [[66, 14], [48, 22], block.h3])] },
+      { note: t('Repliegue a bloque medio: el equipo se junta detrás del balón e inclinado hacia su banda. Ya estamos ordenados otra vez.'), move: { ...block, b: [63.1, 56.3], w2: [64, 56], m1: [70, 30], m2: [74, 34], m3: [70, 46], n: [52, 34], d1: [84, 16], d2: [86, 28], d3: [86, 40], d4: [84, 52], w1: [62, 10] }, draw: [press([block.h7, [60.5, 57]])] },
+      { note: t('Ahora el 7 sale a presionar al extremo con el 2 cubriendo detrás. Regla: si la presión tras pérdida no funciona en 5 segundos, se repliega.'), move: { h7: [61, 57], h2: [34, 58], h6: [42, 46] } },
     ])
   },
 }
 
 const transDA: Template = {
-  id: 'tr-defensa-ataque', group: 'Transiciones', animated: true, name: 'Transición defensa-ataque: robo en bloque bajo y contraataque',
+  id: 'tr-defensa-ataque', group: 'Transiciones', animated: true, name: t('Transición defensa-ataque: robo en bloque bajo y contraataque'),
   build: () => {
     const c = cast(
       h442(14, 26, 40, 30),
@@ -182,13 +183,13 @@ const transDA: Template = {
       [33.1, 26.4],
     )
     return animate('full', c, [
-      { note: 'Defendemos en bloque bajo. El rival, con mucha gente arriba, intenta un pase a su 9 entre nuestras líneas.', draw: [line('pass', [[33.1, 26.4], [18.9, 33.6]])] },
-      { note: 'Robo: el 6 corta el pase. El rival está adelantado y desordenado: es el mejor momento para atacar.', move: { b: [25.2, 31.2], h6: [24.4, 31.6] }, draw: [line('pass', [[25.2, 31.2], [38.6, 24.6]]), line('run', [[40, 36], [52, 38], [64, 41]]), line('run', [[26, 14], [38, 11], [50, 12]]), line('run', [[26, 46], [38, 52], [50, 55]])] },
-      { note: 'Primer pase hacia delante, al 10. El 9 y los extremos ya corren hacia la portería rival: en la transición, la primera mirada es hacia delante.', move: { b: [38.6, 24.6], h10: [39.5, 24.2], h9: [50, 38], h11: [40, 11], h7: [40, 54], i1: [30, 28], p: [44, 32], c1: [56, 26], c2: [56, 42] }, draw: [line('pass', [[39.5, 24.2], [66, 41]]), line('run', [[50, 38], [65.5, 41.4]])] },
-      { note: 'Pase al espacio a la espalda de los centrales: el 9 llega antes porque ya venía corriendo.', move: { b: [66, 41], h9: [65.5, 41.4], h11: [58, 14], h7: [58, 54], h10: [50, 30], c1: [62, 30], c2: [62, 44], f2: [54, 56] }, draw: [line('dribble', [[65.5, 41.4], [74, 40], [82, 38]]), line('run', [[58, 14], [72, 20], [85, 27]])] },
-      { note: 'El 9 conduce hacia la portería y el 11 le acompaña por dentro: 2 contra 1 con el central.', move: { h9: [82, 38], b: [82.9, 38.3], h11: [85, 27], c1: [80, 33], c2: [76, 44], g: [100, 35], h10: [66, 32] }, draw: [line('pass', [[82.9, 38.3], [89.6, 28.8]])] },
-      { note: 'El central sale a por el 9, que pasa al 11, libre.', move: { b: [89.6, 28.8], h11: [89.2, 28.2], c1: [85, 34.5] }, draw: [line('pass', [[89.6, 28.8], [104.7, 32]])] },
-      { note: 'Gol. Del robo al gol en pocos pases y en unos 10 segundos, antes de que el rival se reorganice.', move: { b: [104.7, 32], g: [103, 33] } },
+      { note: t('Defendemos en bloque bajo. El rival, con mucha gente arriba, intenta un pase a su 9 entre nuestras líneas.'), draw: [line('pass', [[33.1, 26.4], [18.9, 33.6]])] },
+      { note: t('Robo: el 6 corta el pase. El rival está adelantado y desordenado: es el mejor momento para atacar.'), move: { b: [25.2, 31.2], h6: [24.4, 31.6] }, draw: [line('pass', [[25.2, 31.2], [38.6, 24.6]]), line('run', [[40, 36], [52, 38], [64, 41]]), line('run', [[26, 14], [38, 11], [50, 12]]), line('run', [[26, 46], [38, 52], [50, 55]])] },
+      { note: t('Primer pase hacia delante, al 10. El 9 y los extremos ya corren hacia la portería rival: en la transición, la primera mirada es hacia delante.'), move: { b: [38.6, 24.6], h10: [39.5, 24.2], h9: [50, 38], h11: [40, 11], h7: [40, 54], i1: [30, 28], p: [44, 32], c1: [56, 26], c2: [56, 42] }, draw: [line('pass', [[39.5, 24.2], [66, 41]]), line('run', [[50, 38], [65.5, 41.4]])] },
+      { note: t('Pase al espacio a la espalda de los centrales: el 9 llega antes porque ya venía corriendo.'), move: { b: [66, 41], h9: [65.5, 41.4], h11: [58, 14], h7: [58, 54], h10: [50, 30], c1: [62, 30], c2: [62, 44], f2: [54, 56] }, draw: [line('dribble', [[65.5, 41.4], [74, 40], [82, 38]]), line('run', [[58, 14], [72, 20], [85, 27]])] },
+      { note: t('El 9 conduce hacia la portería y el 11 le acompaña por dentro: 2 contra 1 con el central.'), move: { h9: [82, 38], b: [82.9, 38.3], h11: [85, 27], c1: [80, 33], c2: [76, 44], g: [100, 35], h10: [66, 32] }, draw: [line('pass', [[82.9, 38.3], [89.6, 28.8]])] },
+      { note: t('El central sale a por el 9, que pasa al 11, libre.'), move: { b: [89.6, 28.8], h11: [89.2, 28.2], c1: [85, 34.5] }, draw: [line('pass', [[89.6, 28.8], [104.7, 32]])] },
+      { note: t('Gol. Del robo al gol en pocos pases y en unos 10 segundos, antes de que el rival se reorganice.'), move: { b: [104.7, 32], g: [103, 33] } },
     ])
   },
 }
@@ -196,7 +197,7 @@ const transDA: Template = {
 // ---------- Generar espacios ----------
 
 const arrastre: Template = {
-  id: 'esp-arrastre', group: 'Generar espacios', animated: true, name: 'Arrastre del 9: abrir hueco a la espalda',
+  id: 'esp-arrastre', group: 'Generar espacios', animated: true, name: t('Arrastre del 9: abrir hueco a la espalda'),
   build: () => {
     const c: Record<string, Token> = {
       h8: player('home', '8', 24, 30), h6: player('home', '6', 18, 38), h3: player('home', '3', 28, 8), h10: player('home', '10', 34, 40), h9: player('home', '9', 44, 34), h11: player('home', '11', 40, 6), h7: player('home', '7', 40, 62),
@@ -204,16 +205,16 @@ const arrastre: Template = {
       b: ballAt(24.9, 30.4),
     }
     return animate('half', c, [
-      { note: 'El 9 está a la altura de los centrales. La defensa rival está ordenada y no hay espacio a su espalda.', draw: [line('run', [[44, 34], [40, 33], [36.5, 31.5]])] },
-      { note: 'El 9 baja a recibir y su central le persigue para no dejarle girarse. Se abre un hueco en la defensa.', move: { h9: [36.5, 31.5], d2: [38.6, 30.6], d1: [42, 17], d3: [42, 38] }, draw: [line('run', [[40, 6], [43, 14], [46, 22]]), line('pass', [[24.9, 30.4], [46.5, 23]])] },
-      { note: 'El 11 ataca ese hueco en diagonal y el 8 pone el balón al espacio.', move: { b: [46.5, 23], h11: [46, 22.4], d1: [44, 19] }, draw: [line('pass', [[46.5, 23], [52.3, 31.5]])] },
-      { note: 'El 11 llega antes que el defensor y remata. Moverse para arrastrar a un rival también es ayudar al equipo, aunque no toques el balón.', move: { b: [52.3, 31.5], g: [51.8, 32.5] } },
+      { note: t('El 9 está a la altura de los centrales. La defensa rival está ordenada y no hay espacio a su espalda.'), draw: [line('run', [[44, 34], [40, 33], [36.5, 31.5]])] },
+      { note: t('El 9 baja a recibir y su central le persigue para no dejarle girarse. Se abre un hueco en la defensa.'), move: { h9: [36.5, 31.5], d2: [38.6, 30.6], d1: [42, 17], d3: [42, 38] }, draw: [line('run', [[40, 6], [43, 14], [46, 22]]), line('pass', [[24.9, 30.4], [46.5, 23]])] },
+      { note: t('El 11 ataca ese hueco en diagonal y el 8 pone el balón al espacio.'), move: { b: [46.5, 23], h11: [46, 22.4], d1: [44, 19] }, draw: [line('pass', [[46.5, 23], [52.3, 31.5]])] },
+      { note: t('El 11 llega antes que el defensor y remata. Moverse para arrastrar a un rival también es ayudar al equipo, aunque no toques el balón.'), move: { b: [52.3, 31.5], g: [51.8, 32.5] } },
     ])
   },
 }
 
 const fijar: Template = {
-  id: 'esp-fijar-soltar', group: 'Generar espacios', animated: true, name: 'Fijar y soltar: 2 contra 1 en banda',
+  id: 'esp-fijar-soltar', group: 'Generar espacios', animated: true, name: t('Fijar y soltar: 2 contra 1 en banda'),
   build: () => {
     const c: Record<string, Token> = {
       h3: player('home', '3', 22, 12), h11: player('home', '11', 34, 3), h9: player('home', '9', 38, 32),
@@ -221,18 +222,18 @@ const fijar: Template = {
       b: ballAt(22.9, 12.4),
     }
     return animate('half', c, [
-      { note: '2 contra 1 en banda: el 3 tiene el balón, el 11 está abierto y hay un solo defensor para los dos.', draw: [line('dribble', [[22, 12], [26, 11.5], [31, 11]])] },
-      { note: 'Fijar: el 3 conduce directo hacia el defensor. Si el defensor no sale, el 3 sigue hasta el área.', move: { h3: [31, 11], b: [31.9, 11.2], f: [35.5, 9.5], h11: [37, 3] }, draw: [line('pass', [[31.9, 11.2], [40.6, 4]]), line('run', [[37, 3], [40.2, 3.5]])] },
-      { note: 'Soltar: cuando el defensor sale a por el 3, pase al 11, que queda solo.', move: { b: [40.6, 4], h11: [40.2, 3.5], f: [33.5, 10.5] }, draw: [line('dribble', [[40.2, 3.5], [44, 5], [48, 8]]), line('run', [[38, 32], [43, 31], [46.8, 30.3]])] },
-      { note: 'El 11 conduce hasta el área y busca al 9, que ataca el punto de penalti.', move: { h11: [48, 8], b: [48.6, 8.6], h9: [46.8, 30.3], d1: [45.5, 25], f: [40, 9] }, draw: [line('pass', [[48.6, 8.6], [46.8, 31]])] },
-      { note: 'Pase atrás y remate. Fijar es atraer a un rival hacia ti para que un compañero quede libre.', move: { b: [46.8, 31] }, draw: [line('pass', [[46.8, 31], [52.3, 35.5]])] },
-      { note: 'Gol.', move: { b: [52.3, 35.5], g: [51.8, 34.5] } },
+      { note: t('2 contra 1 en banda: el 3 tiene el balón, el 11 está abierto y hay un solo defensor para los dos.'), draw: [line('dribble', [[22, 12], [26, 11.5], [31, 11]])] },
+      { note: t('Fijar: el 3 conduce directo hacia el defensor. Si el defensor no sale, el 3 sigue hasta el área.'), move: { h3: [31, 11], b: [31.9, 11.2], f: [35.5, 9.5], h11: [37, 3] }, draw: [line('pass', [[31.9, 11.2], [40.6, 4]]), line('run', [[37, 3], [40.2, 3.5]])] },
+      { note: t('Soltar: cuando el defensor sale a por el 3, pase al 11, que queda solo.'), move: { b: [40.6, 4], h11: [40.2, 3.5], f: [33.5, 10.5] }, draw: [line('dribble', [[40.2, 3.5], [44, 5], [48, 8]]), line('run', [[38, 32], [43, 31], [46.8, 30.3]])] },
+      { note: t('El 11 conduce hasta el área y busca al 9, que ataca el punto de penalti.'), move: { h11: [48, 8], b: [48.6, 8.6], h9: [46.8, 30.3], d1: [45.5, 25], f: [40, 9] }, draw: [line('pass', [[48.6, 8.6], [46.8, 31]])] },
+      { note: t('Pase atrás y remate. Fijar es atraer a un rival hacia ti para que un compañero quede libre.'), move: { b: [46.8, 31] }, draw: [line('pass', [[46.8, 31], [52.3, 35.5]])] },
+      { note: t('Gol.'), move: { b: [52.3, 35.5], g: [51.8, 34.5] } },
     ])
   },
 }
 
 const cambio: Template = {
-  id: 'esp-cambio-orientacion', group: 'Generar espacios', animated: true, name: 'Cargar un lado y cambiar de orientación',
+  id: 'esp-cambio-orientacion', group: 'Generar espacios', animated: true, name: t('Cargar un lado y cambiar de orientación'),
   build: () => {
     const c: Record<string, Token> = {
       h1: player('home', '1', 30, 34), h5: player('home', '5', 46, 24), h4: player('home', '4', 46, 44), h3: player('home', '3', 60, 6), h6: player('home', '6', 56, 26), h8: player('home', '8', 66, 18),
@@ -242,12 +243,12 @@ const cambio: Template = {
       b: ballAt(66.9, 18.4),
     }
     return animate('full', c, [
-      { note: 'Juntamos a mucha gente en la banda izquierda. El rival se inclina hacia ese lado para defenderla.', draw: [line('pass', [[66.9, 18.4], [73.6, 26.4]])] },
-      { note: 'Más pases cortos en esa zona y el rival se junta todavía más. Mira cuánto espacio hay ahora en la otra banda.', move: { b: [73.6, 26.4], m1: [78, 12], m2: [77, 20], m3: [78, 28], m4: [79, 37], d1: [88, 14], d2: [90, 23], d3: [90, 32], d4: [89, 40], f1: [69, 25], f2: [67, 32] }, draw: [line('pass', [[73.6, 26.4], [80, 59.4]])] },
-      { note: 'Cambio de orientación: pase largo al 7, que recibe solo en la banda contraria.', move: { b: [80, 59.4], h7: [80.4, 60.1], d4: [90, 45], m4: [81, 43] }, draw: [line('dribble', [[80.4, 60.1], [86, 57], [92, 52]]), line('run', [[62, 60], [74, 63], [88, 62]])] },
-      { note: 'El 7 tiene espacio para encarar o centrar, con el 2 doblando por fuera. El rival llega tarde a esta banda.', move: { h7: [92, 52], b: [92.8, 52.2], h2: [88, 62], d4: [94, 46], m4: [86, 48], h9: [94, 38.5], d3: [96, 31] }, draw: [line('pass', [[92.8, 52.2], [98, 38.6]]), line('run', [[94, 38.5], [97.4, 38]])] },
-      { note: 'Centro al 9. Atraer al rival hacia un lado sirve para atacar el otro.', move: { b: [98, 38.6], h9: [97.4, 38], g: [103, 35] }, draw: [line('pass', [[98, 38.6], [104.7, 32.5]])] },
-      { note: 'Gol.', move: { b: [104.7, 32.5] } },
+      { note: t('Juntamos a mucha gente en la banda izquierda. El rival se inclina hacia ese lado para defenderla.'), draw: [line('pass', [[66.9, 18.4], [73.6, 26.4]])] },
+      { note: t('Más pases cortos en esa zona y el rival se junta todavía más. Mira cuánto espacio hay ahora en la otra banda.'), move: { b: [73.6, 26.4], m1: [78, 12], m2: [77, 20], m3: [78, 28], m4: [79, 37], d1: [88, 14], d2: [90, 23], d3: [90, 32], d4: [89, 40], f1: [69, 25], f2: [67, 32] }, draw: [line('pass', [[73.6, 26.4], [80, 59.4]])] },
+      { note: t('Cambio de orientación: pase largo al 7, que recibe solo en la banda contraria.'), move: { b: [80, 59.4], h7: [80.4, 60.1], d4: [90, 45], m4: [81, 43] }, draw: [line('dribble', [[80.4, 60.1], [86, 57], [92, 52]]), line('run', [[62, 60], [74, 63], [88, 62]])] },
+      { note: t('El 7 tiene espacio para encarar o centrar, con el 2 doblando por fuera. El rival llega tarde a esta banda.'), move: { h7: [92, 52], b: [92.8, 52.2], h2: [88, 62], d4: [94, 46], m4: [86, 48], h9: [94, 38.5], d3: [96, 31] }, draw: [line('pass', [[92.8, 52.2], [98, 38.6]]), line('run', [[94, 38.5], [97.4, 38]])] },
+      { note: t('Centro al 9. Atraer al rival hacia un lado sirve para atacar el otro.'), move: { b: [98, 38.6], h9: [97.4, 38], g: [103, 35] }, draw: [line('pass', [[98, 38.6], [104.7, 32.5]])] },
+      { note: t('Gol.'), move: { b: [104.7, 32.5] } },
     ])
   },
 }

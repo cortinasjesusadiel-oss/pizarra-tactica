@@ -5,6 +5,7 @@
 
 import type { SavedPlay } from './storage'
 import { DEFAULT_END, type EndCard, type IdentityStore, type Profile } from './identity'
+import { t } from './i18n'
 
 const PLAYS = 'pizarra.jugadas.v1'
 const IDENTITY = 'pizarra.identidad.v1'
@@ -31,7 +32,7 @@ function get<T>(key: string, fallback: T): T {
 // Aquí sí avisamos si no se pudo guardar: importar a medias sin decirlo sería peor que no importar.
 function put(key: string, v: unknown) {
   try { localStorage.setItem(key, typeof v === 'string' ? v : JSON.stringify(v)) } catch {
-    throw new Error('No hay espacio suficiente en este navegador para guardar la copia')
+    throw new Error(t('No hay espacio suficiente en este navegador para guardar la copia'))
   }
 }
 
@@ -73,10 +74,10 @@ export function downloadBackup() {
 // Comprueba que el archivo es una copia de TacticalPro y que cada jugada tiene la forma esperada.
 export function parseBackup(text: string): Backup {
   let d: unknown
-  try { d = JSON.parse(text) } catch { throw new Error('El archivo no es una copia de seguridad de TacticalPro') }
+  try { d = JSON.parse(text) } catch { throw new Error(t('El archivo no es una copia de seguridad de TacticalPro')) }
   const b = d as Partial<Backup>
-  if (!b || b.app !== 'TacticalPro' || b.kind !== 'copia-de-seguridad') throw new Error('El archivo no es una copia de seguridad de TacticalPro')
-  if (typeof b.version !== 'number' || b.version > 1) throw new Error('Esta copia es de una versión más nueva de TacticalPro: actualiza la app y vuelve a intentarlo')
+  if (!b || b.app !== 'TacticalPro' || b.kind !== 'copia-de-seguridad') throw new Error(t('El archivo no es una copia de seguridad de TacticalPro'))
+  if (typeof b.version !== 'number' || b.version > 1) throw new Error(t('Esta copia es de una versión más nueva de TacticalPro: actualiza la app y vuelve a intentarlo'))
   const plays = Array.isArray(b.plays) ? b.plays.filter(isPlay) : []
   const profiles = Array.isArray(b.identity?.profiles) ? b.identity!.profiles.filter(isProfile) : []
   return {
@@ -160,11 +161,11 @@ export function importBackup(b: Backup): ImportResult {
 
 export function describeImport(r: ImportResult) {
   const skipped = r.playsSkipped + r.profilesSkipped
-  const same = skipped === 1 ? 'Había 1 elemento que ya tenías y no se ha duplicado.' : `Había ${skipped} elementos que ya tenías y no se han duplicado.`
-  if (!r.plays && !r.profiles && !r.end) return skipped ? `No había nada nuevo en la copia. ${same}` : 'La copia está vacía.'
+  const same = skipped === 1 ? t('Había 1 elemento que ya tenías y no se ha duplicado.') : t('Había {n} elementos que ya tenías y no se han duplicado.', { n: skipped })
+  if (!r.plays && !r.profiles && !r.end) return skipped ? t('No había nada nuevo en la copia.') + ' ' + same : t('La copia está vacía.')
   const parts: string[] = []
-  if (r.plays) parts.push(r.plays === 1 ? '1 jugada nueva' : `${r.plays} jugadas nuevas`)
-  if (r.profiles) parts.push(r.profiles === 1 ? '1 perfil de Mi identidad' : `${r.profiles} perfiles de Mi identidad`)
-  if (r.end && !parts.length) parts.push('el mensaje final de los vídeos')
-  return `Copia importada: ${parts.join(' y ')}.${skipped ? ' ' + same : ''}`
+  if (r.plays) parts.push(r.plays === 1 ? t('1 jugada nueva') : t('{n} jugadas nuevas', { n: r.plays }))
+  if (r.profiles) parts.push(r.profiles === 1 ? t('1 perfil de Mi identidad') : t('{n} perfiles de Mi identidad', { n: r.profiles }))
+  if (r.end && !parts.length) parts.push(t('el mensaje final de los vídeos'))
+  return t('Copia importada: {x}.', { x: parts.join(t(' y ')) }) + (skipped ? ' ' + same : '')
 }

@@ -1,3 +1,4 @@
+import { t, tr } from './i18n'
 // «Mi identidad»: el nombre del entrenador, su cargo, su club con escudo y eslogan, y el mensaje final de los vídeos.
 // Todo se guarda en este dispositivo (sin cuenta ni conexión). Se pueden tener varios perfiles y cambiar entre ellos.
 
@@ -16,17 +17,17 @@ export interface Profile {
 export type BrandMode = 'logo' | 'text' | 'none' | 'coach' | 'crest' | 'crestClub' | 'crestClubSlogan' | 'full'
 
 export const BRAND_MODES: { id: BrandMode; name: string }[] = [
-  { id: 'coach', name: 'Mi nombre' },
-  { id: 'crest', name: 'Solo escudo' },
-  { id: 'crestClub', name: 'Escudo y equipo' },
-  { id: 'crestClubSlogan', name: 'Escudo, equipo y eslogan' },
-  { id: 'full', name: 'Identidad completa' },
-  { id: 'logo', name: 'Logo Jesús Cortinas' },
-  { id: 'text', name: 'Texto libre' },
-  { id: 'none', name: 'Sin marca' },
+  { id: 'coach', name: t('Mi nombre') },
+  { id: 'crest', name: t('Solo escudo') },
+  { id: 'crestClub', name: t('Escudo y equipo') },
+  { id: 'crestClubSlogan', name: t('Escudo, equipo y eslogan') },
+  { id: 'full', name: t('Identidad completa') },
+  { id: 'logo', name: t('Logo Jesús Cortinas') },
+  { id: 'text', name: t('Texto libre') },
+  { id: 'none', name: t('Sin marca') },
 ]
 
-export const ROLES = ['Entrenador', 'Analista Táctico', 'Director Técnico']
+export const ROLES = [t('Entrenador'), t('Analista Táctico'), t('Director Técnico')]
 
 export interface EndCard {
   on: boolean
@@ -43,9 +44,9 @@ export const DEFAULT_END: EndCard = {
   on: false,
   phrase: '',
   favorites: [
-    'La disciplina de hoy construye las victorias de mañana.',
-    'Un equipo unido siempre encuentra el camino.',
-    'Entrenamos juntos. Crecemos juntos. Competimos juntos.',
+    t('La disciplina de hoy construye las victorias de mañana.'),
+    t('Un equipo unido siempre encuentra el camino.'),
+    t('Entrenamos juntos. Crecemos juntos. Competimos juntos.'),
   ],
   seconds: 4,
   crest: true,
@@ -58,7 +59,7 @@ export const DEFAULT_END: EndCard = {
 export type LineKind = 'club' | 'coach' | 'slogan'
 export interface Mark { crest?: string; crestRatio: number; lines: { kind: LineKind; text: string }[] }
 
-export const coachLine = (p: Profile) => [p.coach.trim(), p.role.trim()].filter(Boolean).join(' — ')
+export const coachLine = (p: Profile) => [p.coach.trim(), tr(p.role.trim())].filter(Boolean).join(' — ')
 
 export function markFor(mode: BrandMode, p: Profile | null): Mark | null {
   if (!p) return null
@@ -117,23 +118,23 @@ export const saveIdentity = (s: IdentityStore) => write(KEY, s)
 export const loadEnd = () => read<EndCard>(END_KEY, DEFAULT_END)
 export const saveEnd = (e: EndCard) => write(END_KEY, e)
 
-export const newProfile = (): Profile => ({ id: `p${Date.now().toString(36)}`, coach: '', role: 'Entrenador', club: '', slogan: '' })
+export const newProfile = (): Profile => ({ id: `p${Date.now().toString(36)}`, coach: '', role: t('Entrenador'), club: '', slogan: '' })
 
-export const profileLabel = (p: Profile) => p.club.trim() || coachLine(p) || 'Perfil sin nombre'
+export const profileLabel = (p: Profile) => p.club.trim() || coachLine(p) || t('Perfil sin nombre')
 
 // ---------- Escudo ----------
 
 // Lee la imagen elegida (PNG, JPG o WebP) y la reduce a un máximo de 512 px por lado sin deformarla.
 // Se guarda en PNG si tiene transparencia y en WebP si no, para que pese poco y se vea nítida.
 export async function readCrest(file: File): Promise<{ crest: string; crestRatio: number }> {
-  if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) throw new Error('Formato no admitido: usa PNG, JPG o WebP')
+  if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) throw new Error(t('Formato no admitido: usa PNG, JPG o WebP'))
   const url = URL.createObjectURL(file)
   try {
     const img = new Image()
     img.src = url
     await img.decode()
     const w0 = img.naturalWidth, h0 = img.naturalHeight
-    if (!w0 || !h0) throw new Error('La imagen está vacía')
+    if (!w0 || !h0) throw new Error(t('La imagen está vacía'))
     const k = Math.min(1, 512 / Math.max(w0, h0))
     const w = Math.max(1, Math.round(w0 * k)), h = Math.max(1, Math.round(h0 * k))
     const c = document.createElement('canvas')

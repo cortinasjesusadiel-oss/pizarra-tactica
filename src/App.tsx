@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   COLORS, DEFAULT_COLOR, DEFAULT_LOOK, TEAM_COLORS, type Look, type TokenShapeKind, type TokenText, EQUIPMENT, KIND_NAME, PITCH, TOOL_NAME, ballAt, item, player, posAt, uid,
   type Board, type TokenKind, type DrawTool, type Drawing, type PitchKind, type Pt, type Team, type Token, type Tool,
@@ -21,6 +21,7 @@ import {
 } from './identity'
 import { IdentityMark } from './Pitch'
 import type { ExportOpts, Renderer } from './exportVideo'
+import { lang, setLang, t, tr } from './i18n'
 
 const PAD = 3
 const DRAW_TOOLS: DrawTool[] = ['pass', 'run', 'dribble', 'zone', 'focus', 'free']
@@ -39,8 +40,11 @@ function hint(): boolean {
 const ease = (k: number) => k * k * (3 - 2 * k)
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
+// Las notas de los pasos que vienen de plantillas se pasan al idioma actual al abrir la jugada; las escritas a mano no cambian.
+const inLang = (b: Board): Board => (b.frames ? { ...b, frames: b.frames.map((f) => ({ ...f, note: tr(f.note) })) } : b)
+
 export default function App() {
-  const [board, setBoard] = useState<Board>(() => loadLast() ?? TEMPLATES.find((t) => t.animated)!.build())
+  const [board, setBoard] = useState<Board>(() => { const l = loadLast(); return l ? inLang(l) : TEMPLATES.find((t) => t.animated)!.build() })
   const past = useRef<Board[]>([])
   const future = useRef<Board[]>([])
   const [, force] = useState(0)
@@ -71,7 +75,6 @@ export default function App() {
   const svg = useRef<SVGSVGElement>(null)
   const layer = useRef<SVGGElement>(null)
   const pendingSel = useRef<string | null | undefined>(undefined)
-  const [size, setSize] = useState({ w: 1, h: 1 })
   const action = useRef<Action>({ kind: 'none' })
   const pointer = useRef<number | null>(null)
   const penDown = useRef(false)
@@ -81,18 +84,10 @@ export default function App() {
   const nFrames = frames?.length ?? 0
   const cur = Math.min(step, Math.max(0, nFrames - 1))
   const { w: W, h: H } = PITCH[board.pitch]
-  // Se gira el campo si así cabe más grande en la pantalla (móvil en vertical).
-  const scaleH = Math.min(size.w / (W + 2 * PAD), size.h / (H + 2 * PAD))
-  const scaleV = Math.min(size.w / (H + 2 * PAD), size.h / (W + 2 * PAD))
-  const vertical = scaleV > scaleH * 1.08
-
-  useLayoutEffect(() => {
-    const el = stage.current
-    if (!el) return
-    const ro = new ResizeObserver(([e]) => setSize({ w: e.contentRect.width, h: e.contentRect.height }))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
+  // Orientación del campo: horizontal por defecto (el equipo ataca hacia la derecha), también el medio campo.
+  // Se puede girar a vertical, sobre todo para el móvil en vertical. Se guarda en el dispositivo.
+  const [vertical, setVertical] = useState(() => { try { return localStorage.getItem('pizarra.orientacion') === 'v' } catch { return false } })
+  const toggleVertical = () => setVertical((v) => { try { localStorage.setItem('pizarra.orientacion', v ? 'h' : 'v') } catch { /* sin almacenamiento */ } return !v })
 
   useEffect(() => { saveLast(board) }, [board])
 
@@ -139,7 +134,7 @@ export default function App() {
   // Cargar una pizarra nueva (plantilla, jugada guardada o campo vacío).
   const load = useCallback((b: Board) => {
     stopAnim()
-    commit(b)
+    commit(inLang(b))
     setStep(0)
     setSelected(null)
   }, [commit, stopAnim])
@@ -257,7 +252,7 @@ export default function App() {
   const [idStore, setIdStoreState] = useState<IdentityStore>(loadIdentity)
   const setIdStore = (f: (s: IdentityStore) => IdentityStore) => setIdStoreState((s) => {
     const next = f(s)
-    if (!saveIdentity(next)) setToast('No se pudo guardar en el dispositivo: prueba con un escudo más ligero')
+    if (!saveIdentity(next)) setToast(t('No se pudo guardar en el dispositivo: prueba con un escudo más ligero'))
     return next
   })
   const profile = idStore.profiles.find((p) => p.id === idStore.active) ?? null
@@ -294,14 +289,14 @@ export default function App() {
       if (image) files = [await ex.exportImage(items[0].board, { ...opts, s: cur })]
       else if (items.length === 1 && items[0].board.frames) {
         const res = await ex.exportVideo(items[0].board, { ...opts, onProgress: setVideo })
-        if (res === 'unsupported') { setToast('Este navegador no puede crear vídeo. Prueba con Chrome actualizado.'); return }
+        if (res === 'unsupported') { setToast(t('Este navegador no puede crear vídeo. Prueba con Chrome actualizado.')); return }
         files = [res.file]
         setOncePhrase(null)
       } else {
         let idx = 0
         files = await ex.exportMany(items, {
           ...opts,
-          onItem: (i) => { idx = i; setProgressLabel(`${i + 1} de ${items.length}: `) },
+          onItem: (i) => { idx = i; setProgressLabel(t('{i} de {n}: ', { i: i + 1, n: items.length })) },
           onProgress: (k) => setVideo((idx + k) / items.length),
         })
       }
@@ -309,7 +304,7 @@ export default function App() {
     } catch (e) {
       // El motivo se enseña para poder arreglarlo si vuelve a pasar.
       console.error(e)
-      setToast(`No se pudo exportar: ${e instanceof Error ? e.message : String(e)}`.slice(0, 160))
+      setToast(t('No se pudo exportar: {e}', { e: e instanceof Error ? e.message : String(e) }).slice(0, 160))
     } finally {
       setVideo(null)
       setProgressLabel('')
@@ -320,12 +315,12 @@ export default function App() {
     if (!ready) return
     const { shareFiles, saveFiles } = await import('./exportVideo')
     if (await shareFiles(ready)) { setReady(null); return }
-    try { await saveFiles(ready); setToast(ready.length > 1 ? 'Archivos guardados' : 'Archivo guardado'); setReady(null) } catch { setToast('No se pudo guardar') }
+    try { await saveFiles(ready); setToast(ready.length > 1 ? t('Archivos guardados') : t('Archivo guardado')); setReady(null) } catch { setToast(t('No se pudo guardar')) }
   }
   const saveReady = async () => {
     if (!ready) return
     const { saveFiles } = await import('./exportVideo')
-    try { await saveFiles(ready); setToast(ready.length > 1 ? 'Archivos guardados' : 'Archivo guardado'); setReady(null) } catch { setToast('No se pudo guardar') }
+    try { await saveFiles(ready); setToast(ready.length > 1 ? t('Archivos guardados') : t('Archivo guardado')); setReady(null) } catch { setToast(t('No se pudo guardar')) }
   }
 
   // Paso nuevo: cada jugador va solo al final de su flecha (carrera o conducción) y el balón al final del pase.
@@ -343,7 +338,7 @@ export default function App() {
       frames: [...f.slice(0, cur + 1), { pos, drawings: [], note: '' }, ...f.slice(cur + 1)],
     })
     setStep(nFrames ? cur + 1 : 1)
-    setToast(Object.keys(pos).length ? 'Paso añadido: cada ficha ya está al final de su flecha' : 'Paso añadido: mueve las fichas o dibuja flechas y pulsa + Paso')
+    setToast(Object.keys(pos).length ? t('Paso añadido: cada ficha ya está al final de su flecha') : t('Paso añadido: mueve las fichas o dibuja flechas y pulsa + Paso'))
   }
   const removeStep = () => {
     if (!frames) return
@@ -552,7 +547,7 @@ export default function App() {
   // Empezar de cero: pizarra vacía con el mismo campo. Se puede deshacer con ↶.
   const newBoard = () => {
     load(emptyBoard(board.pitch))
-    setToast('Pizarra vacía. Si no querías borrarla, pulsa ↶')
+    setToast(t('Pizarra vacía. Si no querías borrarla, pulsa ↶'))
   }
 
   const setPitch = (pitch: PitchKind) => {
@@ -581,33 +576,38 @@ export default function App() {
   return (
     <div className="app">
       <header className="top">
-        <strong className="brand"><img src={tpSymbol} alt="" />Tactical<span>Pro</span></strong>
-        <button className="primary" onClick={newBoard}>+ Nueva</button>
-        <div className="seg" role="group" aria-label="Tipo de campo">
+        <strong className="brand"><img src={tpSymbol} alt="" />{t('Tactical')}<span>{t('Pro')}</span></strong>
+        <button className="primary" onClick={newBoard}>{t('+ Nueva')}</button>
+        <div className="seg" role="group" aria-label={t('Tipo de campo')}>
           {(Object.keys(PITCH) as PitchKind[]).map((k) => (
             <button key={k} className={board.pitch === k ? 'on' : ''} onClick={() => setPitch(k)}>
-              {k === 'full' ? 'Campo' : k === 'half' ? 'Medio' : '40×30'}
+              {k === 'full' ? t('Campo') : k === 'half' ? t('Medio') : '40×30'}
             </button>
           ))}
         </div>
-        <button onClick={() => setSheet('learn')}>Fundamentos</button>
-        <button onClick={() => setSheet('templates')}>Plantillas</button>
-        <button onClick={() => setSheet('sessions')}>Sesiones</button>
-        <button onClick={() => setSheet('tips')}>Consejos</button>
-        <button onClick={() => setSheet('look')}>Fichas</button>
-        <button onClick={() => setSheet('identity')}>Mi identidad</button>
-        <button className={zones ? 'toggle on' : 'toggle'} onClick={toggleZones} aria-pressed={zones}>Zonas</button>
+        <button onClick={() => setSheet('learn')}>{t('Fundamentos')}</button>
+        <button onClick={() => setSheet('templates')}>{t('Plantillas')}</button>
+        <button onClick={() => setSheet('sessions')}>{t('Sesiones')}</button>
+        <button onClick={() => setSheet('tips')}>{t('Consejos')}</button>
+        <button onClick={() => setSheet('look')}>{t('Fichas')}</button>
+        <button onClick={() => setSheet('identity')}>{t('Mi identidad')}</button>
+        <select id="lang" className="lang" aria-label={t('Idioma')} value={lang} onChange={(e) => setLang(e.target.value as 'es' | 'en')}>
+          <option value="es">Español</option>
+          <option value="en">English</option>
+        </select>
+        <button className={zones ? 'toggle on' : 'toggle'} onClick={toggleZones} aria-pressed={zones}>{t('Zonas')}</button>
+        <button onClick={toggleVertical} aria-label={t('Orientación del campo')}>{vertical ? t('▭ Horizontal') : t('▯ Vertical')}</button>
         <span className="sep" />
-        <button className="chip home" onClick={() => addToken('home')} aria-label="Añadir jugador local">+ Local</button>
-        <button className="chip away" onClick={() => addToken('away')} aria-label="Añadir jugador rival">+ Rival</button>
-        <button onClick={() => addToken('ball')}>+ Balón</button>
-        <button onClick={() => setSheet('material')}>+ Material</button>
+        <button className="chip home" onClick={() => addToken('home')} aria-label={t('Añadir jugador local')}>{t('+ Local')}</button>
+        <button className="chip away" onClick={() => addToken('away')} aria-label={t('Añadir jugador rival')}>{t('+ Rival')}</button>
+        <button onClick={() => addToken('ball')}>{t('+ Balón')}</button>
+        <button onClick={() => setSheet('material')}>{t('+ Material')}</button>
         <span className="sep" />
-        <button onClick={undo} disabled={!past.current.length} aria-label="Deshacer">↶</button>
-        <button onClick={redo} disabled={!future.current.length} aria-label="Rehacer">↷</button>
-        <button onClick={() => setSheet('plays')}>Jugadas</button>
-        <button onClick={openPresent}>Proyectar</button>
-        <button onClick={() => setSheet('export')}>Exportar</button>
+        <button onClick={undo} disabled={!past.current.length} aria-label={t('Deshacer')}>↶</button>
+        <button onClick={redo} disabled={!future.current.length} aria-label={t('Rehacer')}>↷</button>
+        <button onClick={() => setSheet('plays')}>{t('Jugadas')}</button>
+        <button onClick={openPresent}>{t('Proyectar')}</button>
+        <button onClick={() => setSheet('export')}>{t('Exportar')}</button>
       </header>
 
       <main className="stage" ref={stage}>
@@ -627,25 +627,25 @@ export default function App() {
           </g>
         </svg>
         {frames && frames[shown].note && !showHint && (
-          <div className="note" aria-live="polite"><b>Paso {shown + 1}.</b> {frames[shown].note}</div>
+          <div className="note" aria-live="polite"><b>{t('Paso')}{' '}{shown + 1}.</b> {tr(frames[shown].note)}</div>
         )}
         {video !== null && (
-          <div className="toast" role="status">Exportando {progressLabel}{Math.round(video * 100)}%</div>
+          <div className="toast" role="status">{t('Exportando')}{' '}{progressLabel}{Math.round(video * 100)}%</div>
         )}
         {showHint && (
           <div className="hint" role="note">
-            <p><b>S Pen:</b> toca una ficha con el lápiz para moverla y toca el césped para dibujar. Mantén el botón lateral para borrar.</p>
-            <p><b>Animaciones:</b> abre Plantillas y elige una marcada con ▶. Luego pulsa Reproducir.</p>
-            <button onClick={() => { setShowHint(false); try { localStorage.setItem('pizarra.ayuda.v2', '1') } catch { /* sin almacenamiento */ } }}>Entendido</button>
+            <p><b>{t('S Pen:')}</b> {' '}{t('toca una ficha con el lápiz para moverla y toca el césped para dibujar. Mantén el botón lateral para borrar.')}</p>
+            <p><b>{t('Animaciones:')}</b> {' '}{t('abre Plantillas y elige una marcada con ▶. Luego pulsa Reproducir.')}</p>
+            <button onClick={() => { setShowHint(false); try { localStorage.setItem('pizarra.ayuda.v2', '1') } catch { /* sin almacenamiento */ } }}>{t('Entendido')}</button>
           </div>
         )}
         {toast && <div className="toast" role="status">{toast}</div>}
         {ready && (
-          <div className="videoready" role="dialog" aria-label="Exportación lista">
-            <b>{ready.length > 1 ? `${ready.length} archivos listos` : ready[0].type === 'image/png' ? 'Imagen lista' : 'Vídeo listo'}</b>
-            <button className="primary" onClick={shareReady}>Compartir</button>
-            <button onClick={saveReady}>Guardar</button>
-            <button onClick={() => setReady(null)} aria-label="Cerrar">✕</button>
+          <div className="videoready" role="dialog" aria-label={t('Exportación lista')}>
+            <b>{ready.length > 1 ? t('{n} archivos listos', { n: ready.length }) : ready[0].type === 'image/png' ? t('Imagen lista') : t('Vídeo listo')}</b>
+            <button className="primary" onClick={shareReady}>{t('Compartir')}</button>
+            <button onClick={saveReady}>{t('Guardar')}</button>
+            <button onClick={() => setReady(null)} aria-label={t('Cerrar')}>✕</button>
           </div>
         )}
       </main>
@@ -656,67 +656,69 @@ export default function App() {
           {sel.kind === 'player' && (
             <>
               <label className="field">
-                Dorsal
+                
+                {t('Dorsal')}
                 <input id="dorsal" value={sel.label} maxLength={3} onChange={(e) => updateSel({ label: e.target.value.toUpperCase() })} />
               </label>
               <label className="field">
-                Nombre
-                <input id="nombre" className="name-input" value={sel.name ?? ''} maxLength={14} placeholder="Opcional" onChange={(e) => updateSel({ name: e.target.value })} />
+                
+                {t('Nombre')}
+                <input id="nombre" className="name-input" value={sel.name ?? ''} maxLength={14} placeholder={t('Opcional')} onChange={(e) => updateSel({ name: e.target.value })} />
               </label>
-              <div className="seg" role="group" aria-label="Equipo">
+              <div className="seg" role="group" aria-label={t('Equipo')}>
                 {(['home', 'away', 'neutral'] as Team[]).map((tm) => (
                   <button key={tm} className={sel.team === tm ? 'on' : ''} onClick={() => updateSel({ team: tm })}>
-                    {tm === 'home' ? 'Local' : tm === 'away' ? 'Rival' : 'Comodín'}
+                    {tm === 'home' ? t('Local') : tm === 'away' ? t('Rival') : t('Comodín')}
                   </button>
                 ))}
               </div>
             </>
           )}
           {sel.kind !== 'player' && sel.kind !== 'ball' && (
-            <button onClick={() => updateSel({ rot: ((sel.rot ?? 0) + 45) % 360 })}>Girar 45°</button>
+            <button onClick={() => updateSel({ rot: ((sel.rot ?? 0) + 45) % 360 })}>{t('Girar 45°')}</button>
           )}
-          <button className="danger" onClick={removeSelected}>Eliminar</button>
+          <button className="danger" onClick={removeSelected}>{t('Eliminar')}</button>
         </div>
       )}
       <div className="animbar">
           {frames ? (
             <>
-              <button className="primary" onClick={play} aria-label={playing ? 'Pausa' : 'Reproducir'}>{playing ? '❚❚ Pausa' : '▶ Reproducir'}</button>
-              <button onClick={prevStep} disabled={cur === 0} aria-label="Paso anterior">‹</button>
-              <div className="steps" role="group" aria-label="Pasos de la animación">
+              <button className="primary" onClick={play} aria-label={playing ? t('Pausa') : t('Reproducir')}>{playing ? t('❚❚ Pausa') : t('▶ Reproducir')}</button>
+              <button onClick={prevStep} disabled={cur === 0} aria-label={t('Paso anterior')}>‹</button>
+              <div className="steps" role="group" aria-label={t('Pasos de la animación')}>
                 {frames.map((_, i) => (
-                  <button key={i} className={i === shown ? 'on' : ''} aria-label={`Ir al paso ${i + 1}`} onClick={() => glide(i)}>{i + 1}</button>
+                  <button key={i} className={i === shown ? 'on' : ''} aria-label={t('Ir al paso {n}', { n: i + 1 })} onClick={() => glide(i)}>{i + 1}</button>
                 ))}
               </div>
-              <button onClick={nextStep} disabled={cur >= nFrames - 1} aria-label="Paso siguiente">›</button>
+              <button onClick={nextStep} disabled={cur >= nFrames - 1} aria-label={t('Paso siguiente')}>›</button>
               <span className="sep" />
-              <input id="step-note" className="noteinput" placeholder="Explica este paso" value={frames[cur].note} onChange={(e) => setNote(e.target.value)} />
-              <button onClick={addStep}>+ Paso</button>
-              <button onClick={removeStep}>Quitar paso</button>
+              <input id="step-note" className="noteinput" placeholder={t('Explica este paso')} value={frames[cur].note} onChange={(e) => setNote(e.target.value)} />
+              <button onClick={addStep}>{t('+ Paso')}</button>
+              <button onClick={removeStep}>{t('Quitar paso')}</button>
               <label className="pace">
-                <span className="muted small">Cada paso</span>
-                <select value={pace.step} onChange={(e) => setPace({ step: +e.target.value })} aria-label="Segundos por paso">
-                  {STEP_SECONDS.map((x) => <option key={x} value={x}>{x} s</option>)}
+                <span className="muted small">{t('Cada paso')}</span>
+                <select value={pace.step} onChange={(e) => setPace({ step: +e.target.value })} aria-label={t('Segundos por paso')}>
+                  {STEP_SECONDS.map((x) => <option key={x} value={x}>{x} {' '}{t('s')}</option>)}
                 </select>
               </label>
               <label className="pace">
-                <span className="muted small">Velocidad</span>
-                <select value={pace.speed} onChange={(e) => setPace({ speed: e.target.value as Speed })} aria-label="Velocidad del movimiento">
+                <span className="muted small">{t('Velocidad')}</span>
+                <select value={pace.speed} onChange={(e) => setPace({ speed: e.target.value as Speed })} aria-label={t('Velocidad del movimiento')}>
                   {SPEEDS.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                 </select>
               </label>
-              <button onClick={() => setSheet('export')} disabled={video !== null}>Exportar vídeo</button>
+              <button onClick={() => setSheet('export')} disabled={video !== null}>{t('Exportar vídeo')}</button>
             </>
           ) : (
             <>
-              <span className="muted small">Para animar: coloca las fichas en su posición inicial y pulsa “+ Paso”. Después mueve las fichas a donde van en ese paso.</span>
-              <button onClick={addStep}>+ Paso</button>
+              <span className="muted small">{t('Para animar: coloca las fichas en su posición inicial y pulsa “+ Paso”. Después mueve las fichas a donde van en ese paso.')}</span>
+              <button onClick={addStep}>{t('+ Paso')}</button>
             </>
           )}
       </div>
 
       <footer className="tools">
-        <div className="seg big" role="group" aria-label="Herramienta">
+        <div className="seg big" role="group" aria-label={t('Herramienta')}>
           {TOOLS.map((t) => (
             <button key={t} className={tool === t ? 'on' : ''} onClick={() => pickTool(t)} aria-pressed={tool === t}>
               <ToolIcon t={t} />
@@ -724,7 +726,7 @@ export default function App() {
             </button>
           ))}
         </div>
-        <div className="colors" role="group" aria-label="Color del trazo">
+        <div className="colors" role="group" aria-label={t('Color del trazo')}>
           {COLORS.map((c) => (
             <button key={c} aria-label={`Color ${c}`} className={(color ?? DEFAULT_COLOR[activeDraw]) === c ? 'on' : ''} style={{ background: c }} onClick={() => setColor(c)} />
           ))}
@@ -732,12 +734,12 @@ export default function App() {
         <button
           onClick={() => commit((b) => ({ ...b, drawings: [], frames: b.frames?.map((f, i) => (i === cur ? { ...f, drawings: [] } : f)) }))}
           disabled={!board.drawings.length && !stepDrawings.length}
-        >Borrar trazos</button>
-        {penSeen && <span className="pen">S Pen · ficha: mover · césped: {TOOL_NAME[activeDraw]}</span>}
+        >{t('Borrar trazos')}</button>
+        {penSeen && <span className="pen">{t('S Pen · ficha: mover · césped:')}{' '}{TOOL_NAME[activeDraw]}</span>}
       </footer>
 
       {sheet === 'templates' && (
-        <Sheet title="Plantillas" onClose={() => setSheet(null)}>
+        <Sheet title={t('Plantillas')} onClose={() => setSheet(null)}>
           {GROUPS.map((g) => {
             const list = TEMPLATES.filter((t) => t.group === g.id)
             return (
@@ -753,11 +755,11 @@ export default function App() {
               </details>
             )
           })}
-          <p className="muted small">▶ = jugada animada paso a paso.</p>
+          <p className="muted small">{t('▶ = jugada animada paso a paso.')}</p>
         </Sheet>
       )}
       {sheet === 'material' && (
-        <Sheet title="Material de entrenamiento" onClose={() => setSheet(null)}>
+        <Sheet title={t('Material de entrenamiento')} onClose={() => setSheet(null)}>
           <div className="material">
             {EQUIPMENT.map((e) => (
               <button key={e.kind} onClick={() => { addToken(e.kind); setSheet(null) }}>
@@ -769,17 +771,17 @@ export default function App() {
               </button>
             ))}
           </div>
-          <p className="muted small">Toca un elemento para ponerlo en el centro del campo. Luego arrástralo y usa “Girar 45°” para orientarlo.</p>
+          <p className="muted small">{t('Toca un elemento para ponerlo en el centro del campo. Luego arrástralo y usa “Girar 45°” para orientarlo.')}</p>
         </Sheet>
       )}
       {sheet === 'sessions' && (
-        <Sheet title="Sesiones sugeridas" onClose={() => setSheet(null)}>
-          <p className="muted small">Sesiones de fútbol 11 de adultos. MD-3 significa 3 días antes del partido. Toca un bloque con ▶ para abrir su ejercicio animado.</p>
+        <Sheet title={t('Sesiones sugeridas')} onClose={() => setSheet(null)}>
+          <p className="muted small">{t('Sesiones de fútbol 11 de adultos. MD-3 significa 3 días antes del partido. Toca un bloque con ▶ para abrir su ejercicio animado.')}</p>
           {SESSIONS.map((ses) => (
             <details key={ses.id} className="session">
               <summary>
                 <b>{ses.name}</b>
-                <span className="muted small">{ses.day} · {ses.blocks.reduce((a, x) => a + x.minutes, 0)} min</span>
+                <span className="muted small">{ses.day} · {ses.blocks.reduce((a, x) => a + x.minutes, 0)} {' '}{t('min')}</span>
               </summary>
               <p className="small">{ses.goal}</p>
               <ol className="blocks">
@@ -789,12 +791,12 @@ export default function App() {
                     <li key={i}>
                       {tpl ? (
                         <button className="row" onClick={() => { load(tpl.build()); setSheet(null); if (tpl.animated) setAutoplay(true) }}>
-                          <span><span className="anim-badge">▶</span><b>{bl.title}</b> · {bl.minutes} min</span>
+                          <span><span className="anim-badge">▶</span><b>{bl.title}</b> · {bl.minutes} {' '}{t('min')}</span>
                           <span className="muted small">{bl.tips}</span>
                         </button>
                       ) : (
                         <div className="row static">
-                          <span><b>{bl.title}</b> · {bl.minutes} min</span>
+                          <span><b>{bl.title}</b> · {bl.minutes} {' '}{t('min')}</span>
                           <span className="muted small">{bl.tips}</span>
                         </div>
                       )}
@@ -807,8 +809,8 @@ export default function App() {
         </Sheet>
       )}
       {sheet === 'learn' && (
-        <Sheet title="Fundamentos" onClose={() => setSheet(null)}>
-          <p className="muted small">Lo esencial para leer un partido y entender cada jugada de la app. Toca un tema y ábrelo en la pizarra.</p>
+        <Sheet title={t('Fundamentos')} onClose={() => setSheet(null)}>
+          <p className="muted small">{t('Lo esencial para leer un partido y entender cada jugada de la app. Toca un tema y ábrelo en la pizarra.')}</p>
           {LESSONS.map((l) => (
             <details key={l.id} className="session">
               <summary><b>{l.title}</b><span className="muted small">{l.summary}</span></summary>
@@ -830,7 +832,7 @@ export default function App() {
             </details>
           ))}
           <details className="session">
-            <summary><b>Diccionario</b><span className="muted small">Las palabras que más se oyen en análisis y entrenamientos.</span></summary>
+            <summary><b>{t('Diccionario')}</b><span className="muted small">{t('Las palabras que más se oyen en análisis y entrenamientos.')}</span></summary>
             <dl className="glossary">
               {GLOSSARY.map(([term, def]) => <div key={term}><dt>{term}</dt><dd>{def}</dd></div>)}
             </dl>
@@ -839,11 +841,11 @@ export default function App() {
       )}
       {sheet === 'look' && <LookSheet look={look} setLook={setLook} onClose={() => setSheet(null)} />}
       {sheet === 'tips' && (
-        <Sheet title="Consejos" onClose={() => setSheet(null)}>
-          <p className="muted small">Ideas prácticas de táctica, entrenamiento y gestión del grupo, inspiradas en entrenadores de referencia.</p>
+        <Sheet title={t('Consejos')} onClose={() => setSheet(null)}>
+          <p className="muted small">{t('Ideas prácticas de táctica, entrenamiento y gestión del grupo, inspiradas en entrenadores de referencia.')}</p>
           {TIPS.map((g) => (
             <details key={g.id} className="session">
-              <summary><b>{g.name}</b><span className="muted small">{g.tips.length} consejos</span></summary>
+              <summary><b>{g.name}</b><span className="muted small">{g.tips.length} {' '}{t('consejos')}</span></summary>
               <ul className="tips">
                 {g.tips.map((t) => (
                   <li key={t.title}>
@@ -907,31 +909,31 @@ export default function App() {
           onExport={() => { setPreview(false); doVideo() }}
         />
       )}
-      {sheet === 'plays' && <PlaysSheet board={board} onOpen={(b) => { load(b); setSheet(null) }} onClose={() => setSheet(null)} onSaved={() => setToast('Jugada guardada')} onImported={reloadSaved} />}
+      {sheet === 'plays' && <PlaysSheet board={board} onOpen={(b) => { load(b); setSheet(null) }} onClose={() => setSheet(null)} onSaved={() => setToast(t('Jugada guardada'))} onImported={reloadSaved} />}
       {present && (
-        <div className="present" ref={presentRef} role="dialog" aria-label="Modo proyector">
+        <div className="present" ref={presentRef} role="dialog" aria-label={t('Modo proyector')}>
           {frames && frames.some((f) => f.note) && (
             <div className="present-note" aria-live="polite">
               {/* Al cambiar de paso el texto nuevo aparece fundido sobre el anterior, sin corte. */}
-              <span style={{ opacity: cap.fade }}><b>Paso {cap.k + 1}/{nFrames}</b> {frames[cap.k].note}</span>
-              {cap.fade < 1 && <span aria-hidden="true" style={{ opacity: 1 - cap.fade }}><b>Paso {cap.prev + 1}/{nFrames}</b> {frames[cap.prev].note}</span>}
+              <span style={{ opacity: cap.fade }}><b>{t('Paso')}{' '}{cap.k + 1}/{nFrames}</b> {tr(frames[cap.k].note)}</span>
+              {cap.fade < 1 && <span aria-hidden="true" style={{ opacity: 1 - cap.fade }}><b>{t('Paso')}{' '}{cap.prev + 1}/{nFrames}</b> {tr(frames[cap.prev].note)}</span>}
             </div>
           )}
           <svg viewBox={`${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`} className="present-board">
             <Markers />
             <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} ident={ident} look={look} />
           </svg>
-          {frames && <button className="present-zone left" onClick={prevStep} aria-label="Paso anterior" />}
-          {frames && <button className="present-zone right" onClick={nextStep} aria-label="Paso siguiente" />}
+          {frames && <button className="present-zone left" onClick={prevStep} aria-label={t('Paso anterior')} />}
+          {frames && <button className="present-zone right" onClick={nextStep} aria-label={t('Paso siguiente')} />}
           <div className="present-bar">
             {frames && (
               <>
-                <button onClick={prevStep} disabled={cur === 0 && anim === null} aria-label="Paso anterior">‹</button>
-                <button className="primary" onClick={play}>{playing ? '❚❚ Pausa' : '▶ Reproducir'}</button>
-                <button onClick={nextStep} disabled={cur >= nFrames - 1 && anim === null} aria-label="Paso siguiente">›</button>
+                <button onClick={prevStep} disabled={cur === 0 && anim === null} aria-label={t('Paso anterior')}>‹</button>
+                <button className="primary" onClick={play}>{playing ? t('❚❚ Pausa') : t('▶ Reproducir')}</button>
+                <button onClick={nextStep} disabled={cur >= nFrames - 1 && anim === null} aria-label={t('Paso siguiente')}>›</button>
               </>
             )}
-            <button onClick={closePresent}>Salir</button>
+            <button onClick={closePresent}>{t('Salir')}</button>
           </div>
         </div>
       )}
@@ -945,7 +947,7 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
       <div className="sheet" role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head">
           <h2>{title}</h2>
-          <button onClick={onClose}>Cerrar</button>
+          <button onClick={onClose}>{t('Cerrar')}</button>
         </div>
         {children}
       </div>
@@ -959,7 +961,7 @@ function PlaysSheet({ board, onOpen, onClose, onSaved, onImported }: { board: Bo
   const [confirm, setConfirm] = useState<string | null>(null)
   const save = (e: React.FormEvent) => {
     e.preventDefault()
-    const n = name.trim() || `Jugada ${plays.length + 1}`
+    const n = name.trim() || t('Jugada {n}', { n: plays.length + 1 })
     savePlay({ id: uid(), name: n, updated: Date.now(), board })
     setPlays(listPlays())
     setName('')
@@ -974,14 +976,14 @@ function PlaysSheet({ board, onOpen, onClose, onSaved, onImported }: { board: Bo
     if (ios) {
       const f = backupFile()
       if (navigator.canShare?.({ files: [f] })) {
-        try { await navigator.share({ files: [f], title: f.name }); setBackupMsg({ ok: true, text: 'Elige «Guardar en Archivos» para conservar la copia.' }); return }
+        try { await navigator.share({ files: [f], title: f.name }); setBackupMsg({ ok: true, text: t('Elige «Guardar en Archivos» para conservar la copia.') }); return }
         catch (e) { if (e instanceof DOMException && e.name === 'AbortError') return }
       }
     }
     try {
       const f = downloadBackup()
-      setBackupMsg({ ok: true, text: `Copia guardada en tus descargas como «${f.name}».` })
-    } catch { setBackupMsg({ ok: false, text: 'No se pudo crear la copia en este navegador.' }) }
+      setBackupMsg({ ok: true, text: t('Copia guardada en tus descargas como «{f}».', { f: f.name }) })
+    } catch { setBackupMsg({ ok: false, text: t('No se pudo crear la copia en este navegador.') }) }
   }
   const pickBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -993,42 +995,42 @@ function PlaysSheet({ board, onOpen, onClose, onSaved, onImported }: { board: Bo
       onImported()
       setBackupMsg({ ok: true, text: describeImport(r) })
     } catch (err) {
-      setBackupMsg({ ok: false, text: err instanceof Error ? err.message : 'No se pudo importar la copia.' })
+      setBackupMsg({ ok: false, text: err instanceof Error ? err.message : t('No se pudo importar la copia.') })
     }
   }
   return (
-    <Sheet title="Mis jugadas" onClose={onClose}>
+    <Sheet title={t('Mis jugadas')} onClose={onClose}>
       <form className="saveform" onSubmit={save}>
-        <input id="play-name" placeholder="Nombre, por ejemplo: Córner primer palo" value={name} onChange={(e) => setName(e.target.value)} />
-        <button className="primary" type="submit">Guardar la pizarra actual</button>
+        <input id="play-name" placeholder={t('Nombre, por ejemplo: Córner primer palo')} value={name} onChange={(e) => setName(e.target.value)} />
+        <button className="primary" type="submit">{t('Guardar la pizarra actual')}</button>
       </form>
-      <p className="muted small">Las jugadas se guardan en este dispositivo, con sus pasos de animación.</p>
+      <p className="muted small">{t('Las jugadas se guardan en este dispositivo, con sus pasos de animación.')}</p>
       <div className="list">
-        {plays.length === 0 && <p className="muted">Todavía no hay jugadas guardadas.</p>}
+        {plays.length === 0 && <p className="muted">{t('Todavía no hay jugadas guardadas.')}</p>}
         {plays.map((p) => (
           <div key={p.id} className="row play">
             <div>
               <b>{p.board.frames && '▶ '}{p.name}</b>
               <span className="muted small">{PITCH[p.board.pitch].name} · {new Date(p.updated).toLocaleDateString('es')}</span>
             </div>
-            <button onClick={() => onOpen(p.board)}>Abrir</button>
+            <button onClick={() => onOpen(p.board)}>{t('Abrir')}</button>
             {confirm === p.id ? (
-              <button className="danger" onClick={() => { deletePlay(p.id); setPlays(listPlays()); setConfirm(null) }}>Confirmar</button>
+              <button className="danger" onClick={() => { deletePlay(p.id); setPlays(listPlays()); setConfirm(null) }}>{t('Confirmar')}</button>
             ) : (
-              <button onClick={() => setConfirm(p.id)}>Eliminar</button>
+              <button onClick={() => setConfirm(p.id)}>{t('Eliminar')}</button>
             )}
           </div>
         ))}
       </div>
       <section className="backup" aria-labelledby="backup-title">
-        <h3 id="backup-title">Copia de seguridad</h3>
-        <p className="muted small">Guarda en un archivo tus jugadas (con sus pasos, movimientos y textos) y «Mi identidad» con tu escudo. Ábrelo en otro navegador, móvil u ordenador para recuperarlo todo. No necesitas cuenta: el archivo es tuyo.</p>
+        <h3 id="backup-title">{t('Copia de seguridad')}</h3>
+        <p className="muted small">{t('Guarda en un archivo tus jugadas (con sus pasos, movimientos y textos) y «Mi identidad» con tu escudo. Ábrelo en otro navegador, móvil u ordenador para recuperarlo todo. No necesitas cuenta: el archivo es tuyo.')}</p>
         <div className="backup-actions">
-          <button className="primary" onClick={exportBackup}>Exportar copia de seguridad</button>
-          <button onClick={() => fileRef.current?.click()}>Importar copia de seguridad</button>
+          <button className="primary" onClick={exportBackup}>{t('Exportar copia de seguridad')}</button>
+          <button onClick={() => fileRef.current?.click()}>{t('Importar copia de seguridad')}</button>
           <input ref={fileRef} id="backup-file" type="file" accept=".json,application/json" hidden onChange={pickBackup} />
         </div>
-        <p className="muted small">Al importar se añade lo que falta y se conserva todo lo que ya tienes aquí. Lo repetido no se duplica.</p>
+        <p className="muted small">{t('Al importar se añade lo que falta y se conserva todo lo que ya tienes aquí. Lo repetido no se duplica.')}</p>
         {backupMsg && <p className={backupMsg.ok ? 'backup-msg' : 'backup-msg error'} role="status">{backupMsg.text}</p>}
       </section>
     </Sheet>
@@ -1089,43 +1091,43 @@ function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, prof
     </label>
   )
   return (
-    <Sheet title="Exportar" onClose={onClose}>
+    <Sheet title={t('Exportar')} onClose={onClose}>
       <section>
-        <h3>Esta pizarra</h3>
+        <h3>{t('Esta pizarra')}</h3>
         <div className="row-actions">
-          <button onClick={onImage}>Imagen PNG</button>
-          <button onClick={onVideo} disabled={!hasFrames}>Vídeo MP4</button>
-          <button onClick={onPreview} disabled={!hasFrames}>Vista previa</button>
+          <button onClick={onImage}>{t('Imagen PNG')}</button>
+          <button onClick={onVideo} disabled={!hasFrames}>{t('Vídeo MP4')}</button>
+          <button onClick={onPreview} disabled={!hasFrames}>{t('Vista previa')}</button>
         </div>
-        {!hasFrames && <p className="muted small">El vídeo y la vista previa necesitan una jugada con pasos (pulsa + Paso).</p>}
+        {!hasFrames && <p className="muted small">{t('El vídeo y la vista previa necesitan una jugada con pasos (pulsa + Paso).')}</p>}
       </section>
       <section>
-        <h3>Mi identidad</h3>
+        <h3>{t('Mi identidad')}</h3>
         <BrandPicker brandMode={brandMode} setBrandMode={setBrandMode} brand={brand} setBrand={setBrand} profile={profile} />
-        <button className="wide" onClick={onIdentity}>{profile ? `Editar mi identidad · ${profileLabel(profile)}` : 'Crear mi identidad'}</button>
+        <button className="wide" onClick={onIdentity}>{profile ? t('Editar mi identidad · {p}', { p: profileLabel(profile) }) : t('Crear mi identidad')}</button>
       </section>
       <section>
-        <h3>Opciones del vídeo</h3>
+        <h3>{t('Opciones del vídeo')}</h3>
         <label className="pick">
           <input type="checkbox" checked={vopts.big} onChange={(e) => setVopts({ big: e.target.checked })} />
-          <span>Letra grande <span className="muted small">para verlo en el móvil, WhatsApp o redes</span></span>
+          <span>{t('Letra grande')}{' '}<span className="muted small">{t('para verlo en el móvil, WhatsApp o redes')}</span></span>
         </label>
         <label className="pick">
           <input type="checkbox" checked={!!vopts.full} onChange={(e) => setVopts({ full: e.target.checked })} />
-          <span>Campo a todo el ancho <span className="muted small">el vídeo sale más alto que una pantalla panorámica</span></span>
+          <span>{t('Campo a todo el ancho')}{' '}<span className="muted small">{t('el vídeo sale más alto que una pantalla panorámica')}</span></span>
         </label>
         <EndEditor end={end} setEnd={setEnd} phrase={phrase} setPhrase={setPhrase} perVideo profile={profile} />
         <label className="pick">
           <input type="checkbox" checked={vopts.outro} onChange={(e) => setVopts({ outro: e.target.checked })} />
-          <span>Cierre con el logo de TacticalPro <span className="muted small">Aprende · Planifica · Entrena</span></span>
+          <span>{t('Cierre con el logo de TacticalPro')}{' '}<span className="muted small">{t('Aprende · Planifica · Entrena')}</span></span>
         </label>
       </section>
       <section>
-        <h3>Varias a la vez</h3>
-        <p className="muted small">Marca las que quieras. Las animadas salen en vídeo y las demás en imagen.</p>
+        <h3>{t('Varias a la vez')}</h3>
+        <p className="muted small">{t('Marca las que quieras. Las animadas salen en vídeo y las demás en imagen.')}</p>
         {plays.length > 0 && (
           <details className="session" open>
-            <summary><b>Mis jugadas</b><span className="muted small">{plays.length}</span></summary>
+            <summary><b>{t('Mis jugadas')}</b><span className="muted small">{plays.length}</span></summary>
             <div className="picklist">{plays.map((p) => <Item key={p.id} id={p.id} label={p.name} anim={!!p.board.frames} />)}</div>
           </details>
         )}
@@ -1139,10 +1141,10 @@ function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, prof
           )
         })}
         <button className="primary wide" disabled={!picked.length} onClick={many}>
-          {picked.length ? `Exportar ${picked.length} seleccionada${picked.length > 1 ? 's' : ''}` : 'Elige al menos una'}
+          {picked.length ? (picked.length > 1 ? t('Exportar {n} seleccionadas', { n: picked.length }) : t('Exportar 1 seleccionada')) : t('Elige al menos una')}
         </button>
       </section>
-      <p className="muted small">Versión {__BUILD__}</p>
+      <p className="muted small">{t('Versión')}{' '}{__BUILD__}</p>
     </Sheet>
   )
 }
@@ -1159,26 +1161,26 @@ function BrandPicker({ brandMode, setBrandMode, brand, setBrand, profile }: {
   return (
     <>
       <label className="pace field-full">
-        <span>Se ve</span>
-        <select value={brandMode} onChange={(e) => setBrandMode(e.target.value as BrandMode)} aria-label="Qué marca se ve">
+        <span>{t('Se ve')}</span>
+        <select value={brandMode} onChange={(e) => setBrandMode(e.target.value as BrandMode)} aria-label={t('Qué marca se ve')}>
           {BRAND_MODES.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
       </label>
       {brandMode === 'text' && (
         <label className="field brand">
-          <input id="brand" value={brand} maxLength={30} placeholder="Escribe tu marca" onChange={(e) => setBrand(e.target.value)} />
+          <input id="brand" value={brand} maxLength={30} placeholder={t('Escribe tu marca')} onChange={(e) => setBrand(e.target.value)} />
         </label>
       )}
       {isIdentityMode(brandMode) && (
         m ? (
-          <svg className="mark-preview" viewBox="0 0 44 8" role="img" aria-label="Así se verá abajo a la derecha">
+          <svg className="mark-preview" viewBox="0 0 44 8" role="img" aria-label={t('Así se verá abajo a la derecha')}>
             <rect x={0} y={0} width={44} height={8} fill="var(--pitch-out)" />
             <rect x={-1} y={-1} width={42} height={3.2} fill="var(--pitch)" stroke="rgba(255,255,255,.85)" strokeWidth={0.12} />
             <IdentityMark m={m} right={41.5} top={2.6} h={4.4} maxW={34} />
           </svg>
-        ) : <p className="muted small">{profile ? 'Rellena los datos de tu perfil para que aparezca.' : 'Todavía no tienes perfil. Pulsa «Crear mi identidad».'}</p>
+        ) : <p className="muted small">{profile ? t('Rellena los datos de tu perfil para que aparezca.') : t('Todavía no tienes perfil. Pulsa «Crear mi identidad».')}</p>
       )}
-      <p className="muted small">Sale pequeña y discreta abajo a la derecha, fuera del campo: en la pizarra, el proyector, las imágenes y los vídeos.</p>
+      <p className="muted small">{t('Sale pequeña y discreta abajo a la derecha, fuera del campo: en la pizarra, el proyector, las imágenes y los vídeos.')}</p>
     </>
   )
 }
@@ -1198,40 +1200,40 @@ function EndEditor({ end, setEnd, phrase, setPhrase, perVideo = false, profile }
     <div className="endcard">
       <label className="pick">
         <input type="checkbox" checked={end.on} onChange={(e) => setEnd({ on: e.target.checked })} />
-        <span>Mensaje final <span className="muted small">pantalla con tu frase, tu escudo y tu nombre al terminar el vídeo</span></span>
+        <span>{t('Mensaje final')}{' '}<span className="muted small">{t('pantalla con tu frase, tu escudo y tu nombre al terminar el vídeo')}</span></span>
       </label>
       {end.on && (
         <div className="endcard-body">
           <label className="stack">
-            <span className="muted small">{perVideo ? 'Frase de este vídeo' : 'Tu frase de siempre'}</span>
-            <textarea rows={2} maxLength={140} value={phrase} placeholder="Escribe tu frase o elige una guardada" onChange={(e) => setPhrase(e.target.value)} />
+            <span className="muted small">{perVideo ? t('Frase de este vídeo') : t('Tu frase de siempre')}</span>
+            <textarea rows={2} maxLength={140} value={phrase} placeholder={t('Escribe tu frase o elige una guardada')} onChange={(e) => setPhrase(e.target.value)} />
           </label>
-          {perVideo && phrase !== end.phrase && <p className="muted small">Este cambio solo vale para el próximo vídeo. Tu frase de siempre no cambia.</p>}
-          {!p && <p className="muted small">Sin frase no se añade la pantalla final.</p>}
+          {perVideo && phrase !== end.phrase && <p className="muted small">{t('Este cambio solo vale para el próximo vídeo. Tu frase de siempre no cambia.')}</p>}
+          {!p && <p className="muted small">{t('Sin frase no se añade la pantalla final.')}</p>}
           <div className="favs">
             {end.favorites.map((f) => (
               <span key={f} className={`fav${f === p ? ' on' : ''}`}>
                 <button onClick={() => setPhrase(f)}>{f}</button>
-                {!perVideo && <button className="x" aria-label={`Quitar «${f}» de favoritas`} onClick={() => setEnd({ favorites: end.favorites.filter((x) => x !== f) })}>✕</button>}
+                {!perVideo && <button className="x" aria-label={t('Quitar «{f}» de favoritas', { f })} onClick={() => setEnd({ favorites: end.favorites.filter((x) => x !== f) })}>✕</button>}
               </span>
             ))}
           </div>
-          {p && !isFav && <button onClick={() => setEnd({ favorites: [...end.favorites, p] })}>★ Guardar en favoritas</button>}
+          {p && !isFav && <button onClick={() => setEnd({ favorites: [...end.favorites, p] })}>{t('★ Guardar en favoritas')}</button>}
           <div className="pace">
-            <span>Duración</span>
-            <div className="seg" role="group" aria-label="Duración del mensaje">
-              {[3, 4, 5].map((n) => <button key={n} className={end.seconds === n ? 'on' : ''} onClick={() => setEnd({ seconds: n })}>{n} s</button>)}
+            <span>{t('Duración')}</span>
+            <div className="seg" role="group" aria-label={t('Duración del mensaje')}>
+              {[3, 4, 5].map((n) => <button key={n} className={end.seconds === n ? 'on' : ''} onClick={() => setEnd({ seconds: n })}>{n} {' '}{t('s')}</button>)}
             </div>
           </div>
           <div className="checks">
-            {([['crest', 'Escudo'], ['club', 'Equipo'], ['coach', 'Mi nombre'], ['slogan', 'Eslogan']] as const).map(([k, label]) => (
+            {([['crest', t('Escudo')], ['club', t('Equipo')], ['coach', t('Mi nombre')], ['slogan', t('Eslogan')]] as const).map(([k, label]) => (
               <label key={k} className="pick">
                 <input type="checkbox" checked={end[k]} onChange={(e) => setEnd({ [k]: e.target.checked })} />
                 <span>{label}</span>
               </label>
             ))}
           </div>
-          {!profile && <p className="muted small">Crea tu perfil en Mi identidad para añadir escudo, equipo y nombre.</p>}
+          {!profile && <p className="muted small">{t('Crea tu perfil en Mi identidad para añadir escudo, equipo y nombre.')}</p>}
         </div>
       )}
     </div>
@@ -1279,72 +1281,72 @@ function IdentitySheet({ store, setStore, brandMode, setBrandMode, brand, setBra
     const f = e.target.files?.[0]
     e.target.value = ''
     if (!f) return
-    try { update(await readCrest(f)) } catch (err) { onError(err instanceof Error ? err.message : 'No se pudo leer la imagen') }
+    try { update(await readCrest(f)) } catch (err) { onError(err instanceof Error ? err.message : t('No se pudo leer la imagen')) }
   }
   return (
-    <Sheet title="Mi identidad" onClose={onClose}>
-      <p className="muted small">Tu nombre, tu equipo y tu escudo en tus pizarras, imágenes y vídeos. Se guarda solo en este dispositivo: sin cuenta y sin internet.</p>
+    <Sheet title={t('Mi identidad')} onClose={onClose}>
+      <p className="muted small">{t('Tu nombre, tu equipo y tu escudo en tus pizarras, imágenes y vídeos. Se guarda solo en este dispositivo: sin cuenta y sin internet.')}</p>
       <section>
-        <h3>Perfiles</h3>
+        <h3>{t('Perfiles')}</h3>
         <div className="chips-row">
           {store.profiles.map((x) => (
             <button key={x.id} className={x.id === store.active ? 'on' : ''} onClick={() => pick(x.id)}>{profileLabel(x)}</button>
           ))}
-          <button className="primary" onClick={add}>+ Nuevo perfil</button>
+          <button className="primary" onClick={add}>{t('+ Nuevo perfil')}</button>
         </div>
       </section>
       {p && (
         <section className="idform">
           <label className="stack">
-            <span className="muted small">Nombre del entrenador</span>
-            <input id="id-coach" value={p.coach} maxLength={60} placeholder="Ej.: Jesús Cortinas" onChange={(e) => update({ coach: e.target.value })} />
+            <span className="muted small">{t('Nombre del entrenador')}</span>
+            <input id="id-coach" value={p.coach} maxLength={60} placeholder={t('Ej.: Jesús Cortinas')} onChange={(e) => update({ coach: e.target.value })} />
           </label>
           <label className="stack">
-            <span className="muted small">Cargo</span>
+            <span className="muted small">{t('Cargo')}</span>
             <select id="id-role" value={otherRole ? 'otro' : p.role} onChange={(e) => {
               if (e.target.value === 'otro') { setOtherRole(true); update({ role: '' }) } else { setOtherRole(false); update({ role: e.target.value }) }
             }}>
               {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-              <option value="otro">Otro…</option>
+              <option value="otro">{t('Otro…')}</option>
             </select>
           </label>
-          {otherRole && <input id="id-role-other" value={p.role} maxLength={40} placeholder="Escribe tu cargo" onChange={(e) => update({ role: e.target.value })} />}
+          {otherRole && <input id="id-role-other" value={p.role} maxLength={40} placeholder={t('Escribe tu cargo')} onChange={(e) => update({ role: e.target.value })} />}
           <label className="stack">
-            <span className="muted small">Club, equipo o escuela</span>
-            <input id="id-club" value={p.club} maxLength={60} placeholder="Ej.: Semillas Tuluá FC" onChange={(e) => update({ club: e.target.value })} />
+            <span className="muted small">{t('Club, equipo o escuela')}</span>
+            <input id="id-club" value={p.club} maxLength={60} placeholder={t('Ej.: Semillas Tuluá FC')} onChange={(e) => update({ club: e.target.value })} />
           </label>
           <div className="stack">
-            <span className="muted small">Escudo (PNG, JPG o WebP)</span>
+            <span className="muted small">{t('Escudo (PNG, JPG o WebP)')}</span>
             <div className="crest-row">
-              {p.crest ? <img className="crest" src={p.crest} alt="Escudo" /> : <span className="crest empty">Sin escudo</span>}
-              <button onClick={() => file.current?.click()}>{p.crest ? 'Cambiar' : 'Subir escudo'}</button>
-              {p.crest && <button onClick={() => update({ crest: undefined, crestRatio: undefined })}>Quitar</button>}
+              {p.crest ? <img className="crest" src={p.crest} alt={t('Escudo')} /> : <span className="crest empty">{t('Sin escudo')}</span>}
+              <button onClick={() => file.current?.click()}>{p.crest ? t('Cambiar') : t('Subir escudo')}</button>
+              {p.crest && <button onClick={() => update({ crest: undefined, crestRatio: undefined })}>{t('Quitar')}</button>}
               <input ref={file} id="id-crest" type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={onFile} />
             </div>
-            <span className="muted small">Mejor en PNG con fondo transparente. Se respeta la forma y la transparencia.</span>
+            <span className="muted small">{t('Mejor en PNG con fondo transparente. Se respeta la forma y la transparencia.')}</span>
           </div>
           <label className="stack">
-            <span className="muted small">Eslogan (opcional)</span>
-            <input id="id-slogan" value={p.slogan} maxLength={80} placeholder="Ej.: Formamos personas, formamos futbolistas" onChange={(e) => update({ slogan: e.target.value })} />
+            <span className="muted small">{t('Eslogan (opcional)')}</span>
+            <input id="id-slogan" value={p.slogan} maxLength={80} placeholder={t('Ej.: Formamos personas, formamos futbolistas')} onChange={(e) => update({ slogan: e.target.value })} />
           </label>
           {confirm ? (
             <div className="row-actions">
-              <button className="danger" onClick={remove}>Sí, eliminar «{profileLabel(p)}»</button>
-              <button onClick={() => setConfirm(false)}>Cancelar</button>
+              <button className="danger" onClick={remove}>{t('Sí, eliminar «{p}»', { p: profileLabel(p) })}</button>
+              <button onClick={() => setConfirm(false)}>{t('Cancelar')}</button>
             </div>
-          ) : <button onClick={() => setConfirm(true)}>Eliminar este perfil</button>}
+          ) : <button onClick={() => setConfirm(true)}>{t('Eliminar este perfil')}</button>}
         </section>
       )}
-      {!p && <p className="muted">Crea tu primer perfil con «+ Nuevo perfil». Ningún dato es obligatorio.</p>}
+      {!p && <p className="muted">{t('Crea tu primer perfil con «+ Nuevo perfil». Ningún dato es obligatorio.')}</p>}
       <section>
-        <h3>Qué se ve</h3>
+        <h3>{t('Qué se ve')}</h3>
         <BrandPicker brandMode={brandMode} setBrandMode={setBrandMode} brand={brand} setBrand={setBrand} profile={p} />
       </section>
       <section>
-        <h3>Mensaje final del vídeo</h3>
+        <h3>{t('Mensaje final del vídeo')}</h3>
         <EndEditor end={end} setEnd={setEnd} phrase={end.phrase} setPhrase={(v) => setEnd({ phrase: v })} profile={p} />
       </section>
-      <p className="muted small">La marca de TacticalPro y la tuya van por separado: el logo de TacticalPro solo sale si activas su cierre al exportar.</p>
+      <p className="muted small">{t('La marca de TacticalPro y la tuya van por separado: el logo de TacticalPro solo sale si activas su cierre al exportar.')}</p>
     </Sheet>
   )
 }
@@ -1404,29 +1406,29 @@ function Preview({ board, opts, vopts, setVopts, end, setEnd, brandMode, setBran
   }
   const fmt = (x: number) => `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, '0')}`
   return (
-    <div className="preview" role="dialog" aria-label="Vista previa del vídeo">
+    <div className="preview" role="dialog" aria-label={t('Vista previa del vídeo')}>
       <div className="preview-frame"><canvas ref={canvas} width={1280} height={720} /></div>
       <div className="preview-bar">
-        <button className="primary" onClick={toggle}>{paused ? '▶ Seguir' : '❚❚ Pausa'}</button>
-        <button onClick={() => seek(0)}>⟲ Inicio</button>
-        <button onClick={() => seek(Math.max(0, (rend.current?.animSeconds ?? 0) - 1.5))} disabled={!end.on && !vopts.outro}>Ver el final</button>
+        <button className="primary" onClick={toggle}>{paused ? t('▶ Seguir') : t('❚❚ Pausa')}</button>
+        <button onClick={() => seek(0)}>{t('⟲ Inicio')}</button>
+        <button onClick={() => seek(Math.max(0, (rend.current?.animSeconds ?? 0) - 1.5))} disabled={!end.on && !vopts.outro}>{t('Ver el final')}</button>
         <span className="muted small time">{fmt(info.t)} / {fmt(info.total)}</span>
       </div>
       <div className="preview-opts">
-        <label className="pick"><input type="checkbox" checked={vopts.big} onChange={(e) => setVopts({ big: e.target.checked })} /><span>Letra grande</span></label>
-        <label className="pick"><input type="checkbox" checked={!!vopts.full} onChange={(e) => setVopts({ full: e.target.checked })} /><span>Campo a todo el ancho</span></label>
-        <label className="pick"><input type="checkbox" checked={end.on} onChange={(e) => setEnd({ on: e.target.checked })} /><span>Mensaje final</span></label>
-        <label className="pick"><input type="checkbox" checked={vopts.outro} onChange={(e) => setVopts({ outro: e.target.checked })} /><span>Cierre TacticalPro</span></label>
+        <label className="pick"><input type="checkbox" checked={vopts.big} onChange={(e) => setVopts({ big: e.target.checked })} /><span>{t('Letra grande')}</span></label>
+        <label className="pick"><input type="checkbox" checked={!!vopts.full} onChange={(e) => setVopts({ full: e.target.checked })} /><span>{t('Campo a todo el ancho')}</span></label>
+        <label className="pick"><input type="checkbox" checked={end.on} onChange={(e) => setEnd({ on: e.target.checked })} /><span>{t('Mensaje final')}</span></label>
+        <label className="pick"><input type="checkbox" checked={vopts.outro} onChange={(e) => setVopts({ outro: e.target.checked })} /><span>{t('Cierre TacticalPro')}</span></label>
         <label className="pace">
-          <span>Marca</span>
-          <select value={brandMode} onChange={(e) => setBrandMode(e.target.value as BrandMode)} aria-label="Qué marca se ve">
+          <span>{t('Marca')}</span>
+          <select value={brandMode} onChange={(e) => setBrandMode(e.target.value as BrandMode)} aria-label={t('Qué marca se ve')}>
             {BRAND_MODES.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         </label>
       </div>
       <div className="preview-bar">
-        <button onClick={onClose}>Volver</button>
-        <button className="primary" onClick={onExport}>Exportar vídeo MP4</button>
+        <button onClick={onClose}>{t('Volver')}</button>
+        <button className="primary" onClick={onExport}>{t('Exportar vídeo MP4')}</button>
       </div>
     </div>
   )
@@ -1437,48 +1439,48 @@ function LookSheet({ look, setLook, onClose }: { look: Look; setLook: (p: Partia
     <svg viewBox="-6 -3.2 12 7.4" width="120" height="74" aria-hidden="true">
       <Markers />
       <rect x="-10" y="-10" width="20" height="20" fill="var(--pitch)" />
-      <TokenShape t={{ id: 'a', kind: 'player', team: 'home', label: '10', name: 'Martín', x: -2.6, y: -0.4 }} r={1.5} selected={false} upright={false} look={{ ...look, shape }} />
-      <TokenShape t={{ id: 'b', kind: 'player', team: 'away', label: '9', name: 'Rivas', x: 2.6, y: -0.4 }} r={1.5} selected={false} upright={false} look={{ ...look, shape }} />
+      <TokenShape t={{ id: 'a', kind: 'player', team: 'home', label: '10', name: t('Martín'), x: -2.6, y: -0.4 }} r={1.5} selected={false} upright={false} look={{ ...look, shape }} />
+      <TokenShape t={{ id: 'b', kind: 'player', team: 'away', label: '9', name: t('Rivas'), x: 2.6, y: -0.4 }} r={1.5} selected={false} upright={false} look={{ ...look, shape }} />
     </svg>
   )
   const swatches = (team: 'home' | 'away') => (
-    <div className="colors" role="group" aria-label={team === 'home' ? 'Color del local' : 'Color del rival'}>
+    <div className="colors" role="group" aria-label={team === 'home' ? t('Color del local') : t('Color del rival')}>
       {TEAM_COLORS.map((c) => (
         <button key={c} aria-label={`Color ${c}`} className={look[team] === c ? 'on' : ''} style={{ background: c }} onClick={() => setLook({ [team]: c })} />
       ))}
     </div>
   )
   return (
-    <Sheet title="Fichas" onClose={onClose}>
+    <Sheet title={t('Fichas')} onClose={onClose}>
       <section>
-        <h3>Forma</h3>
+        <h3>{t('Forma')}</h3>
         <div className="shapes">
           {(['pro', 'disc', 'shirt'] as TokenShapeKind[]).map((sh) => (
             <button key={sh} className={look.shape === sh ? 'on' : ''} onClick={() => setLook({ shape: sh })}>
               {preview(sh)}
-              <span>{sh === 'pro' ? 'Ficha pro' : sh === 'disc' ? 'Clásica' : 'Camiseta'}</span>
+              <span>{sh === 'pro' ? t('Ficha pro') : sh === 'disc' ? t('Clásica') : t('Camiseta')}</span>
             </button>
           ))}
         </div>
       </section>
       <section>
-        <h3>Mostrar</h3>
-        <div className="seg" role="group" aria-label="Qué mostrar">
+        <h3>{t('Mostrar')}</h3>
+        <div className="seg" role="group" aria-label={t('Qué mostrar')}>
           {(['number', 'name', 'both'] as TokenText[]).map((tx) => (
             <button key={tx} className={look.text === tx ? 'on' : ''} onClick={() => setLook({ text: tx })}>
-              {tx === 'number' ? 'Número' : tx === 'name' ? 'Nombre' : 'Número y nombre'}
+              {tx === 'number' ? t('Número') : tx === 'name' ? t('Nombre') : t('Número y nombre')}
             </button>
           ))}
         </div>
-        <p className="muted small">Para poner el nombre, toca un jugador en la pizarra y escríbelo en “Nombre”, junto al dorsal.</p>
+        <p className="muted small">{t('Para poner el nombre, toca un jugador en la pizarra y escríbelo en “Nombre”, junto al dorsal.')}</p>
       </section>
       <section>
-        <h3>Color del local</h3>
+        <h3>{t('Color del local')}</h3>
         {swatches('home')}
-        <h3>Color del rival</h3>
+        <h3>{t('Color del rival')}</h3>
         {swatches('away')}
       </section>
-      <p className="muted small">Se aplica a todas las pizarras, imágenes y vídeos.</p>
+      <p className="muted small">{t('Se aplica a todas las pizarras, imágenes y vídeos.')}</p>
     </Sheet>
   )
 }

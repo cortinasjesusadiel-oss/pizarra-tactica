@@ -1,4 +1,5 @@
 import { posAt, type Board, type Drawing, type Pt, type Token } from './model'
+import { t } from './i18n'
 
 // Posición continua de una ficha en el instante `s`, medido en pasos (1.5 = a mitad entre el paso 1 y el 2).
 // Los jugadores siguen una curva suave que pasa por todos los pasos (sin cambios bruscos de dirección):
@@ -38,9 +39,9 @@ export type Pace = { step: number; speed: Speed }
 export type Speed = 'lenta' | 'normal' | 'rapida'
 export const STEP_SECONDS = [5, 8, 10]
 export const SPEEDS: { id: Speed; name: string; move: number }[] = [
-  { id: 'lenta', name: 'Lenta', move: 3.6 },
-  { id: 'normal', name: 'Normal', move: 2.6 },
-  { id: 'rapida', name: 'Rápida', move: 1.7 },
+  { id: 'lenta', name: t('Lenta'), move: 3.6 },
+  { id: 'normal', name: t('Normal'), move: 2.6 },
+  { id: 'rapida', name: t('Rápida'), move: 1.7 },
 ]
 export const DEFAULT_PACE: Pace = { step: 5, speed: 'normal' }
 
