@@ -231,3 +231,10 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 .tools-end { display: flex; gap: 8px; align-items: center; margin-left: auto; flex: none; padding-left: 8px; }
 .label-sheet textarea { width: 100%; resize: vertical; font-size: 16px; }
 .board g.label { cursor: grab; }
+.label-preview { align-self: center; max-width: 100%; padding: 6px 14px; border-radius: 8px; font-family: Montserrat, system-ui, sans-serif; font-weight: 700; text-align: center; white-space: pre-wrap; word-break: break-word; line-height: 1.25; background-image: none; outline: 1px dashed var(--line); outline-offset: 4px; }
+.label-opts { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; align-items: center; }
+.label-opts > span { font-size: 13px; color: var(--muted, #9bb0a3); }
+.label-opts .colors { display: flex; flex-wrap: wrap; gap: 6px; }
+.label-opts .colors button.none { background: repeating-linear-gradient(45deg, transparent 0 4px, rgba(255,255,255,.35) 4px 6px); }
+.label-opts .seg { flex-wrap: wrap; }
+@media (max-width: 520px) { .label-opts { grid-template-columns: 1fr; } }

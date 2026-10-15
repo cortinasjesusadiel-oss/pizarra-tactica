@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { COLORS, DEFAULT_LOOK, lobAt, lobControl, type Drawing, type Look, type Pt, type Token } from './model'
+import { COLORS, DEFAULT_LOOK, LABEL_DEFAULT_BG, lobAt, lobControl, type Drawing, type Look, type Pt, type Token } from './model'
 
 export function Markers() {
   return (
@@ -186,15 +186,18 @@ function lobArrow(a: Pt, b: Pt, sw: number): { body: string; head: string } {
 function TextLabel({ d, opacity, upright }: { d: Drawing; opacity: number; upright?: boolean }) {
   const lines = (d.text ?? '').split('\n').map((l) => l.trim()).filter(Boolean)
   if (!lines.length || opacity < 0.01) return null
-  const fs = 2.1, lh = fs * 1.25
+  const fs = d.fs ?? 2.1, lh = fs * 1.25
+  const bg = d.bg ?? LABEL_DEFAULT_BG
   const w = Math.max(...lines.map((l) => l.length)) * fs * 0.56 + fs * 1.2
   const h = lines.length * lh + fs * 0.7
   const [x, y] = d.points[0]
   return (
     <g data-draw={d.id} opacity={opacity} transform={`translate(${x} ${y})${upright ? ' rotate(-90)' : ''}`} className="label">
-      <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={0.8} fill="#0b1510" fillOpacity={0.78} stroke={d.color} strokeWidth={0.18} />
+      {bg === 'none'
+        ? <rect x={-w / 2} y={-h / 2} width={w} height={h} fill="#000" fillOpacity={0.001} />
+        : <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={fs * 0.38} fill={bg} fillOpacity={bg === LABEL_DEFAULT_BG ? 0.78 : 0.95} stroke={d.bg ? 'none' : d.color} strokeWidth={0.18} />}
       {lines.map((l, i) => (
-        <text key={i} x={0} y={-h / 2 + fs * 0.35 + lh * (i + 0.5)} textAnchor="middle" dominantBaseline="central" fontSize={fs} fontWeight={700} fill={d.color} fontFamily="Montserrat, system-ui, sans-serif">{l}</text>
+        <text key={i} x={0} y={-h / 2 + fs * 0.35 + lh * (i + 0.5)} textAnchor="middle" dominantBaseline="central" fontSize={fs} fontWeight={700} fill={d.color} stroke={bg === 'none' ? '#000' : 'none'} strokeOpacity={0.55} strokeWidth={fs * 0.09} paintOrder="stroke" fontFamily="Montserrat, system-ui, sans-serif">{l}</text>
       ))}
     </g>
   )

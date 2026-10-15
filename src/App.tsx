@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MOVES_BALL, MOVES_PLAYER, STRAIGHT,
   COLORS, DEFAULT_COLOR, DEFAULT_LOOK, TEAM_COLORS, type Look, type TokenShapeKind, type TokenText, EQUIPMENT, KIND_NAME, PITCH, TOOL_NAME, ballAt, item, player, posAt, uid,
   type Board, type TokenKind, type DrawTool, type Drawing, type PitchKind, type Pt, type Team, type Token, type Tool,
+  LABEL_BG_COLORS, LABEL_DEFAULT_BG, LABEL_SIZES, LABEL_TEXT_COLORS,
 } from './model'
 import { Equipment, Markers, TokenShape } from './Shapes'
 import { Scene } from './Scene'
@@ -31,8 +32,19 @@ type Action =
   | { kind: 'move'; id: string; dx: number; dy: number; ball?: { id: string; ox: number; oy: number } }
   | { kind: 'draw'; drawing: Drawing }
   | { kind: 'erase' }
-  | { kind: 'moveText'; id: string; dx: number; dy: number }
+  | { kind: 'moveText'; id: string; dx: number; dy: number; edit?: Drawing }
   | { kind: 'none' }
+
+// Letrero que se está escribiendo o editando, con su estilo.
+type LabelEdit = { id: string; p: Pt; text: string; color: string; bg: string; fs: number }
+const LABEL_STYLE = 'pizarra.letrero'
+// Un letrero nuevo usa el último estilo elegido.
+function newLabel(p: Pt): LabelEdit {
+  let st: Partial<LabelEdit> = {}
+  try { st = JSON.parse(localStorage.getItem(LABEL_STYLE) ?? '{}') } catch { /* sin almacenamiento */ }
+  return { id: '', p, text: '', color: st.color ?? '#ffffff', bg: st.bg ?? LABEL_DEFAULT_BG, fs: st.fs ?? 2.1 }
+}
+const editLabel = (d: Drawing): LabelEdit => ({ id: d.id, p: d.points[0], text: d.text ?? '', color: d.color, bg: d.bg ?? LABEL_DEFAULT_BG, fs: d.fs ?? 2.1 })
 
 function hint(): boolean {
   try { return !localStorage.getItem('pizarra.ayuda.v2') } catch { return true }
@@ -56,7 +68,7 @@ export default function App() {
   const [selected, setSelected] = useState<string | null>(null)
   const [live, setLive] = useState<Drawing | null>(null)
   // Letrero que se está escribiendo o editando (id vacío = nuevo).
-  const [label, setLabel] = useState<{ id: string; p: Pt; text: string } | null>(null)
+  const [label, setLabel] = useState<LabelEdit | null>(null)
   const [penSeen, setPenSeen] = useState(false)
   const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | 'learn' | 'look' | 'identity' | null>(null)
   const [showHint, setShowHint] = useState(hint)
@@ -443,7 +455,14 @@ export default function App() {
     const allDrawings = [...board.drawings, ...(board.frames?.[cur]?.drawings ?? [])]
     if (tool === 'text' && !(isPen && (e.buttons & 2 || e.buttons & 32))) {
       const d = labelId ? allDrawings.find((x) => x.id === labelId) : undefined
-      setLabel(d ? { id: d.id, p: d.points[0], text: d.text ?? '' } : { id: '', p, text: '' })
+      if (!d) { setLabel(newLabel(p)); return }
+      // Sobre un letrero: arrastrarlo lo recoloca; tocarlo sin moverlo lo abre para editarlo.
+      pointer.current = e.pointerId
+      try { svg.current?.setPointerCapture(e.pointerId) } catch { /* puntero ya liberado */ }
+      past.current.push(board)
+      future.current = []
+      startSnap.current = JSON.stringify(board)
+      action.current = { kind: 'moveText', id: d.id, dx: d.points[0][0] - p[0], dy: d.points[0][1] - p[1], edit: d }
       return
     }
     // Botón lateral del S Pen (2) o goma del lápiz (32): borrar.
@@ -530,11 +549,12 @@ export default function App() {
   const saveLabel = (text: string, remove = false) => {
     if (!label) return
     const txt = text.replace(/\r/g, '').trim()
+    try { localStorage.setItem(LABEL_STYLE, JSON.stringify({ color: label.color, bg: label.bg, fs: label.fs })) } catch { /* sin almacenamiento */ }
     if (label.id) {
-      const ed = (l: Drawing[]) => (remove || !txt ? l.filter((d) => d.id !== label.id) : l.map((d) => (d.id === label.id ? { ...d, text: txt } : d)))
+      const ed = (l: Drawing[]) => (remove || !txt ? l.filter((d) => d.id !== label.id) : l.map((d) => (d.id === label.id ? { ...d, text: txt, color: label.color, bg: label.bg, fs: label.fs } : d)))
       commit((b) => ({ ...b, drawings: ed(b.drawings), frames: b.frames?.map((f) => ({ ...f, drawings: ed(f.drawings) })) }))
     } else if (txt && !remove) {
-      const d: Drawing = { id: uid(), type: 'text', color: color ?? DEFAULT_COLOR.text, width: 0.5, points: [label.p], text: txt }
+      const d: Drawing = { id: uid(), type: 'text', color: label.color, bg: label.bg, fs: label.fs, width: 0.5, points: [label.p], text: txt }
       commit((b) => (b.frames
         ? { ...b, frames: b.frames.map((f, i) => (i === cur ? { ...f, drawings: [...f.drawings, d] } : f)) }
         : { ...b, drawings: [...b.drawings, d] }))
@@ -559,7 +579,10 @@ export default function App() {
           ? { ...b, frames: b.frames.map((f, i) => (i === cur ? { ...f, drawings: [...f.drawings, a.drawing] } : f)) }
           : { ...b, drawings: [...b.drawings, a.drawing] }))
       } else past.current.pop()
-    } else if (JSON.stringify(board) === startSnap.current) past.current.pop()
+    } else if (JSON.stringify(board) === startSnap.current) {
+      past.current.pop()
+      if (a.kind === 'moveText' && a.edit) setLabel(editLabel(a.edit))
+    }
     force((x) => x + 1)
   }
 
@@ -679,7 +702,22 @@ export default function App() {
                 <button type="button" onClick={() => setLabel(null)}>{t('Cancelar')}</button>
               </div>
               <textarea id="label-text" autoFocus rows={3} maxLength={120} placeholder={t('Escribe el mensaje, por ejemplo: ¡Presión aquí!')} value={label.text} onChange={(e) => setLabel({ ...label, text: e.target.value })} />
-              <p className="muted small">{t('Sale en la pizarra, el proyector, las imágenes y los vídeos. Para moverlo, arrástralo con «Mover». Usa el color de abajo antes de tocar el campo.')}</p>
+              <div className="label-preview" style={{ background: label.bg === 'none' ? 'transparent' : label.bg, color: label.color, fontSize: `${label.fs * 7}px`, border: label.bg === LABEL_DEFAULT_BG ? `1px solid ${label.color}` : undefined }}>{label.text.trim() || t('Vista previa')}</div>
+              <div className="label-opts">
+                <span>{t('Color de letra')}</span>
+                <div className="colors" role="group" aria-label={t('Color de letra')}>
+                  {LABEL_TEXT_COLORS.map((c) => <button type="button" key={c} aria-label={`${t('Color de letra')} ${c}`} className={label.color === c ? 'on' : ''} style={{ background: c }} onClick={() => setLabel({ ...label, color: c })} />)}
+                </div>
+                <span>{t('Color de fondo')}</span>
+                <div className="colors" role="group" aria-label={t('Color de fondo')}>
+                  {LABEL_BG_COLORS.map((c) => <button type="button" key={c} aria-label={c === 'none' ? t('Sin fondo') : `${t('Color de fondo')} ${c}`} title={c === 'none' ? t('Sin fondo') : undefined} className={(label.bg === c ? 'on' : '') + (c === 'none' ? ' none' : '')} style={c === 'none' ? undefined : { background: c }} onClick={() => setLabel({ ...label, bg: c })} />)}
+                </div>
+                <span>{t('Tamaño de letra')}</span>
+                <div className="seg" role="group" aria-label={t('Tamaño de letra')}>
+                  {LABEL_SIZES.map((s) => <button type="button" key={s.fs} className={label.fs === s.fs ? 'on' : ''} onClick={() => setLabel({ ...label, fs: s.fs })}>{t(s.name)}</button>)}
+                </div>
+              </div>
+              <p className="muted small">{t('Sale en la pizarra, el proyector, las imágenes y los vídeos. Para moverlo, arrástralo con el dedo o el lápiz; tócalo sin moverlo para editarlo.')}</p>
               <div className="backup-actions">
                 <button className="primary" type="submit">{label.id ? t('Guardar') : t('Poner en el campo')}</button>
                 {label.id && <button type="button" className="danger" onClick={() => saveLabel('', true)}>{t('Quitar letrero')}</button>}

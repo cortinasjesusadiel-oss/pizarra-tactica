@@ -55,7 +55,15 @@ export interface Drawing {
   points: Pt[]
   // Solo en los letreros (tipo 'text'): lo que pone. Se coloca en points[0].
   text?: string
+  // Letreros: color del fondo ('none' = sin fondo) y tamaño de la letra en metros del campo.
+  bg?: string
+  fs?: number
 }
+
+export const LABEL_DEFAULT_BG = '#0b1510'
+export const LABEL_SIZES = [{ fs: 1.5, name: 'Pequeña' }, { fs: 2.1, name: 'Mediana' }, { fs: 3, name: 'Grande' }, { fs: 4.2, name: 'Muy grande' }]
+export const LABEL_TEXT_COLORS = ['#ffffff', '#ffd23f', '#ff6b5e', '#5bb6ff', '#4fd18b', '#ff9f1c', '#1d1d1f']
+export const LABEL_BG_COLORS = [LABEL_DEFAULT_BG, '#ffffff', '#ffd23f', '#ff6b5e', '#5bb6ff', '#00995e', '#1d1d1f', 'none']
 
 // Un paso de una animación: solo guarda las fichas que se mueven en ese paso
 // y las flechas que explican lo que va a pasar a continuación.
