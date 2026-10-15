@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { PITCH, type PitchKind } from './model'
 import { LOGO, LOGO_RATIO } from './brandLogo'
+import type { LineKind, Mark } from './identity'
 
 const CHALK = 'rgba(255,255,255,.92)'
 const L = { fill: 'none', stroke: CHALK, strokeWidth: 0.22 }
@@ -45,7 +46,8 @@ function Zones({ kind, w, h }: { kind: PitchKind; w: number; h: number }) {
 // Césped con corte profesional: franjas a lo largo, franjas suaves a lo ancho (efecto damero) y viñeta de luz.
 // Marca de agua pequeña y transparente en el margen inferior derecho, fuera de las líneas del campo:
 // `brand` = 'logo' para el logo del autor, otro texto para escribirlo, o nada para no poner marca.
-export const Pitch = memo(function Pitch({ kind, zones, brand }: { kind: PitchKind; zones?: boolean; brand?: string }) {
+// `ident` = la identidad del entrenador (escudo, equipo, nombre, eslogan), en el mismo sitio.
+export const Pitch = memo(function Pitch({ kind, zones, brand, ident }: { kind: PitchKind; zones?: boolean; brand?: string; ident?: Mark | null }) {
   const { w, h } = PITCH[kind]
   const stripeW = kind === 'grid' ? 5 : 105 / 18
   const stripes = Math.ceil(w / stripeW)
@@ -79,6 +81,7 @@ export const Pitch = memo(function Pitch({ kind, zones, brand }: { kind: PitchKi
       {brand && brand !== 'logo' && (
         <text x={w} y={h + 2.05} textAnchor="end" fontSize={1.2} fontWeight={800} letterSpacing={0.12} fill="#fff" opacity={0.3} fontFamily="system-ui, sans-serif">{brand}</text>
       )}
+      {ident && <IdentityMark m={ident} right={w} top={h + 0.25} h={2.5} maxW={w * 0.6} />}
       <rect x={0} y={0} width={w} height={h} {...L} />
       {kind === 'full' && (
         <>
@@ -103,3 +106,37 @@ export const Pitch = memo(function Pitch({ kind, zones, brand }: { kind: PitchKi
     </g>
   )
 })
+
+const WEIGHT: Record<LineKind, number> = { club: 800, coach: 700, slogan: 600 }
+const SIZES = [[0.36], [0.32, 0.25], [0.27, 0.21, 0.2]]
+
+// La identidad del entrenador en el margen de abajo a la derecha, fuera del campo: el escudo y, a su izquierda,
+// el texto. Si el texto es muy largo se hace más pequeño y, si aun así no cabe, se corta con «…».
+export function IdentityMark({ m, right, top, h, maxW }: { m: Mark; right: number; top: number; h: number; maxW: number }) {
+  const cw = m.crest ? Math.min(h * m.crestRatio, h * 2) : 0
+  const x = m.crest ? right - cw - h * 0.25 : right
+  const room = maxW - (right - x)
+  const sizes = SIZES[Math.min(m.lines.length, 3) - 1] ?? []
+  // Ancho aproximado de Montserrat en negrita: 0,62 veces la altura de la letra por carácter.
+  const lines = m.lines.slice(0, 3).map((l, i) => {
+    let size = sizes[i] * h
+    let text = l.text
+    const est = (t: string, s: number) => t.length * s * 0.62
+    if (est(text, size) > room) size = Math.max(size * 0.6, room / (text.length * 0.62))
+    if (est(text, size) > room) text = text.slice(0, Math.max(1, Math.floor(room / (size * 0.62)) - 1)).trimEnd() + '…'
+    return { ...l, size, text }
+  })
+  const total = lines.reduce((a, l) => a + l.size * 1.22, 0)
+  let y = top + h / 2 - total / 2
+  return (
+    <g opacity={0.6} pointerEvents="none">
+      {m.crest && <image href={m.crest} x={right - cw} y={top + (h - cw / m.crestRatio) / 2} width={cw} height={cw / m.crestRatio} preserveAspectRatio="xMidYMid meet" />}
+      {lines.map((l, i) => {
+        y += l.size * 1.22
+        return (
+          <text key={i} x={x} y={y - l.size * 0.3} textAnchor="end" fontSize={l.size} fontWeight={WEIGHT[l.kind]} fill="#fff" opacity={i === 0 ? 1 : 0.85} fontFamily="Montserrat, system-ui, sans-serif">{l.text}</text>
+        )
+      })}
+    </g>
+  )
+}

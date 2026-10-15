@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   COLORS, DEFAULT_COLOR, DEFAULT_LOOK, TEAM_COLORS, type Look, type TokenShapeKind, type TokenText, EQUIPMENT, KIND_NAME, PITCH, TOOL_NAME, ballAt, item, player, posAt, uid,
   type Board, type TokenKind, type DrawTool, type Drawing, type PitchKind, type Pt, type Team, type Token, type Tool,
@@ -14,6 +14,12 @@ import { TIPS } from './tips'
 import tpSymbol from './tpSymbol.png'
 import { GLOSSARY, LESSONS } from './fundamentos'
 import { deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay } from './storage'
+import {
+  BRAND_MODES, ROLES, endFor, isIdentityMode, loadEnd, loadIdentity, markFor, newProfile, profileLabel, readCrest, saveEnd, saveIdentity,
+  type BrandMode, type EndCard, type IdentityStore, type Profile,
+} from './identity'
+import { IdentityMark } from './Pitch'
+import type { ExportOpts, Renderer } from './exportVideo'
 
 const PAD = 3
 const DRAW_TOOLS: DrawTool[] = ['pass', 'run', 'dribble', 'zone', 'focus', 'free']
@@ -44,7 +50,7 @@ export default function App() {
   const [selected, setSelected] = useState<string | null>(null)
   const [live, setLive] = useState<Drawing | null>(null)
   const [penSeen, setPenSeen] = useState(false)
-  const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | 'learn' | 'look' | null>(null)
+  const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | 'learn' | 'look' | 'identity' | null>(null)
   const [showHint, setShowHint] = useState(hint)
   const [toast, setToast] = useState<string | null>(null)
   const [zones, setZones] = useState(() => { try { return localStorage.getItem('pizarra.zonas') === '1' } catch { return false } })
@@ -231,6 +237,22 @@ export default function App() {
   const setBrandMode = (m: BrandMode) => { setBrandModeState(m); try { localStorage.setItem('pizarra.marca.tipo', m) } catch { /* sin almacenamiento */ } }
   const mark = brandMode === 'logo' ? 'logo' : brandMode === 'text' ? brand.trim() || undefined : undefined
 
+  // Mi identidad: perfiles del entrenador (nombre, cargo, club, escudo, eslogan) y el mensaje final de los vídeos.
+  const [idStore, setIdStoreState] = useState<IdentityStore>(loadIdentity)
+  const setIdStore = (f: (s: IdentityStore) => IdentityStore) => setIdStoreState((s) => {
+    const next = f(s)
+    if (!saveIdentity(next)) setToast('No se pudo guardar en el dispositivo: prueba con un escudo más ligero')
+    return next
+  })
+  const profile = idStore.profiles.find((p) => p.id === idStore.active) ?? null
+  const ident = useMemo(() => (isIdentityMode(brandMode) ? markFor(brandMode, profile) : null), [brandMode, profile])
+  const [endCard, setEndState] = useState<EndCard>(loadEnd)
+  const setEnd = (patch: Partial<EndCard>) => setEndState((e) => { const next = { ...e, ...patch }; saveEnd(next); return next })
+  // La frase se puede cambiar solo para el próximo vídeo sin tocar la guardada.
+  const [oncePhrase, setOncePhrase] = useState<string | null>(null)
+  const endView = useMemo(() => endFor(endCard, profile, oncePhrase ?? endCard.phrase), [endCard, profile, oncePhrase])
+  const [preview, setPreview] = useState(false)
+
   // Exportar: los vídeos se crean fotograma a fotograma; al terminar se ofrece compartir (WhatsApp, etc.) o guardar.
   const [ready, setReady] = useState<File[] | null>(null)
   const [progressLabel, setProgressLabel] = useState('')
@@ -243,6 +265,7 @@ export default function App() {
     try { localStorage.setItem('pizarra.video', JSON.stringify(next)) } catch { /* sin almacenamiento */ }
     return next
   })
+  const exportOpts: ExportOpts = useMemo(() => ({ zones, brand: mark, look, pace, ...vopts, ident, end: endView }), [zones, mark, look, pace, vopts, ident, endView])
   const runExport = async (items: { name: string; board: Board }[], image = false) => {
     if (video !== null || !items.length) return
     stopAnim()
@@ -250,13 +273,14 @@ export default function App() {
     setVideo(0)
     try {
       const ex = await import('./exportVideo')
-      const opts = { zones, brand: mark, look, pace, ...vopts }
+      const opts = exportOpts
       let files: File[]
       if (image) files = [await ex.exportImage(items[0].board, { ...opts, s: cur })]
       else if (items.length === 1 && items[0].board.frames) {
         const res = await ex.exportVideo(items[0].board, { ...opts, onProgress: setVideo })
         if (res === 'unsupported') { setToast('Este navegador no puede crear vídeo. Prueba con Chrome actualizado.'); return }
         files = [res.file]
+        setOncePhrase(null)
       } else {
         let idx = 0
         files = await ex.exportMany(items, {
@@ -555,6 +579,7 @@ export default function App() {
         <button onClick={() => setSheet('sessions')}>Sesiones</button>
         <button onClick={() => setSheet('tips')}>Consejos</button>
         <button onClick={() => setSheet('look')}>Fichas</button>
+        <button onClick={() => setSheet('identity')}>Mi identidad</button>
         <button className={zones ? 'toggle on' : 'toggle'} onClick={toggleZones} aria-pressed={zones}>Zonas</button>
         <span className="sep" />
         <button className="chip home" onClick={() => addToken('home')} aria-label="Añadir jugador local">+ Local</button>
@@ -582,7 +607,7 @@ export default function App() {
         >
           <Markers />
           <g ref={layer} transform={vertical ? `translate(${H} 0) rotate(90)` : undefined}>
-            <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} look={look} upright={vertical} selected={selected} live={live} ghost={anim === null && !playing} />
+            <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} ident={ident} look={look} upright={vertical} selected={selected} live={live} ghost={anim === null && !playing} />
           </g>
         </svg>
         {frames && frames[shown].note && !showHint && (
@@ -823,12 +848,47 @@ export default function App() {
           setBrand={setBrand}
           brandMode={brandMode}
           setBrandMode={setBrandMode}
+          profile={profile}
+          onIdentity={() => setSheet('identity')}
+          end={endCard}
+          setEnd={setEnd}
+          phrase={oncePhrase ?? endCard.phrase}
+          setPhrase={setOncePhrase}
+          onPreview={() => { setSheet(null); setPreview(true) }}
           onClose={() => setSheet(null)}
           onImage={() => runExport([{ name: 'pizarra', board }], true)}
           onVideo={doVideo}
           onMany={runExport}
           vopts={vopts}
           setVopts={setVopts}
+        />
+      )}
+      {sheet === 'identity' && (
+        <IdentitySheet
+          store={idStore}
+          setStore={setIdStore}
+          brandMode={brandMode}
+          setBrandMode={setBrandMode}
+          brand={brand}
+          setBrand={setBrand}
+          end={endCard}
+          setEnd={setEnd}
+          onError={setToast}
+          onClose={() => setSheet(null)}
+        />
+      )}
+      {preview && frames && (
+        <Preview
+          board={board}
+          opts={exportOpts}
+          vopts={vopts}
+          setVopts={setVopts}
+          end={endCard}
+          setEnd={setEnd}
+          brandMode={brandMode}
+          setBrandMode={setBrandMode}
+          onClose={() => setPreview(false)}
+          onExport={() => { setPreview(false); doVideo() }}
         />
       )}
       {sheet === 'plays' && <PlaysSheet board={board} onOpen={(b) => { load(b); setSheet(null) }} onClose={() => setSheet(null)} onSaved={() => setToast('Jugada guardada')} />}
@@ -843,7 +903,7 @@ export default function App() {
           )}
           <svg viewBox={`${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`} className="present-board">
             <Markers />
-            <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} look={look} />
+            <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} ident={ident} look={look} />
           </svg>
           {frames && <button className="present-zone left" onClick={prevStep} aria-label="Paso anterior" />}
           {frames && <button className="present-zone right" onClick={nextStep} aria-label="Paso siguiente" />}
@@ -933,11 +993,9 @@ function ToolIcon({ t }: { t: Tool }) {
   )
 }
 
-type BrandMode = 'logo' | 'text' | 'none'
-
 type VideoOpts = { big: boolean; outro: boolean }
 
-function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, onClose, onImage, onVideo, onMany, vopts, setVopts }: {
+function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, profile, onIdentity, end, setEnd, phrase, setPhrase, onPreview, onClose, onImage, onVideo, onMany, vopts, setVopts }: {
   vopts: VideoOpts
   setVopts: (p: Partial<VideoOpts>) => void
   hasFrames: boolean
@@ -945,6 +1003,13 @@ function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, onCl
   setBrand: (v: string) => void
   brandMode: BrandMode
   setBrandMode: (m: BrandMode) => void
+  profile: Profile | null
+  onIdentity: () => void
+  end: EndCard
+  setEnd: (p: Partial<EndCard>) => void
+  phrase: string
+  setPhrase: (v: string) => void
+  onPreview: () => void
   onClose: () => void
   onImage: () => void
   onVideo: () => void
@@ -972,7 +1037,14 @@ function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, onCl
         <div className="row-actions">
           <button onClick={onImage}>Imagen PNG</button>
           <button onClick={onVideo} disabled={!hasFrames}>Vídeo MP4</button>
+          <button onClick={onPreview} disabled={!hasFrames}>Vista previa</button>
         </div>
+        {!hasFrames && <p className="muted small">El vídeo y la vista previa necesitan una jugada con pasos (pulsa + Paso).</p>}
+      </section>
+      <section>
+        <h3>Mi identidad</h3>
+        <BrandPicker brandMode={brandMode} setBrandMode={setBrandMode} brand={brand} setBrand={setBrand} profile={profile} />
+        <button className="wide" onClick={onIdentity}>{profile ? `Editar mi identidad · ${profileLabel(profile)}` : 'Crear mi identidad'}</button>
       </section>
       <section>
         <h3>Opciones del vídeo</h3>
@@ -980,9 +1052,10 @@ function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, onCl
           <input type="checkbox" checked={vopts.big} onChange={(e) => setVopts({ big: e.target.checked })} />
           <span>Letra grande <span className="muted small">para verlo en el móvil, WhatsApp o redes</span></span>
         </label>
+        <EndEditor end={end} setEnd={setEnd} phrase={phrase} setPhrase={setPhrase} perVideo profile={profile} />
         <label className="pick">
           <input type="checkbox" checked={vopts.outro} onChange={(e) => setVopts({ outro: e.target.checked })} />
-          <span>Pantalla final con el logo <span className="muted small">TacticalPro · Aprende · Planifica · Entrena</span></span>
+          <span>Cierre con el logo de TacticalPro <span className="muted small">Aprende · Planifica · Entrena</span></span>
         </label>
       </section>
       <section>
@@ -1007,24 +1080,292 @@ function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, onCl
           {picked.length ? `Exportar ${picked.length} seleccionada${picked.length > 1 ? 's' : ''}` : 'Elige al menos una'}
         </button>
       </section>
-      <section>
-        <h3>Tu marca</h3>
-        <div className="seg" role="group" aria-label="Tipo de marca">
-          {(['logo', 'text', 'none'] as BrandMode[]).map((m) => (
-            <button key={m} className={brandMode === m ? 'on' : ''} onClick={() => setBrandMode(m)}>
-              {m === 'logo' ? 'Mi logo' : m === 'text' ? 'Texto' : 'Sin marca'}
-            </button>
-          ))}
-        </div>
-        {brandMode === 'text' && (
-          <label className="field brand">
-            <input id="brand" value={brand} maxLength={30} placeholder="Escribe tu marca" onChange={(e) => setBrand(e.target.value)} />
-          </label>
-        )}
-        <p className="muted small">Aparece pequeña y transparente en el margen de abajo a la derecha, fuera de las líneas del campo, en la pizarra, las imágenes y los vídeos.</p>
-      </section>
       <p className="muted small">Versión {__BUILD__}</p>
     </Sheet>
+  )
+}
+
+// Qué marca se ve abajo a la derecha. Las opciones de siempre (logo, texto, sin marca) siguen igual.
+function BrandPicker({ brandMode, setBrandMode, brand, setBrand, profile }: {
+  brandMode: BrandMode
+  setBrandMode: (m: BrandMode) => void
+  brand: string
+  setBrand: (v: string) => void
+  profile: Profile | null
+}) {
+  const m = isIdentityMode(brandMode) ? markFor(brandMode, profile) : null
+  return (
+    <>
+      <label className="pace field-full">
+        <span>Se ve</span>
+        <select value={brandMode} onChange={(e) => setBrandMode(e.target.value as BrandMode)} aria-label="Qué marca se ve">
+          {BRAND_MODES.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+        </select>
+      </label>
+      {brandMode === 'text' && (
+        <label className="field brand">
+          <input id="brand" value={brand} maxLength={30} placeholder="Escribe tu marca" onChange={(e) => setBrand(e.target.value)} />
+        </label>
+      )}
+      {isIdentityMode(brandMode) && (
+        m ? (
+          <svg className="mark-preview" viewBox="0 0 44 8" role="img" aria-label="Así se verá abajo a la derecha">
+            <rect x={0} y={0} width={44} height={8} fill="var(--pitch-out)" />
+            <rect x={-1} y={-1} width={42} height={3.2} fill="var(--pitch)" stroke="rgba(255,255,255,.85)" strokeWidth={0.12} />
+            <IdentityMark m={m} right={41.5} top={2.6} h={4.4} maxW={34} />
+          </svg>
+        ) : <p className="muted small">{profile ? 'Rellena los datos de tu perfil para que aparezca.' : 'Todavía no tienes perfil. Pulsa «Crear mi identidad».'}</p>
+      )}
+      <p className="muted small">Sale pequeña y discreta abajo a la derecha, fuera del campo: en la pizarra, el proyector, las imágenes y los vídeos.</p>
+    </>
+  )
+}
+
+// Mensaje final del vídeo. En Exportar la frase se puede cambiar solo para ese vídeo; en Mi identidad se elige la de siempre.
+function EndEditor({ end, setEnd, phrase, setPhrase, perVideo = false, profile }: {
+  end: EndCard
+  setEnd: (p: Partial<EndCard>) => void
+  phrase: string
+  setPhrase: (v: string) => void
+  perVideo?: boolean
+  profile: Profile | null
+}) {
+  const p = phrase.trim()
+  const isFav = end.favorites.includes(p)
+  return (
+    <div className="endcard">
+      <label className="pick">
+        <input type="checkbox" checked={end.on} onChange={(e) => setEnd({ on: e.target.checked })} />
+        <span>Mensaje final <span className="muted small">pantalla con tu frase, tu escudo y tu nombre al terminar el vídeo</span></span>
+      </label>
+      {end.on && (
+        <div className="endcard-body">
+          <label className="stack">
+            <span className="muted small">{perVideo ? 'Frase de este vídeo' : 'Tu frase de siempre'}</span>
+            <textarea rows={2} maxLength={140} value={phrase} placeholder="Escribe tu frase o elige una guardada" onChange={(e) => setPhrase(e.target.value)} />
+          </label>
+          {perVideo && phrase !== end.phrase && <p className="muted small">Este cambio solo vale para el próximo vídeo. Tu frase de siempre no cambia.</p>}
+          {!p && <p className="muted small">Sin frase no se añade la pantalla final.</p>}
+          <div className="favs">
+            {end.favorites.map((f) => (
+              <span key={f} className={`fav${f === p ? ' on' : ''}`}>
+                <button onClick={() => setPhrase(f)}>{f}</button>
+                {!perVideo && <button className="x" aria-label={`Quitar «${f}» de favoritas`} onClick={() => setEnd({ favorites: end.favorites.filter((x) => x !== f) })}>✕</button>}
+              </span>
+            ))}
+          </div>
+          {p && !isFav && <button onClick={() => setEnd({ favorites: [...end.favorites, p] })}>★ Guardar en favoritas</button>}
+          <div className="pace">
+            <span>Duración</span>
+            <div className="seg" role="group" aria-label="Duración del mensaje">
+              {[3, 4, 5].map((n) => <button key={n} className={end.seconds === n ? 'on' : ''} onClick={() => setEnd({ seconds: n })}>{n} s</button>)}
+            </div>
+          </div>
+          <div className="checks">
+            {([['crest', 'Escudo'], ['club', 'Equipo'], ['coach', 'Mi nombre'], ['slogan', 'Eslogan']] as const).map(([k, label]) => (
+              <label key={k} className="pick">
+                <input type="checkbox" checked={end[k]} onChange={(e) => setEnd({ [k]: e.target.checked })} />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          {!profile && <p className="muted small">Crea tu perfil en Mi identidad para añadir escudo, equipo y nombre.</p>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function IdentitySheet({ store, setStore, brandMode, setBrandMode, brand, setBrand, end, setEnd, onError, onClose }: {
+  store: IdentityStore
+  setStore: (f: (s: IdentityStore) => IdentityStore) => void
+  brandMode: BrandMode
+  setBrandMode: (m: BrandMode) => void
+  brand: string
+  setBrand: (v: string) => void
+  end: EndCard
+  setEnd: (p: Partial<EndCard>) => void
+  onError: (msg: string) => void
+  onClose: () => void
+}) {
+  const p = store.profiles.find((x) => x.id === store.active) ?? null
+  const [confirm, setConfirm] = useState(false)
+  const [otherRole, setOtherRole] = useState(() => !!p && !ROLES.includes(p.role))
+  const file = useRef<HTMLInputElement>(null)
+  const update = (patch: Partial<Profile>) => setStore((s) => ({ ...s, profiles: s.profiles.map((x) => (x.id === s.active ? { ...x, ...patch } : x)) }))
+  const pick = (id: string) => {
+    setStore((s) => ({ ...s, active: id }))
+    const q = store.profiles.find((x) => x.id === id)
+    setOtherRole(!!q && !ROLES.includes(q.role))
+    setConfirm(false)
+  }
+  const add = () => {
+    const q = newProfile()
+    setStore((s) => ({ profiles: [...s.profiles, q], active: q.id }))
+    setOtherRole(false)
+    setConfirm(false)
+    if (!isIdentityMode(brandMode)) setBrandMode('full')
+  }
+  const remove = () => {
+    setStore((s) => {
+      const profiles = s.profiles.filter((x) => x.id !== s.active)
+      return { profiles, active: profiles[0]?.id ?? null }
+    })
+    setConfirm(false)
+  }
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f) return
+    try { update(await readCrest(f)) } catch (err) { onError(err instanceof Error ? err.message : 'No se pudo leer la imagen') }
+  }
+  return (
+    <Sheet title="Mi identidad" onClose={onClose}>
+      <p className="muted small">Tu nombre, tu equipo y tu escudo en tus pizarras, imágenes y vídeos. Se guarda solo en este dispositivo: sin cuenta y sin internet.</p>
+      <section>
+        <h3>Perfiles</h3>
+        <div className="chips-row">
+          {store.profiles.map((x) => (
+            <button key={x.id} className={x.id === store.active ? 'on' : ''} onClick={() => pick(x.id)}>{profileLabel(x)}</button>
+          ))}
+          <button className="primary" onClick={add}>+ Nuevo perfil</button>
+        </div>
+      </section>
+      {p && (
+        <section className="idform">
+          <label className="stack">
+            <span className="muted small">Nombre del entrenador</span>
+            <input id="id-coach" value={p.coach} maxLength={60} placeholder="Ej.: Jesús Cortinas" onChange={(e) => update({ coach: e.target.value })} />
+          </label>
+          <label className="stack">
+            <span className="muted small">Cargo</span>
+            <select id="id-role" value={otherRole ? 'otro' : p.role} onChange={(e) => {
+              if (e.target.value === 'otro') { setOtherRole(true); update({ role: '' }) } else { setOtherRole(false); update({ role: e.target.value }) }
+            }}>
+              {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+              <option value="otro">Otro…</option>
+            </select>
+          </label>
+          {otherRole && <input id="id-role-other" value={p.role} maxLength={40} placeholder="Escribe tu cargo" onChange={(e) => update({ role: e.target.value })} />}
+          <label className="stack">
+            <span className="muted small">Club, equipo o escuela</span>
+            <input id="id-club" value={p.club} maxLength={60} placeholder="Ej.: Semillas Tuluá FC" onChange={(e) => update({ club: e.target.value })} />
+          </label>
+          <div className="stack">
+            <span className="muted small">Escudo (PNG, JPG o WebP)</span>
+            <div className="crest-row">
+              {p.crest ? <img className="crest" src={p.crest} alt="Escudo" /> : <span className="crest empty">Sin escudo</span>}
+              <button onClick={() => file.current?.click()}>{p.crest ? 'Cambiar' : 'Subir escudo'}</button>
+              {p.crest && <button onClick={() => update({ crest: undefined, crestRatio: undefined })}>Quitar</button>}
+              <input ref={file} id="id-crest" type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={onFile} />
+            </div>
+            <span className="muted small">Mejor en PNG con fondo transparente. Se respeta la forma y la transparencia.</span>
+          </div>
+          <label className="stack">
+            <span className="muted small">Eslogan (opcional)</span>
+            <input id="id-slogan" value={p.slogan} maxLength={80} placeholder="Ej.: Formamos personas, formamos futbolistas" onChange={(e) => update({ slogan: e.target.value })} />
+          </label>
+          {confirm ? (
+            <div className="row-actions">
+              <button className="danger" onClick={remove}>Sí, eliminar «{profileLabel(p)}»</button>
+              <button onClick={() => setConfirm(false)}>Cancelar</button>
+            </div>
+          ) : <button onClick={() => setConfirm(true)}>Eliminar este perfil</button>}
+        </section>
+      )}
+      {!p && <p className="muted">Crea tu primer perfil con «+ Nuevo perfil». Ningún dato es obligatorio.</p>}
+      <section>
+        <h3>Qué se ve</h3>
+        <BrandPicker brandMode={brandMode} setBrandMode={setBrandMode} brand={brand} setBrand={setBrand} profile={p} />
+      </section>
+      <section>
+        <h3>Mensaje final del vídeo</h3>
+        <EndEditor end={end} setEnd={setEnd} phrase={end.phrase} setPhrase={(v) => setEnd({ phrase: v })} profile={p} />
+      </section>
+      <p className="muted small">La marca de TacticalPro y la tuya van por separado: el logo de TacticalPro solo sale si activas su cierre al exportar.</p>
+    </Sheet>
+  )
+}
+
+// Vista previa: el mismo dibujo que el vídeo, en tiempo real. Si cambias una opción, se actualiza sin volver al principio.
+function Preview({ board, opts, vopts, setVopts, end, setEnd, brandMode, setBrandMode, onClose, onExport }: {
+  board: Board
+  opts: ExportOpts
+  vopts: VideoOpts
+  setVopts: (p: Partial<VideoOpts>) => void
+  end: EndCard
+  setEnd: (p: Partial<EndCard>) => void
+  brandMode: BrandMode
+  setBrandMode: (m: BrandMode) => void
+  onClose: () => void
+  onExport: () => void
+}) {
+  const canvas = useRef<HTMLCanvasElement>(null)
+  const clock = useRef({ t: 0, at: performance.now() })
+  const [paused, setPaused] = useState(false)
+  const pausedRef = useRef(false)
+  const [info, setInfo] = useState({ t: 0, total: 0 })
+  const rend = useRef<Renderer | null>(null)
+  const now = () => (pausedRef.current ? clock.current.t : clock.current.t + (performance.now() - clock.current.at) / 1000)
+  const seek = (t: number) => { clock.current = { t, at: performance.now() } }
+  useEffect(() => {
+    let alive = true
+    let busy = false
+    let id = 0
+    ;(async () => {
+      const ex = await import('./exportVideo')
+      const r = await ex.videoRenderer(board, opts, canvas.current!)
+      if (!alive) return
+      rend.current = r
+      const tick = async () => {
+        if (!alive) return
+        if (!busy) {
+          busy = true
+          let t = now()
+          // Al terminar vuelve a empezar tras un segundo.
+          if (t > r.seconds + 1) { seek(0); t = 0 }
+          await r.draw(Math.min(t, r.seconds - 0.001))
+          setInfo({ t: Math.min(t, r.seconds), total: r.seconds })
+          busy = false
+        }
+        id = requestAnimationFrame(tick)
+      }
+      tick()
+    })()
+    return () => { alive = false; cancelAnimationFrame(id) }
+  }, [board, opts])
+  const toggle = () => {
+    const t = now()
+    pausedRef.current = !pausedRef.current
+    seek(t)
+    setPaused(pausedRef.current)
+  }
+  const fmt = (x: number) => `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, '0')}`
+  return (
+    <div className="preview" role="dialog" aria-label="Vista previa del vídeo">
+      <div className="preview-frame"><canvas ref={canvas} width={1280} height={720} /></div>
+      <div className="preview-bar">
+        <button className="primary" onClick={toggle}>{paused ? '▶ Seguir' : '❚❚ Pausa'}</button>
+        <button onClick={() => seek(0)}>⟲ Inicio</button>
+        <button onClick={() => seek(Math.max(0, (rend.current?.animSeconds ?? 0) - 1.5))} disabled={!end.on && !vopts.outro}>Ver el final</button>
+        <span className="muted small time">{fmt(info.t)} / {fmt(info.total)}</span>
+      </div>
+      <div className="preview-opts">
+        <label className="pick"><input type="checkbox" checked={vopts.big} onChange={(e) => setVopts({ big: e.target.checked })} /><span>Letra grande</span></label>
+        <label className="pick"><input type="checkbox" checked={end.on} onChange={(e) => setEnd({ on: e.target.checked })} /><span>Mensaje final</span></label>
+        <label className="pick"><input type="checkbox" checked={vopts.outro} onChange={(e) => setVopts({ outro: e.target.checked })} /><span>Cierre TacticalPro</span></label>
+        <label className="pace">
+          <span>Marca</span>
+          <select value={brandMode} onChange={(e) => setBrandMode(e.target.value as BrandMode)} aria-label="Qué marca se ve">
+            {BRAND_MODES.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="preview-bar">
+        <button onClick={onClose}>Volver</button>
+        <button className="primary" onClick={onExport}>Exportar vídeo MP4</button>
+      </div>
+    </div>
   )
 }
 

@@ -7,6 +7,8 @@ import { Pitch } from './Pitch'
 import { Scene } from './Scene'
 import { Markers } from './Shapes'
 import logoFull from './logoFull.webp'
+import type { EndView, Mark } from './identity'
+import { drawEndCard, drawMarkColumn, drawMarkRow, endDuration, fontsReady } from './identityDraw'
 
 // Exporta la jugada animada a un vídeo MP4 fluido (30 imágenes por segundo).
 // Cada imagen se dibuja aparte con la posición exacta de cada ficha en ese instante, así no hay saltos
@@ -96,13 +98,15 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[
 export interface ExportOpts { zones?: boolean; brand?: string; look?: Look; pace?: Pace
   // Letra grande para verlo en el móvil (WhatsApp, redes) y pantalla final con el logo y el lema.
   big?: boolean; outro?: boolean
+  // Identidad del entrenador (abajo a la derecha) y su pantalla final con el mensaje.
+  ident?: Mark | null; end?: EndView | null
   onProgress?: (k: number) => void }
 
-export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<Result> {
-  const n = board.frames?.length ?? 0
-  const picked = await pickCodec()
-  if (!picked || n < 2) return 'unsupported'
+export interface Renderer { canvas: HTMLCanvasElement; seconds: number; animSeconds: number; draw: (sec: number) => Promise<void> }
 
+// Prepara el dibujo de cada instante del vídeo. Lo usan el exportador y la vista previa, así se ve exactamente igual.
+export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas = document.createElement('canvas')): Promise<Renderer> {
+  const n = board.frames?.length ?? 0
   const CAPTION = opts.big ? 176 : 84
   const { w: W, h: H } = PITCH[board.pitch]
   const vbW = W + 2 * PAD, vbH = H + 2 * PAD
@@ -111,15 +115,79 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
   const bx = Math.round((WIDTH - bw) / 2), by = CAPTION + Math.round((HEIGHT - CAPTION - bh) / 2)
   const viewBox = `${-PAD} ${-PAD} ${vbW} ${vbH}`
 
+  await fontsReady()
   // El césped no cambia: se dibuja una sola vez.
   const grass = await svgImage(renderToStaticMarkup(createElement(Pitch, { kind: board.pitch, zones: opts.zones, brand: opts.brand })), viewBox, bw, bh)
-
   const logo = opts.outro ? await loadImage(logoFull) : null
+  const crest = opts.ident?.crest ? await loadImage(opts.ident.crest).catch(() => null) : null
+  const endCrest = opts.end?.crest ? await loadImage(opts.end.crest).catch(() => null) : null
 
-  const canvas = document.createElement('canvas')
   canvas.width = WIDTH
   canvas.height = HEIGHT
   const ctx = canvas.getContext('2d')!
+
+  // Cada paso dura lo elegido (5, 8 o 10 s): quietos para leer y luego el movimiento al siguiente.
+  const pace = opts.pace ?? DEFAULT_PACE
+  const animSec = paceTotal(n, pace)
+  const endSec = opts.end ? endDuration(opts.end) : 0
+  const seconds = animSec + endSec + (logo ? OUTRO : 0)
+  let lastScene: { s: number; img: HTMLImageElement } | null = null
+
+  const draw = async (sec: number) => {
+    const s = paceAt(n, pace, Math.min(sec, animSec))
+    // En las pantallas finales la jugada ya no se mueve: se reutiliza la última imagen.
+    const scene = lastScene && lastScene.s === s ? lastScene.img
+      : await svgImage(renderToStaticMarkup(createElement('g', null, createElement(Markers), createElement(Scene, { board, s, grass: false, look: opts.look }))), viewBox, bw, bh)
+    lastScene = { s, img: scene }
+
+    ctx.fillStyle = '#0f1712'
+    ctx.fillRect(0, 0, WIDTH, HEIGHT)
+    ctx.drawImage(grass, bx, by, bw, bh)
+    ctx.drawImage(scene, bx, by, bw, bh)
+
+    // Explicación del paso arriba. Al cambiar de paso, el texto nuevo se funde sobre el anterior.
+    const cap = caption(board, s)
+    const drawCaption = (j: number, alpha: number) => {
+      ctx.globalAlpha = alpha
+      ctx.fillStyle = '#4fd18b'
+      ctx.font = opts.big ? '800 30px system-ui, sans-serif' : '700 22px system-ui, sans-serif'
+      ctx.textBaseline = 'middle'
+      ctx.textAlign = 'left'
+      ctx.fillText(`PASO ${j + 1}/${n}`, 28, opts.big ? 32 : 28)
+      const note = board.frames![j].note
+      if (note) {
+        ctx.fillStyle = '#ffffff'
+        ctx.font = opts.big ? '700 34px system-ui, sans-serif' : '600 22px system-ui, sans-serif'
+        if (opts.big) wrap(ctx, note, WIDTH - 56).slice(0, 3).forEach((l, i) => ctx.fillText(l, 28, 76 + i * 42))
+        else wrap(ctx, note, WIDTH - 56).slice(0, 2).forEach((l, i) => ctx.fillText(l, 28, 56 + i * 24))
+      }
+      ctx.globalAlpha = 1
+    }
+    if (cap.fade < 1) drawCaption(cap.prev, 1 - cap.fade)
+    drawCaption(cap.k, cap.fade)
+
+    // La identidad va en la franja libre a la derecha del campo, abajo: nunca tapa jugadores, flechas ni líneas.
+    if (opts.ident) {
+      const right0 = bx + bw
+      const colW = WIDTH - right0 - 20
+      if (colW >= 100) drawMarkColumn(ctx, opts.ident, crest, right0 + (WIDTH - right0) / 2, HEIGHT - 18, colW, 0.85)
+      else drawMarkRow(ctx, opts.ident, crest, bx + bw - PAD * scale, by + bh - PAD * scale + 0.25 * scale, 2.5 * scale, W * 0.6 * scale, 0.75)
+    }
+
+    const endT = sec - animSec
+    if (opts.end && endT > 0) drawEndCard(ctx, opts.end, endCrest, endT, WIDTH, HEIGHT)
+    const outroT = sec - animSec - endSec
+    if (logo && outroT > 0) drawOutro(ctx, logo, outroT)
+  }
+
+  return { canvas, seconds, animSeconds: animSec, draw }
+}
+
+export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<Result> {
+  const n = board.frames?.length ?? 0
+  const picked = await pickCodec()
+  if (!picked || n < 2) return 'unsupported'
+  const r = await videoRenderer(board, opts)
 
   // Se dibuja y codifica fotograma a fotograma. Si el codificador del equipo falla (pasa con algunas tarjetas
   // gráficas en Windows), se vuelve a intentar con otro formato o con el codificador por software.
@@ -135,51 +203,14 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
       error: (e) => { failed = e },
     })
     encoder.configure({ codec: c.codec, width: WIDTH, height: HEIGHT, bitrate: 6e6, framerate: FPS, hardwareAcceleration: hw })
-
-    // Cada paso dura lo elegido (5, 8 o 10 s): quietos para leer y luego el movimiento al siguiente.
-    const pace = opts.pace ?? DEFAULT_PACE
-    const animSec = paceTotal(n, pace)
-    const total = Math.round((animSec + (logo ? OUTRO : 0)) * FPS)
-    let lastScene: HTMLImageElement | null = null
+    const total = Math.round(r.seconds * FPS)
     for (let f = 0; f < total; f++) {
       if (failed) { if (encoder.state !== 'closed') encoder.close(); throw failed }
-      const sec = f / FPS
-      const outroT = sec - animSec
-      const s = paceAt(n, pace, Math.min(sec, animSec))
-      const scene: HTMLImageElement = outroT > 0 && lastScene ? lastScene
-        : await svgImage(renderToStaticMarkup(createElement('g', null, createElement(Markers), createElement(Scene, { board, s, grass: false, look: opts.look }))), viewBox, bw, bh)
-      lastScene = scene
-
-      ctx.fillStyle = '#0f1712'
-      ctx.fillRect(0, 0, WIDTH, HEIGHT)
-      ctx.drawImage(grass, bx, by, bw, bh)
-      ctx.drawImage(scene, bx, by, bw, bh)
-
-      // Explicación del paso arriba. Al cambiar de paso, el texto nuevo se funde sobre el anterior.
-      const cap = caption(board, s)
-      const drawCaption = (j: number, alpha: number) => {
-        ctx.globalAlpha = alpha
-        ctx.fillStyle = '#4fd18b'
-        ctx.font = opts.big ? '800 30px system-ui, sans-serif' : '700 22px system-ui, sans-serif'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(`PASO ${j + 1}/${n}`, 28, opts.big ? 32 : 28)
-        const note = board.frames![j].note
-        if (note) {
-          ctx.fillStyle = '#ffffff'
-          ctx.font = opts.big ? '700 34px system-ui, sans-serif' : '600 22px system-ui, sans-serif'
-          if (opts.big) wrap(ctx, note, WIDTH - 56).slice(0, 3).forEach((l, i) => ctx.fillText(l, 28, 76 + i * 42))
-          else wrap(ctx, note, WIDTH - 56).slice(0, 2).forEach((l, i) => ctx.fillText(l, 28, 56 + i * 24))
-        }
-        ctx.globalAlpha = 1
-      }
-      if (cap.fade < 1) drawCaption(cap.prev, 1 - cap.fade)
-      drawCaption(cap.k, cap.fade)
-      if (logo && outroT > 0) drawOutro(ctx, logo, outroT)
-
-      const frame = new VideoFrame(canvas, { timestamp: Math.round((f * 1e6) / FPS), duration: Math.round(1e6 / FPS) })
+      await r.draw(f / FPS)
+      const frame = new VideoFrame(r.canvas, { timestamp: Math.round((f * 1e6) / FPS), duration: Math.round(1e6 / FPS) })
       encoder.encode(frame, { keyFrame: f % (FPS * 2) === 0 })
       frame.close()
-      while (encoder.encodeQueueSize > 8) await new Promise((r) => setTimeout(r, 5))
+      while (encoder.encodeQueueSize > 8) await new Promise((res) => setTimeout(res, 5))
       if (f % 5 === 0) opts.onProgress?.(f / total)
     }
     await encoder.flush()
@@ -216,7 +247,13 @@ export async function exportImage(board: Board, opts: ExportOpts & { s?: number 
   const canvas = document.createElement('canvas')
   canvas.width = w
   canvas.height = h
-  canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+  const ctx = canvas.getContext('2d')!
+  ctx.drawImage(img, 0, 0, w, h)
+  if (opts.ident) {
+    await fontsReady()
+    const crest = opts.ident.crest ? await loadImage(opts.ident.crest).catch(() => null) : null
+    drawMarkRow(ctx, opts.ident, crest, (PAD + W) * scale, (PAD + H + 0.25) * scale, 2.5 * scale, W * 0.6 * scale, 0.7)
+  }
   const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'))
   if (!blob) throw new Error('png')
   return new File([blob], `tacticalpro-${new Date().toISOString().slice(0, 10)}.png`, { type: 'image/png' })
