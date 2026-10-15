@@ -26,7 +26,7 @@ const OUT_W = WIDTH * K, OUT_H = HEIGHT * K
 const K_FULL = 1.25
 const BITRATE = 10e6
 const FPS = 30
-const OUTRO = 3.2
+const OUTRO = 2.2
 const PAD = 3
 
 type Result = { file: File } | 'unsupported'

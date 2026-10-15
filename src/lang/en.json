@@ -741,7 +741,7 @@
  "La forma y la altura del equipo cuando defiende.": "The team's shape and height when defending.",
  "La imagen está vacía": "The image is empty",
  "La línea sigue subiendo junta. Los delanteros rivales que se quedan detrás de nuestra línea están en fuera de juego.": "The line keeps stepping up together. Opposing strikers left behind our line are offside.",
- "La marca de TacticalPro y la tuya van por separado: el logo de TacticalPro solo sale si activas su cierre al exportar.": "The TacticalPro brand and yours are separate: the TacticalPro logo only appears if you turn on its ending when exporting.",
+ "La marca de TacticalPro y la tuya van por separado: durante la jugada solo se ve la tuya y el logo de TacticalPro sale en un cierre breve al final, que puedes quitar al exportar.": "The TacticalPro brand and yours are separate: during the play only yours is shown, and the TacticalPro logo appears in a short ending that you can turn off when exporting.",
  "La voz de la defensa": "The voice of the defence",
  "Las 4 fases del juego": "The 4 phases of play",
  "Las jugadas se guardan en este dispositivo, con sus pasos de animación.": "Plays are saved on this device, with their animation steps.",

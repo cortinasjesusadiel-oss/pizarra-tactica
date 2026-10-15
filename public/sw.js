@@ -1,8 +1,10 @@
 // Guarda la app en el dispositivo para que funcione sin conexión en el campo.
-const CACHE = 'tacticalpro-v3'
+// La lista de archivos y la versión las escribe el build (vite.config.ts); cada versión nueva usa otra caché.
+const CACHE = 'tacticalpro-__VERSION__'
+const FILES = '__PRECACHE__'
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icon-192.png'])))
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(Array.isArray(FILES) ? FILES : ['./', './index.html', './manifest.webmanifest', './icon-192.png'])))
   self.skipWaiting()
 })
 
@@ -22,6 +24,6 @@ self.addEventListener('fetch', (e) => {
         caches.open(CACHE).then((c) => c.put(e.request, copy))
         return res
       })
-      .catch(() => caches.match(e.request).then((r) => r || caches.match('./index.html'))),
+      .catch(() => caches.match(e.request, { ignoreSearch: true }).then((r) => r || (e.request.mode === 'navigate' ? caches.match('./index.html') : Response.error()))),
   )
 })

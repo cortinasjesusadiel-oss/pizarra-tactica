@@ -113,7 +113,7 @@ export default function App() {
     setEndState(loadEnd())
     setPaceState(j('pizarra.ritmo', DEFAULT_PACE))
     setLookState(j('pizarra.fichas', DEFAULT_LOOK))
-    setVoptsState(j<VideoOpts>('pizarra.video', { big: false, outro: false }))
+    setVoptsState(loadVopts())
     try {
       setBrandState(localStorage.getItem('pizarra.marca') ?? 'TacticalPro')
       setBrandModeState((localStorage.getItem('pizarra.marca.tipo') as BrandMode) || 'logo')
@@ -283,12 +283,13 @@ export default function App() {
   const [ready, setReady] = useState<File[] | null>(null)
   const [progressLabel, setProgressLabel] = useState('')
   // Opciones del vídeo, guardadas en el dispositivo: letra grande para el móvil y pantalla final con el logo.
-  const [vopts, setVoptsState] = useState<VideoOpts>(() => {
-    try { return { big: false, outro: false, ...JSON.parse(localStorage.getItem('pizarra.video') ?? '{}') } } catch { return { big: false, outro: false } }
-  })
+  const [vopts, setVoptsState] = useState<VideoOpts>(loadVopts)
   const setVopts = (patch: Partial<VideoOpts>) => setVoptsState((v) => {
     const next = { ...v, ...patch }
-    try { localStorage.setItem('pizarra.video', JSON.stringify(next)) } catch { /* sin almacenamiento */ }
+    try {
+      localStorage.setItem('pizarra.video', JSON.stringify(next))
+      if ('outro' in patch) localStorage.setItem(OUTRO_KEY, next.outro ? '1' : '0')
+    } catch { /* sin almacenamiento */ }
     return next
   })
   const exportOpts: ExportOpts = useMemo(() => ({ zones, brand: mark, look, pace, ...vopts, ident, end: endView }), [zones, mark, look, pace, vopts, ident, endView])
@@ -1156,6 +1157,18 @@ function ToolIcon({ t }: { t: Tool }) {
 }
 
 type VideoOpts = { big: boolean; outro: boolean; full?: boolean }
+// El cierre con el logo de TacticalPro sale por defecto en todos los vídeos; el entrenador puede quitarlo
+// y entonces se recuerda su elección (se guarda aparte para que la opción antigua, apagada, no cuente).
+const OUTRO_KEY = 'pizarra.cierre'
+function loadVopts(): VideoOpts {
+  let v: VideoOpts = { big: false, outro: true }
+  try {
+    v = { ...v, ...JSON.parse(localStorage.getItem('pizarra.video') ?? '{}') }
+    const c = localStorage.getItem(OUTRO_KEY)
+    v.outro = c === null ? true : c === '1'
+  } catch { /* sin almacenamiento */ }
+  return v
+}
 
 function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, profile, onIdentity, end, setEnd, phrase, setPhrase, onPreview, onClose, onImage, onVideo, onMany, vopts, setVopts }: {
   vopts: VideoOpts
@@ -1448,7 +1461,7 @@ function IdentitySheet({ store, setStore, brandMode, setBrandMode, brand, setBra
         <h3>{t('Mensaje final del vídeo')}</h3>
         <EndEditor end={end} setEnd={setEnd} phrase={end.phrase} setPhrase={(v) => setEnd({ phrase: v })} profile={p} />
       </section>
-      <p className="muted small">{t('La marca de TacticalPro y la tuya van por separado: el logo de TacticalPro solo sale si activas su cierre al exportar.')}</p>
+      <p className="muted small">{t('La marca de TacticalPro y la tuya van por separado: durante la jugada solo se ve la tuya y el logo de TacticalPro sale en un cierre breve al final, que puedes quitar al exportar.')}</p>
     </Sheet>
   )
 }

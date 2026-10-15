@@ -11,7 +11,7 @@ const PLAYS = 'pizarra.jugadas.v1'
 const IDENTITY = 'pizarra.identidad.v1'
 const END = 'pizarra.mensaje.v1'
 // Preferencias que se copian tal cual. Al importar solo se rellenan si en este dispositivo no hay ninguna.
-const SETTINGS = ['pizarra.marca', 'pizarra.marca.tipo', 'pizarra.fichas', 'pizarra.ritmo', 'pizarra.video', 'pizarra.zonas', 'pizarra.letrero']
+const SETTINGS = ['pizarra.marca', 'pizarra.marca.tipo', 'pizarra.fichas', 'pizarra.ritmo', 'pizarra.video', 'pizarra.zonas', 'pizarra.letrero', 'pizarra.cierre']
 
 export interface Backup {
   app: 'TacticalPro'
