@@ -31,7 +31,7 @@ function Zones({ kind, w, h }: { kind: PitchKind; w: number; h: number }) {
   const lanes = kind === 'grid' ? [6, 12, 18, 24] : [13.84, 24.84, 43.16, 54.16]
   const cols = kind === 'full' ? [16.5, 35, 52.5, 70, 88.5] : kind === 'half' ? [17.5, 36] : [10, 20, 30]
   const z = { stroke: 'rgba(255,255,255,.45)', strokeWidth: 0.15, strokeDasharray: '0.8 0.6' }
-  const names = [t('Banda'), t('Interior'), t('Central'), t('Interior'), t('Banda')]
+  const names = [t('zona|Banda'), t('zona|Interior'), t('zona|Central'), t('zona|Interior'), t('zona|Banda')]
   const yb = [0, ...lanes, h]
   return (
     <g>

@@ -590,13 +590,7 @@ export default function App() {
         <button onClick={() => setSheet('sessions')}>{t('Sesiones')}</button>
         <button onClick={() => setSheet('tips')}>{t('Consejos')}</button>
         <button onClick={() => setSheet('look')}>{t('Fichas')}</button>
-        <button onClick={() => setSheet('identity')}>{t('Mi identidad')}</button>
-        <select id="lang" className="lang" aria-label={t('Idioma')} value={lang} onChange={(e) => setLang(e.target.value as 'es' | 'en')}>
-          <option value="es">Español</option>
-          <option value="en">English</option>
-        </select>
         <button className={zones ? 'toggle on' : 'toggle'} onClick={toggleZones} aria-pressed={zones}>{t('Zonas')}</button>
-        <button onClick={toggleVertical} aria-label={t('Orientación del campo')}>{vertical ? t('▭ Horizontal') : t('▯ Vertical')}</button>
         <span className="sep" />
         <button className="chip home" onClick={() => addToken('home')} aria-label={t('Añadir jugador local')}>{t('+ Local')}</button>
         <button className="chip away" onClick={() => addToken('away')} aria-label={t('Añadir jugador rival')}>{t('+ Rival')}</button>
@@ -736,6 +730,15 @@ export default function App() {
           disabled={!board.drawings.length && !stepDrawings.length}
         >{t('Borrar trazos')}</button>
         {penSeen && <span className="pen">{t('S Pen · ficha: mover · césped:')}{' '}{TOOL_NAME[activeDraw]}</span>}
+        {/* Ajustes generales, a la derecha de la barra inferior: Mi identidad, orientación del campo e idioma. */}
+        <div className="tools-end">
+          <button onClick={() => setSheet('identity')}>{t('Mi identidad')}</button>
+          <button onClick={toggleVertical} aria-label={t('Orientación del campo')}>{vertical ? t('▭ Horizontal') : t('▯ Vertical')}</button>
+          <select id="lang" className="lang" aria-label={t('Idioma')} value={lang} onChange={(e) => setLang(e.target.value as 'es' | 'en')}>
+            <option value="es">Español</option>
+            <option value="en">English</option>
+          </select>
+        </div>
       </footer>
 
       {sheet === 'templates' && (

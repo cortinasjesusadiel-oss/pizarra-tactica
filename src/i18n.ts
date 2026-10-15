@@ -23,8 +23,10 @@ let es: Record<string, string> | null = null
 const toEs = () => es ?? (es = Object.fromEntries(Object.entries(en).map(([k, v]) => [v, k])))
 
 // Traduce un texto. Los valores entre llaves se rellenan: t('Paso {n}', { n: 3 }).
+// Si una palabra significa cosas distintas según el sitio, se le pone delante el contexto: t('zona|Central').
 export function t(s: string, vars?: Record<string, string | number>): string {
-  let out = lang === 'en' ? en[s] ?? s : s
+  const base = s.includes('|') ? s.slice(s.indexOf('|') + 1) : s
+  let out = lang === 'en' ? en[s] ?? base : base
   if (vars) for (const [k, v] of Object.entries(vars)) out = out.split(`{${k}}`).join(String(v))
   return out
 }

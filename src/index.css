@@ -227,4 +227,5 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 .backup-actions button { flex: 1 1 220px; }
 .backup-msg { padding: 8px 10px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); }
 .backup-msg.error { border-color: #ff6b5e; }
-.top select.lang { flex: none; min-height: 36px; padding: 6px 8px; font-weight: 600; cursor: pointer; }
+.tools select.lang { flex: none; min-height: 36px; padding: 6px 8px; font-weight: 600; cursor: pointer; }
+.tools-end { display: flex; gap: 8px; align-items: center; margin-left: auto; flex: none; padding-left: 8px; }
