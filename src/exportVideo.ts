@@ -14,8 +14,13 @@ import { drawEndCard, drawMarkColumn, drawMarkRow, endDuration, fontsReady } fro
 // Cada imagen se dibuja aparte con la posición exacta de cada ficha en ese instante, así no hay saltos
 // aunque el móvil vaya lento: el vídeo se crea fotograma a fotograma y se reproduce siempre igual de suave.
 
+// El vídeo sale en Full HD (1920×1080). Todo se coloca en medidas de 1280×720 y se amplía ×1,5 al dibujar,
+// así las fichas y las letras salen nítidas.
 const WIDTH = 1280
 const HEIGHT = 720
+const K = 1.5
+const OUT_W = WIDTH * K, OUT_H = HEIGHT * K
+const BITRATE = 10e6
 const FPS = 30
 const OUTRO = 3.2
 const PAD = 3
@@ -23,16 +28,17 @@ const PAD = 3
 type Result = { file: File } | 'unsupported'
 
 const CODECS: { codec: string; mux: 'avc' | 'vp9' }[] = [
+  { codec: 'avc1.640028', mux: 'avc' },
   { codec: 'avc1.4d0028', mux: 'avc' },
-  { codec: 'avc1.42001f', mux: 'avc' },
-  { codec: 'vp09.00.31.08', mux: 'vp9' },
+  { codec: 'avc1.42002a', mux: 'avc' },
+  { codec: 'vp09.00.40.08', mux: 'vp9' },
 ]
 
 async function pickCodec() {
   if (typeof VideoEncoder === 'undefined') return null
   for (const c of CODECS) {
     try {
-      const { supported } = await VideoEncoder.isConfigSupported({ codec: c.codec, width: WIDTH, height: HEIGHT, bitrate: 6e6, framerate: FPS })
+      const { supported } = await VideoEncoder.isConfigSupported({ codec: c.codec, width: OUT_W, height: OUT_H, bitrate: BITRATE, framerate: FPS })
       if (supported) return c
     } catch { /* se prueba el siguiente */ }
   }
@@ -83,18 +89,6 @@ function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, t: num
   ctx.globalAlpha = 1
 }
 
-// Parte el texto en líneas que quepan en el ancho dado.
-function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[] {
-  const out: string[] = []
-  let line = ''
-  for (const word of text.split(/\s+/)) {
-    const next = line ? `${line} ${word}` : word
-    if (ctx.measureText(next).width > max && line) { out.push(line); line = word } else line = next
-  }
-  if (line) out.push(line)
-  return out
-}
-
 export interface ExportOpts { zones?: boolean; brand?: string; look?: Look; pace?: Pace
   // Letra grande para verlo en el móvil (WhatsApp, redes) y pantalla final con el logo y el lema.
   big?: boolean; outro?: boolean
@@ -107,23 +101,28 @@ export interface Renderer { canvas: HTMLCanvasElement; seconds: number; animSeco
 // Prepara el dibujo de cada instante del vídeo. Lo usan el exportador y la vista previa, así se ve exactamente igual.
 export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas = document.createElement('canvas')): Promise<Renderer> {
   const n = board.frames?.length ?? 0
-  const CAPTION = opts.big ? 176 : 84
+  // Texto del paso en una franja fina arriba y el campo lo más grande posible debajo.
+  // Sin explicaciones en los pasos basta con una franja más fina para «PASO 2/5».
+  const hasNotes = !!board.frames?.some((f) => f.note.trim())
+  const CAPTION = !hasNotes ? (opts.big ? 52 : 44) : opts.big ? 92 : 68
   const { w: W, h: H } = PITCH[board.pitch]
-  const vbW = W + 2 * PAD, vbH = H + 2 * PAD
-  const scale = Math.min(WIDTH / vbW, (HEIGHT - CAPTION) / vbH)
+  // Poco margen alrededor del campo; abajo se deja el sitio de la marca de siempre (logo o texto).
+  const M = 1.5
+  const vbW = W + 2 * M, vbH = H + M + PAD
+  const scale = Math.min((WIDTH - 16) / vbW, (HEIGHT - CAPTION - 8) / vbH)
   const bw = Math.round(vbW * scale), bh = Math.round(vbH * scale)
   const bx = Math.round((WIDTH - bw) / 2), by = CAPTION + Math.round((HEIGHT - CAPTION - bh) / 2)
-  const viewBox = `${-PAD} ${-PAD} ${vbW} ${vbH}`
+  const viewBox = `${-M} ${-M} ${vbW} ${vbH}`
 
   await fontsReady()
   // El césped no cambia: se dibuja una sola vez.
-  const grass = await svgImage(renderToStaticMarkup(createElement(Pitch, { kind: board.pitch, zones: opts.zones, brand: opts.brand })), viewBox, bw, bh)
+  const grass = await svgImage(renderToStaticMarkup(createElement(Pitch, { kind: board.pitch, zones: opts.zones, brand: opts.brand })), viewBox, bw * K, bh * K)
   const logo = opts.outro ? await loadImage(logoFull) : null
   const crest = opts.ident?.crest ? await loadImage(opts.ident.crest).catch(() => null) : null
   const endCrest = opts.end?.crest ? await loadImage(opts.end.crest).catch(() => null) : null
 
-  canvas.width = WIDTH
-  canvas.height = HEIGHT
+  canvas.width = OUT_W
+  canvas.height = OUT_H
   const ctx = canvas.getContext('2d')!
 
   // Cada paso dura lo elegido (5, 8 o 10 s): quietos para leer y luego el movimiento al siguiente.
@@ -137,9 +136,11 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
     const s = paceAt(n, pace, Math.min(sec, animSec))
     // En las pantallas finales la jugada ya no se mueve: se reutiliza la última imagen.
     const scene = lastScene && lastScene.s === s ? lastScene.img
-      : await svgImage(renderToStaticMarkup(createElement('g', null, createElement(Markers), createElement(Scene, { board, s, grass: false, look: opts.look }))), viewBox, bw, bh)
+      : await svgImage(renderToStaticMarkup(createElement('g', null, createElement(Markers), createElement(Scene, { board, s, grass: false, look: opts.look }))), viewBox, bw * K, bh * K)
     lastScene = { s, img: scene }
 
+    ctx.setTransform(K, 0, 0, K, 0, 0)
+    ctx.imageSmoothingQuality = 'high'
     ctx.fillStyle = '#0f1712'
     ctx.fillRect(0, 0, WIDTH, HEIGHT)
     ctx.drawImage(grass, bx, by, bw, bh)
@@ -148,18 +149,31 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
     // Explicación del paso arriba. Al cambiar de paso, el texto nuevo se funde sobre el anterior.
     const cap = caption(board, s)
     const drawCaption = (j: number, alpha: number) => {
+      const size = opts.big ? 27 : 20, lh = Math.round(size * 1.24), x = 24, y0 = opts.big ? 28 : 22
       ctx.globalAlpha = alpha
-      ctx.fillStyle = '#4fd18b'
-      ctx.font = opts.big ? '800 30px system-ui, sans-serif' : '700 22px system-ui, sans-serif'
       ctx.textBaseline = 'middle'
       ctx.textAlign = 'left'
-      ctx.fillText(`PASO ${j + 1}/${n}`, 28, opts.big ? 32 : 28)
+      ctx.fillStyle = '#4fd18b'
+      ctx.font = `800 ${size}px system-ui, sans-serif`
+      const label = `PASO ${j + 1}/${n}`
+      ctx.fillText(label, x, y0)
+      const indent = ctx.measureText(label).width + size * 0.6
       const note = board.frames![j].note
       if (note) {
         ctx.fillStyle = '#ffffff'
-        ctx.font = opts.big ? '700 34px system-ui, sans-serif' : '600 22px system-ui, sans-serif'
-        if (opts.big) wrap(ctx, note, WIDTH - 56).slice(0, 3).forEach((l, i) => ctx.fillText(l, 28, 76 + i * 42))
-        else wrap(ctx, note, WIDTH - 56).slice(0, 2).forEach((l, i) => ctx.fillText(l, 28, 56 + i * 24))
+        ctx.font = `700 ${size}px system-ui, sans-serif`
+        // Primer renglón al lado de «PASO», el segundo debajo; si no cabe, se corta con «…».
+        const max = WIDTH - 2 * x
+        const words = note.split(/\s+/)
+        const lines = ['', '']
+        let k = 0
+        for (const w of words) {
+          const next = lines[k] ? `${lines[k]} ${w}` : w
+          if (ctx.measureText(next).width > max - (k === 0 ? indent : 0) && lines[k]) { if (k === 1) { lines[1] += ' …'; break } k = 1; lines[1] = w } else lines[k] = next
+        }
+        while (ctx.measureText(lines[1]).width > max && lines[1].length > 2) lines[1] = lines[1].slice(0, -3).trimEnd() + ' …'
+        ctx.fillText(lines[0], x + indent, y0)
+        if (lines[1]) ctx.fillText(lines[1], x, y0 + lh)
       }
       ctx.globalAlpha = 1
     }
@@ -171,7 +185,7 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
       const right0 = bx + bw
       const colW = WIDTH - right0 - 20
       if (colW >= 100) drawMarkColumn(ctx, opts.ident, crest, right0 + (WIDTH - right0) / 2, HEIGHT - 18, colW, 0.85)
-      else drawMarkRow(ctx, opts.ident, crest, bx + bw - PAD * scale, by + bh - PAD * scale + 0.25 * scale, 2.5 * scale, W * 0.6 * scale, 0.75)
+      else drawMarkRow(ctx, opts.ident, crest, bx + bw - M * scale, by + bh - PAD * scale + 0.25 * scale, 2.5 * scale, W * 0.6 * scale, 0.75)
     }
 
     const endT = sec - animSec
@@ -194,7 +208,7 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
   const attempt = async (c: (typeof CODECS)[number], hw: HardwareAcceleration): Promise<Blob> => {
     const muxer = new Muxer({
       target: new ArrayBufferTarget(),
-      video: { codec: c.mux, width: WIDTH, height: HEIGHT, frameRate: FPS },
+      video: { codec: c.mux, width: OUT_W, height: OUT_H, frameRate: FPS },
       fastStart: 'in-memory',
     })
     let failed: unknown = null
@@ -202,7 +216,7 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
       output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
       error: (e) => { failed = e },
     })
-    encoder.configure({ codec: c.codec, width: WIDTH, height: HEIGHT, bitrate: 6e6, framerate: FPS, hardwareAcceleration: hw })
+    encoder.configure({ codec: c.codec, width: OUT_W, height: OUT_H, bitrate: BITRATE, framerate: FPS, hardwareAcceleration: hw })
     const total = Math.round(r.seconds * FPS)
     for (let f = 0; f < total; f++) {
       if (failed) { if (encoder.state !== 'closed') encoder.close(); throw failed }
@@ -225,7 +239,7 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
   for (const c of [picked, ...CODECS.filter((x) => x !== picked)]) {
     for (const hw of ['no-preference', 'prefer-software'] as HardwareAcceleration[]) {
       try {
-        const { supported } = await VideoEncoder.isConfigSupported({ codec: c.codec, width: WIDTH, height: HEIGHT, bitrate: 6e6, framerate: FPS, hardwareAcceleration: hw })
+        const { supported } = await VideoEncoder.isConfigSupported({ codec: c.codec, width: OUT_W, height: OUT_H, bitrate: BITRATE, framerate: FPS, hardwareAcceleration: hw })
         if (!supported) continue
         const blob = await attempt(c, hw)
         return { file: new File([blob], `tacticalpro-${new Date().toISOString().slice(0, 10)}.mp4`, { type: 'video/mp4' }) }
