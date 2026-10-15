@@ -4,13 +4,13 @@
 import { ballAt, line, player, type Board, type Drawing, type Pt, type Token } from '../model'
 import { animate, press, type Step, type Template } from '../anim'
 
-type Shape = Record<string, Pt>
+export type Shape = Record<string, Pt>
 // Una flecha de movimiento: el nombre de la ficha y, si hace falta, puntos intermedios para curvarla.
 type Mv = string | [string, ...Pt[]]
 
 // Un paso, escrito de forma corta. Las flechas (pase, conducción, carrera, presión) se dibujan
 // solas en el paso anterior, desde donde estaba cada ficha hasta donde está en este paso.
-interface S {
+export interface S {
   n: string // nota del paso
   m?: Shape // fichas que se mueven
   b?: string | Pt // quién tiene el balón (o dónde está el balón si no lo tiene nadie)
@@ -33,7 +33,7 @@ function cast(home: Shape, away: Shape, ball: Pt): Record<string, Token> {
 const dist = (a: Pt, b: Pt) => Math.hypot(a[0] - b[0], a[1] - b[1])
 const cp = (p: Pt): Pt => [p[0], p[1]]
 
-function play(pitch: Board['pitch'], home: Shape, away: Shape, b0: string | Pt, specs: S[]): Board {
+function play(pitch: Board['pitch'], home: Shape, away: Shape, b0: string | Pt, specs: S[], extra: Token[] = []): Board {
   let pos: Shape = { ...home, ...away }
   const dirOf = (h: string | Pt, d?: 1 | -1) => d ?? (typeof h === 'string' && h in away ? -1 : 1)
   // Balón a los pies, un poco adelantado hacia donde mira el jugador.
@@ -65,11 +65,11 @@ function play(pitch: Board['pitch'], home: Shape, away: Shape, b0: string | Pt, 
     holder = h
     ball = nb
   })
-  return animate(pitch, c, steps)
+  return animate(pitch, c, steps, extra)
 }
 
-const T = (id: string, group: Template['group'], name: string, pitch: Board['pitch'], home: Shape, away: Shape, b0: string | Pt, specs: S[]): Template => ({
-  id, group, name, animated: true, build: () => play(pitch, home, away, b0, specs),
+export const T = (id: string, group: Template['group'], name: string, pitch: Board['pitch'], home: Shape, away: Shape, b0: string | Pt, specs: S[], extra: () => Token[] = () => []): Template => ({
+  id, group, name, animated: true, build: () => play(pitch, home, away, b0, specs, extra()),
 })
 
 // ---------- Generar espacios: ataque posicional ----------

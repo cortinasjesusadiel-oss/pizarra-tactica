@@ -16,7 +16,7 @@ Pizarra táctica de fútbol 11 pensada para el móvil y el S Pen, con plantillas
 - Página web de presentación en `web/` (https://cortinasjesusadiel-oss.github.io/pizarra-tactica/web/).
 - Plantillas (63, 53 animadas) en grupos: sistemas, bloques defensivos (bajo, medio, alto y repliegue), presión alta (al saque del portero con trampa en banda), transiciones (ataque-defensa y defensa-ataque), generar espacios (arrastre del 9, fijar y soltar, cambio de orientación, tercer hombre), ABP y ejercicios.
 - Material de entrenamiento: conos, picas, vallas, aros, escalera, maniquíes, miniporterías, porterías y banderines, con giro de 45°.
-- Sesiones sugeridas (`src/sessions.ts`): 21 sesiones de fútbol 11 de adultos con bloques, minutos y consignas, enlazadas a los ejercicios animados.
+- Sesiones sugeridas (`src/sessions.ts`): 25 sesiones de fútbol 11 de adultos con bloques, minutos y consignas, enlazadas a los ejercicios animados.
 - Consejos (`src/tips.ts`): 126 consejos breves sobre sistemas, ataque, defensa, ABP, entrenamiento, gestión del grupo, análisis, posiciones, estrategia de partido, preparación física, cabeza y portero.
 - Fundamentos (`src/fundamentos.ts`): las 4 fases, carriles y zonas, posiciones y dorsales, sistemas, bloques, principios de ataque y defensa y un diccionario, cada tema enlazado a su plantilla.
 - Césped con corte profesional y botón Zonas para ver carriles y franjas del juego de posición.

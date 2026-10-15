@@ -4,6 +4,7 @@ import { TACTICS } from './tactics'
 import { FUND_TEMPLATES } from './fundamentos'
 import { EJERCICIOS } from './more/ejercicios'
 import { TACTICAS2 } from './more/tacticas'
+import { TACTICAS3 } from './more/tacticas3'
 
 type P = [string, number, number]
 
@@ -304,6 +305,7 @@ export const TEMPLATES: Template[] = [
   ...TACTICS,
   ...EJERCICIOS,
   ...TACTICAS2,
+  ...TACTICAS3,
 ]
 
 export const emptyBoard = (pitch: Board['pitch'] = 'full'): Board => ({ pitch, tokens: [], drawings: [] })
