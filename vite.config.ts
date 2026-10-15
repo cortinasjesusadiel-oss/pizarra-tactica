@@ -6,6 +6,8 @@ import { viteSingleFile } from 'vite-plugin-singlefile'
 export default defineConfig(({ mode }) => ({
   // Rutas relativas para que funcione en GitHub Pages (/pizarra-tactica/) y en cualquier carpeta.
   base: './',
+  // Fecha de la versión, visible en la app para saber si ya se actualizó.
+  define: { __BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ')) },
   plugins: mode === 'demo' ? [react(), viteSingleFile()] : [react()],
   build: mode === 'demo' ? { outDir: 'dist-demo' } : {},
 }))

@@ -239,15 +239,13 @@ export default function App() {
   const shareReady = async () => {
     if (!ready) return
     const { shareFiles, saveFiles } = await import('./exportVideo')
-    if (!(await shareFiles(ready))) { await saveFiles(ready); setToast(ready.length > 1 ? 'Archivos guardados' : 'Archivo guardado') }
-    setReady(null)
+    if (await shareFiles(ready)) { setReady(null); return }
+    try { await saveFiles(ready); setToast(ready.length > 1 ? 'Archivos guardados' : 'Archivo guardado'); setReady(null) } catch { setToast('No se pudo guardar') }
   }
   const saveReady = async () => {
     if (!ready) return
     const { saveFiles } = await import('./exportVideo')
-    await saveFiles(ready)
-    setToast(ready.length > 1 ? 'Archivos guardados' : 'Archivo guardado')
-    setReady(null)
+    try { await saveFiles(ready); setToast(ready.length > 1 ? 'Archivos guardados' : 'Archivo guardado'); setReady(null) } catch { setToast('No se pudo guardar') }
   }
 
   const addStep = () => {
@@ -833,6 +831,7 @@ function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, onCl
         )}
         <p className="muted small">Aparece pequeña y transparente en el margen de abajo a la derecha, fuera de las líneas del campo, en la pizarra, las imágenes y los vídeos.</p>
       </section>
+      <p className="muted small">Versión {__BUILD__}</p>
     </Sheet>
   )
 }

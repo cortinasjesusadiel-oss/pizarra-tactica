@@ -175,7 +175,20 @@ export async function exportMany(items: { name: string; board: Board }[], opts: 
   return out
 }
 
+// Dentro de Claude (la demo) las descargas pasan por el permiso de descargas de la página.
+type Downloads = { save: (r: { filename: string; data: Blob }) => Promise<unknown> }
+async function claudeDownloads(): Promise<Downloads | null> {
+  const c = (window as unknown as { claude?: { use?: (name: string) => Promise<unknown> } }).claude
+  if (!c?.use) return null
+  try { return (await c.use('downloads')) as Downloads | null } catch { return null }
+}
+
 export async function saveFiles(files: File[]) {
+  const dl = await claudeDownloads()
+  if (dl) {
+    for (const file of files) await dl.save({ filename: file.name, data: file })
+    return
+  }
   for (const file of files) {
     const a = document.createElement('a')
     a.href = URL.createObjectURL(file)

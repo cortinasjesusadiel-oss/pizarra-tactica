@@ -1,5 +1,5 @@
 // Guarda la app en el dispositivo para que funcione sin conexión en el campo.
-const CACHE = 'tacticalpro-v1'
+const CACHE = 'tacticalpro-v2'
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icon-192.png'])))
@@ -15,7 +15,8 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || !e.request.url.startsWith(self.location.origin)) return
   e.respondWith(
-    fetch(e.request)
+    // Sin la caché HTTP del navegador, para que una versión nueva llegue al momento.
+    fetch(e.request, { cache: 'no-cache' })
       .then((res) => {
         const copy = res.clone()
         caches.open(CACHE).then((c) => c.put(e.request, copy))
