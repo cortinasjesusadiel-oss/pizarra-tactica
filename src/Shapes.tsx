@@ -51,9 +51,10 @@ function wavy(p: Pt[], amp = 0.55, wave = 2.2): string {
 
 // `part` muestra solo un tramo del trazo, de 0 (inicio) a 1 (final): en la animación las flechas se van
 // borrando por detrás mientras ocurre el movimiento y las siguientes se dibujan desde su inicio.
-export function DrawingShape({ d, faded, part }: { d: Drawing; faded?: boolean; part?: [number, number] }) {
+export function DrawingShape({ d, faded, part, upright }: { d: Drawing; faded?: boolean; part?: [number, number]; upright?: boolean }) {
   const mid = useId().replace(/:/g, '')
   const p = d.points
+  if (d.type === 'text') return <TextLabel d={d} opacity={(faded ? 0.6 : 1) * (part ? part[1] - part[0] : 1)} upright={upright} />
   if (p.length < 2) return null
   const [from, to] = part ?? [0, 1]
   if (to - from < 0.001) return null
@@ -64,7 +65,7 @@ export function DrawingShape({ d, faded, part }: { d: Drawing; faded?: boolean; 
   const marker = `url(#ah-${d.color.slice(1)})`
   const sw = d.width
   const a = p[0], b = p[p.length - 1]
-  const path = d.type === 'pass' || d.type === 'shot' || d.type === 'line' ? `M${a[0]} ${a[1]} L${b[0]} ${b[1]}` : d.type === 'dribble' ? wavy(p) : smooth(p)
+  const path = d.type === 'lob' ? lobPath(a, b) : d.type === 'pass' || d.type === 'shot' || d.type === 'line' ? `M${a[0]} ${a[1]} L${b[0]} ${b[1]}` : d.type === 'dribble' ? wavy(p) : smooth(p)
   // Máscara que deja ver solo el tramo pedido (pathLength=1 hace que las medidas vayan de 0 a 1).
   const mask = trimmed && !area ? `m${mid}` : undefined
   const defs = mask && (
@@ -81,6 +82,9 @@ export function DrawingShape({ d, faded, part }: { d: Drawing; faded?: boolean; 
       return <>{defs}<line {...common} {...m} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={d.color} strokeWidth={sw} strokeLinecap="round" markerEnd={marker} /></>
     case 'run':
       return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw} strokeDasharray={`${sw * 2.6} ${sw * 2}`} strokeLinecap="round" markerEnd={marker} /></>
+    case 'lob':
+      // Pase aéreo: flecha en curva, como el balón que va por el aire.
+      return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw} strokeLinecap="round" markerEnd={marker} /></>
     case 'arrow':
       // Flecha continua que sigue el trazo: movimiento sin balón o cualquier indicación.
       return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" markerEnd={marker} /></>
@@ -133,6 +137,31 @@ export function DrawingShape({ d, faded, part }: { d: Drawing; faded?: boolean; 
       )
     }
   }
+}
+
+// Curva del pase aéreo: se arquea hacia un lado, más cuanto más largo es el pase.
+function lobPath(a: Pt, b: Pt): string {
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1
+  const nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L, h = Math.min(12, L * 0.28)
+  return `M${a[0]} ${a[1]} Q${(a[0] + b[0]) / 2 + nx * h} ${(a[1] + b[1]) / 2 + ny * h} ${b[0]} ${b[1]}`
+}
+
+// Letrero: el texto sobre una etiqueta oscura para que se lea encima del césped. Varias líneas con saltos de línea.
+function TextLabel({ d, opacity, upright }: { d: Drawing; opacity: number; upright?: boolean }) {
+  const lines = (d.text ?? '').split('\n').map((l) => l.trim()).filter(Boolean)
+  if (!lines.length || opacity < 0.01) return null
+  const fs = 2.1, lh = fs * 1.25
+  const w = Math.max(...lines.map((l) => l.length)) * fs * 0.56 + fs * 1.2
+  const h = lines.length * lh + fs * 0.7
+  const [x, y] = d.points[0]
+  return (
+    <g data-draw={d.id} opacity={opacity} transform={`translate(${x} ${y})${upright ? ' rotate(-90)' : ''}`} className="label">
+      <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={0.8} fill="#0b1510" fillOpacity={0.78} stroke={d.color} strokeWidth={0.18} />
+      {lines.map((l, i) => (
+        <text key={i} x={0} y={-h / 2 + fs * 0.35 + lh * (i + 0.5)} textAnchor="middle" dominantBaseline="central" fontSize={fs} fontWeight={700} fill={d.color} fontFamily="Montserrat, system-ui, sans-serif">{l}</text>
+      ))}
+    </g>
+  )
 }
 
 // Texto oscuro sobre colores claros y blanco sobre colores oscuros.

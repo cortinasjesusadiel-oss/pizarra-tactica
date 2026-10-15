@@ -18,13 +18,13 @@ export const EQUIPMENT: { kind: TokenKind; name: string }[] = [
   { kind: 'flag', name: t('Banderín') },
 ]
 export const KIND_NAME = (k: TokenKind) => (k === 'player' ? t('Jugador') : k === 'ball' ? t('Balón') : EQUIPMENT.find((e) => e.kind === k)?.name ?? '')
-export type DrawTool = 'pass' | 'run' | 'arrow' | 'dribble' | 'press' | 'shot' | 'line' | 'zone' | 'focus' | 'free'
+export type DrawTool = 'pass' | 'lob' | 'run' | 'arrow' | 'dribble' | 'press' | 'shot' | 'line' | 'text' | 'zone' | 'focus' | 'free'
 // Flechas que mueven a un jugador al crear un paso (con o sin balón).
 export const MOVES_PLAYER: DrawTool[] = ['run', 'arrow', 'dribble', 'press']
 // Flechas que mueven el balón.
-export const MOVES_BALL: DrawTool[] = ['pass', 'shot']
+export const MOVES_BALL: DrawTool[] = ['pass', 'lob', 'shot']
 // Trazos rectos: solo cuentan el inicio y el final.
-export const STRAIGHT: DrawTool[] = ['pass', 'shot', 'line']
+export const STRAIGHT: DrawTool[] = ['pass', 'lob', 'shot', 'line']
 export type Tool = 'move' | DrawTool | 'erase'
 export type Pt = [number, number]
 
@@ -53,6 +53,8 @@ export interface Drawing {
   color: string
   width: number
   points: Pt[]
+  // Solo en los letreros (tipo 'text'): lo que pone. Se coloca en points[0].
+  text?: string
 }
 
 // Un paso de una animación: solo guarda las fichas que se mueven en ese paso
@@ -87,12 +89,14 @@ export const COLORS = ['#ffffff', '#ffd23f', '#ff6b5e', '#5bb6ff']
 
 export const DEFAULT_COLOR: Record<DrawTool, string> = {
   pass: '#ffffff',
+  lob: '#ffffff',
   run: '#ffd23f',
   arrow: '#ffffff',
   dribble: '#ffffff',
   press: '#ff6b5e',
   shot: '#ffd23f',
   line: '#ffffff',
+  text: '#ffffff',
   zone: '#ffd23f',
   focus: '#ffffff',
   free: '#ff6b5e',
@@ -101,12 +105,14 @@ export const DEFAULT_COLOR: Record<DrawTool, string> = {
 export const TOOL_NAME: Record<Tool, string> = {
   move: t('Mover'),
   pass: t('Pase'),
+  lob: t('Pase aéreo'),
   run: t('Carrera'),
   arrow: t('Flecha'),
   dribble: t('Conducción'),
   press: t('Presión'),
   shot: t('Tiro'),
   line: t('Línea'),
+  text: t('Texto'),
   zone: t('Zona'),
   focus: t('Foco'),
   free: t('Libre'),

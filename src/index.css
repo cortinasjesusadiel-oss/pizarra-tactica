@@ -229,3 +229,5 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 .backup-msg.error { border-color: #ff6b5e; }
 .tools select.lang { flex: none; min-height: 36px; padding: 6px 8px; font-weight: 600; cursor: pointer; }
 .tools-end { display: flex; gap: 8px; align-items: center; margin-left: auto; flex: none; padding-left: 8px; }
+.label-sheet textarea { width: 100%; resize: vertical; font-size: 16px; }
+.board g.label { cursor: grab; }

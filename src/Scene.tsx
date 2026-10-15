@@ -24,15 +24,18 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
   return (
     <>
       {grass && <Pitch kind={board.pitch} zones={zones} brand={brand} ident={ident} />}
-      {board.drawings.map((d) => <DrawingShape key={d.id} d={d} />)}
+      {board.drawings.filter((d) => d.type !== 'text').map((d) => <DrawingShape key={d.id} d={d} />)}
       {ghost && <Ghost board={board} step={Math.round(s)} upright={upright} look={look} />}
-      {parts.map(({ d, part }) => <DrawingShape key={d.id} d={d} part={part} />)}
+      {parts.filter(({ d }) => d.type !== 'text').map(({ d, part }) => <DrawingShape key={d.id} d={d} part={part} />)}
       {live && <DrawingShape d={live} />}
       <Motion board={board} s={s} look={look} />
       {board.tokens.map((t) => {
         const [x, y] = sampleAt(board, t, s)
         return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} look={look} />
       })}
+      {/* Los letreros van encima de todo para que siempre se lean. */}
+      {board.drawings.filter((d) => d.type === 'text').map((d) => <DrawingShape key={d.id} d={d} upright={upright} />)}
+      {parts.filter(({ d }) => d.type === 'text').map(({ d, part }) => <DrawingShape key={d.id} d={d} part={part} upright={upright} />)}
     </>
   )
 }

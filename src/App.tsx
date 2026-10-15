@@ -24,13 +24,14 @@ import type { ExportOpts, Renderer } from './exportVideo'
 import { lang, setLang, t, tr } from './i18n'
 
 const PAD = 3
-const DRAW_TOOLS: DrawTool[] = ['pass', 'run', 'arrow', 'dribble', 'press', 'shot', 'line', 'zone', 'focus', 'free']
+const DRAW_TOOLS: DrawTool[] = ['pass', 'lob', 'run', 'arrow', 'dribble', 'press', 'shot', 'line', 'text', 'zone', 'focus', 'free']
 const TOOLS: Tool[] = ['move', ...DRAW_TOOLS, 'erase']
 
 type Action =
   | { kind: 'move'; id: string; dx: number; dy: number; ball?: { id: string; ox: number; oy: number } }
   | { kind: 'draw'; drawing: Drawing }
   | { kind: 'erase' }
+  | { kind: 'moveText'; id: string; dx: number; dy: number }
   | { kind: 'none' }
 
 function hint(): boolean {
@@ -54,6 +55,8 @@ export default function App() {
   const [color, setColor] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [live, setLive] = useState<Drawing | null>(null)
+  // Letrero que se está escribiendo o editando (id vacío = nuevo).
+  const [label, setLabel] = useState<{ id: string; p: Pt; text: string } | null>(null)
   const [penSeen, setPenSeen] = useState(false)
   const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | 'learn' | 'look' | 'identity' | null>(null)
   const [showHint, setShowHint] = useState(hint)
@@ -435,6 +438,14 @@ export default function App() {
     if (playing || anim !== null) stopAnim()
     const tokenId = (e.target as Element).closest('[data-token]')?.getAttribute('data-token') ?? null
     const p = toBoard(e)
+    // Letreros: con la herramienta Texto se toca para escribir uno nuevo o para editar uno que ya está.
+    const labelId = (e.target as Element).closest('g.label')?.getAttribute('data-draw') ?? null
+    const allDrawings = [...board.drawings, ...(board.frames?.[cur]?.drawings ?? [])]
+    if (tool === 'text' && !(isPen && (e.buttons & 2 || e.buttons & 32))) {
+      const d = labelId ? allDrawings.find((x) => x.id === labelId) : undefined
+      setLabel(d ? { id: d.id, p: d.points[0], text: d.text ?? '' } : { id: '', p, text: '' })
+      return
+    }
     // Botón lateral del S Pen (2) o goma del lápiz (32): borrar.
     const penErase = isPen && (e.buttons & 2 || e.buttons & 32)
     const fingerWithPen = penSeen && e.pointerType === 'touch'
@@ -456,6 +467,11 @@ export default function App() {
     future.current = []
     startSnap.current = JSON.stringify(board)
 
+    if (mode === 'move' && !tokenId && labelId) {
+      // Arrastrar un letrero para recolocarlo.
+      const d = allDrawings.find((x) => x.id === labelId)
+      if (d) { action.current = { kind: 'moveText', id: d.id, dx: d.points[0][0] - p[0], dy: d.points[0][1] - p[1] }; return }
+    }
     if (mode === 'move') {
       const t = board.tokens.find((x) => x.id === tokenId)
       // La barra de la ficha aparece al soltar: si apareciera ya, la pizarra se movería bajo el dedo.
@@ -502,7 +518,28 @@ export default function App() {
       setLive(a.drawing)
     } else if (a.kind === 'erase') {
       eraseAt(e.clientX, e.clientY)
+    } else if (a.kind === 'moveText') {
+      const [x, y] = toBoard(e)
+      const pt: Pt = [x + a.dx, y + a.dy]
+      const mv = (l: Drawing[]) => l.map((d) => (d.id === a.id ? { ...d, points: [pt] } : d))
+      setBoard((b) => ({ ...b, drawings: mv(b.drawings), frames: b.frames?.map((f) => ({ ...f, drawings: mv(f.drawings) })) }))
     }
+  }
+
+  // Guardar el letrero: nuevo (en el paso actual si hay pasos) o editado; vacío lo quita.
+  const saveLabel = (text: string, remove = false) => {
+    if (!label) return
+    const txt = text.replace(/\r/g, '').trim()
+    if (label.id) {
+      const ed = (l: Drawing[]) => (remove || !txt ? l.filter((d) => d.id !== label.id) : l.map((d) => (d.id === label.id ? { ...d, text: txt } : d)))
+      commit((b) => ({ ...b, drawings: ed(b.drawings), frames: b.frames?.map((f) => ({ ...f, drawings: ed(f.drawings) })) }))
+    } else if (txt && !remove) {
+      const d: Drawing = { id: uid(), type: 'text', color: color ?? DEFAULT_COLOR.text, width: 0.5, points: [label.p], text: txt }
+      commit((b) => (b.frames
+        ? { ...b, frames: b.frames.map((f, i) => (i === cur ? { ...f, drawings: [...f.drawings, d] } : f)) }
+        : { ...b, drawings: [...b.drawings, d] }))
+    }
+    setLabel(null)
   }
 
   const onUp = (e: React.PointerEvent) => {
@@ -516,7 +553,7 @@ export default function App() {
       setLive(null)
       const p = a.drawing.points
       const [x0, y0] = p[0], [x1, y1] = p[p.length - 1]
-      const ok = a.drawing.type === 'zone' ? Math.abs(x1 - x0) > 1 && Math.abs(y1 - y0) > 1 : p.length > 1 && Math.hypot(x1 - x0, y1 - y0) > 1
+      const ok = a.drawing.type === 'text' ? false : a.drawing.type === 'zone' ? Math.abs(x1 - x0) > 1 && Math.abs(y1 - y0) > 1 : p.length > 1 && Math.hypot(x1 - x0, y1 - y0) > 1
       if (ok) {
         setBoard((b) => (b.frames
           ? { ...b, frames: b.frames.map((f, i) => (i === cur ? { ...f, drawings: [...f.drawings, a.drawing] } : f)) }
@@ -634,6 +671,22 @@ export default function App() {
           </div>
         )}
         {toast && <div className="toast" role="status">{toast}</div>}
+        {label && (
+          <div className="scrim" onClick={() => setLabel(null)}>
+            <form className="sheet label-sheet" role="dialog" aria-label={t('Letrero')} onClick={(e) => e.stopPropagation()} onSubmit={(e) => { e.preventDefault(); saveLabel(label.text) }}>
+              <div className="sheet-head">
+                <h2>{label.id ? t('Editar letrero') : t('Nuevo letrero')}</h2>
+                <button type="button" onClick={() => setLabel(null)}>{t('Cancelar')}</button>
+              </div>
+              <textarea id="label-text" autoFocus rows={3} maxLength={120} placeholder={t('Escribe el mensaje, por ejemplo: ¡Presión aquí!')} value={label.text} onChange={(e) => setLabel({ ...label, text: e.target.value })} />
+              <p className="muted small">{t('Sale en la pizarra, el proyector, las imágenes y los vídeos. Para moverlo, arrástralo con «Mover». Usa el color de abajo antes de tocar el campo.')}</p>
+              <div className="backup-actions">
+                <button className="primary" type="submit">{label.id ? t('Guardar') : t('Poner en el campo')}</button>
+                {label.id && <button type="button" className="danger" onClick={() => saveLabel('', true)}>{t('Quitar letrero')}</button>}
+              </div>
+            </form>
+          </div>
+        )}
         {ready && (
           <div className="videoready" role="dialog" aria-label={t('Exportación lista')}>
             <b>{ready.length > 1 ? t('{n} archivos listos', { n: ready.length }) : ready[0].type === 'image/png' ? t('Imagen lista') : t('Vídeo listo')}</b>
@@ -1047,6 +1100,8 @@ function ToolIcon({ t }: { t: Tool }) {
       {t === 'move' && <><circle cx="12" cy="12" r="5" {...s} /><path d="M12 2v4M12 18v4M2 12h4M18 12h4" {...s} /></>}
       {t === 'pass' && <><path d="M4 18L18 6" {...s} /><path d="M12 6h6v6" {...s} /></>}
       {t === 'run' && <><path d="M4 18L18 6" {...s} strokeDasharray="3 3" /><path d="M12 6h6v6" {...s} /></>}
+      {t === 'lob' && <><path d="M4 18Q10 2 19 14" {...s} /><path d="M19.5 8.5l-.5 5.5-5-1.5" {...s} /></>}
+      {t === 'text' && <><path d="M5 6h14M12 6v13M9 19h6" {...s} /></>}
       {t === 'arrow' && <><path d="M4 18c3-8 8-11 14-12" {...s} /><path d="M13 4l5 2-3 4.5" {...s} /></>}
       {t === 'press' && <><path d="M4 18L16 8" {...s} /><path d="M13.5 4.5l6 7" {...s} /></>}
       {t === 'shot' && <><path d="M3 16L15 7M5 19L17 10" {...s} /><path d="M14 4.5l6 3-2.5 6" {...s} /></>}
