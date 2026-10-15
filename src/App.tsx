@@ -11,7 +11,6 @@ import { TEMPLATES, emptyBoard } from './templates'
 import { GROUPS } from './anim'
 import { TIPS } from './tips'
 import { deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay } from './storage'
-import { exportPng } from './exportPng'
 
 const PAD = 3
 const DRAW_TOOLS: DrawTool[] = ['pass', 'run', 'dribble', 'zone', 'free']
@@ -42,7 +41,7 @@ export default function App() {
   const [selected, setSelected] = useState<string | null>(null)
   const [live, setLive] = useState<Drawing | null>(null)
   const [penSeen, setPenSeen] = useState(false)
-  const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | null>(null)
+  const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | null>(null)
   const [showHint, setShowHint] = useState(hint)
   const [toast, setToast] = useState<string | null>(null)
   const [zones, setZones] = useState(() => { try { return localStorage.getItem('pizarra.zonas') === '1' } catch { return false } })
@@ -195,35 +194,56 @@ export default function App() {
   const nextStep = () => glide(Math.min(nFrames - 1, Math.floor((animRef.current ?? cur) + 1e-6) + 1))
   const prevStep = () => glide(Math.max(0, Math.ceil((animRef.current ?? cur) - 1e-6) - 1))
 
-  // El vídeo se crea fotograma a fotograma; al terminar se ofrece compartir (WhatsApp, etc.) o guardar.
-  const [videoFile, setVideoFile] = useState<File | null>(null)
-  const doVideo = async () => {
-    if (!frames || video !== null) return
+  // Marca de agua (por defecto TacticalPro); vacía = sin marca.
+  const [brand, setBrandState] = useState(() => { try { return localStorage.getItem('pizarra.marca') ?? 'TacticalPro' } catch { return 'TacticalPro' } })
+  const setBrand = (v: string) => { setBrandState(v); try { localStorage.setItem('pizarra.marca', v) } catch { /* sin almacenamiento */ } }
+
+  // Exportar: los vídeos se crean fotograma a fotograma; al terminar se ofrece compartir (WhatsApp, etc.) o guardar.
+  const [ready, setReady] = useState<File[] | null>(null)
+  const [progressLabel, setProgressLabel] = useState('')
+  const runExport = async (items: { name: string; board: Board }[], image = false) => {
+    if (video !== null || !items.length) return
     stopAnim()
+    setSheet(null)
     setVideo(0)
     try {
-      const { exportVideo } = await import('./exportVideo')
-      const res = await exportVideo(board, { zones, onProgress: setVideo })
-      if (res === 'unsupported') setToast('Este navegador no puede crear vídeo. Prueba con Chrome actualizado.')
-      else setVideoFile(res.file)
+      const ex = await import('./exportVideo')
+      const opts = { zones, brand: brand.trim() || undefined }
+      let files: File[]
+      if (image) files = [await ex.exportImage(items[0].board, { ...opts, s: cur })]
+      else if (items.length === 1 && items[0].board.frames) {
+        const res = await ex.exportVideo(items[0].board, { ...opts, onProgress: setVideo })
+        if (res === 'unsupported') { setToast('Este navegador no puede crear vídeo. Prueba con Chrome actualizado.'); return }
+        files = [res.file]
+      } else {
+        let idx = 0
+        files = await ex.exportMany(items, {
+          ...opts,
+          onItem: (i) => { idx = i; setProgressLabel(`${i + 1} de ${items.length}: `) },
+          onProgress: (k) => setVideo((idx + k) / items.length),
+        })
+      }
+      setReady(files)
     } catch {
-      setToast('No se pudo crear el vídeo')
+      setToast('No se pudo exportar')
     } finally {
       setVideo(null)
+      setProgressLabel('')
     }
   }
-  const shareVideo = async () => {
-    if (!videoFile) return
-    const { shareFile, saveFile } = await import('./exportVideo')
-    if (!(await shareFile(videoFile))) { saveFile(videoFile); setToast('Vídeo guardado') }
-    setVideoFile(null)
+  const doVideo = () => runExport([{ name: 'jugada', board }])
+  const shareReady = async () => {
+    if (!ready) return
+    const { shareFiles, saveFiles } = await import('./exportVideo')
+    if (!(await shareFiles(ready))) { await saveFiles(ready); setToast(ready.length > 1 ? 'Archivos guardados' : 'Archivo guardado') }
+    setReady(null)
   }
-  const saveVideo = async () => {
-    if (!videoFile) return
-    const { saveFile } = await import('./exportVideo')
-    saveFile(videoFile)
-    setToast('Vídeo guardado')
-    setVideoFile(null)
+  const saveReady = async () => {
+    if (!ready) return
+    const { saveFiles } = await import('./exportVideo')
+    await saveFiles(ready)
+    setToast(ready.length > 1 ? 'Archivos guardados' : 'Archivo guardado')
+    setReady(null)
   }
 
   const addStep = () => {
@@ -414,12 +434,6 @@ export default function App() {
     setColor(null)
   }
 
-  const doExport = async () => {
-    if (!svg.current) return
-    const res = await exportPng(svg.current)
-    setToast(res === 'shared' ? 'Imagen compartida' : res === 'saved' ? 'Imagen guardada' : 'No se pudo exportar la imagen en este navegador')
-  }
-
   const vb = vertical
     ? `${-PAD} ${-PAD} ${H + 2 * PAD} ${W + 2 * PAD}`
     : `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`
@@ -451,7 +465,7 @@ export default function App() {
         <button onClick={undo} disabled={!past.current.length} aria-label="Deshacer">↶</button>
         <button onClick={redo} disabled={!future.current.length} aria-label="Rehacer">↷</button>
         <button onClick={() => setSheet('plays')}>Jugadas</button>
-        <button onClick={doExport}>Exportar</button>
+        <button onClick={() => setSheet('export')}>Exportar</button>
       </header>
 
       <main className="stage" ref={stage}>
@@ -467,14 +481,14 @@ export default function App() {
         >
           <Markers />
           <g ref={layer} transform={vertical ? `translate(${H} 0) rotate(90)` : undefined}>
-            <Scene board={board} s={anim ?? cur} zones={zones} upright={vertical} selected={selected} live={live} />
+            <Scene board={board} s={anim ?? cur} zones={zones} brand={brand.trim() || undefined} upright={vertical} selected={selected} live={live} />
           </g>
         </svg>
         {frames && frames[shown].note && !showHint && (
           <div className="note" aria-live="polite"><b>Paso {shown + 1}.</b> {frames[shown].note}</div>
         )}
         {video !== null && (
-          <div className="toast" role="status">Creando vídeo… {Math.round(video * 100)}%</div>
+          <div className="toast" role="status">Exportando {progressLabel}{Math.round(video * 100)}%</div>
         )}
         {showHint && (
           <div className="hint" role="note">
@@ -484,12 +498,12 @@ export default function App() {
           </div>
         )}
         {toast && <div className="toast" role="status">{toast}</div>}
-        {videoFile && (
-          <div className="videoready" role="dialog" aria-label="Vídeo listo">
-            <b>Vídeo listo</b>
-            <button className="primary" onClick={shareVideo}>Compartir</button>
-            <button onClick={saveVideo}>Guardar</button>
-            <button onClick={() => setVideoFile(null)} aria-label="Cerrar">✕</button>
+        {ready && (
+          <div className="videoready" role="dialog" aria-label="Exportación lista">
+            <b>{ready.length > 1 ? `${ready.length} archivos listos` : ready[0].type === 'image/png' ? 'Imagen lista' : 'Vídeo listo'}</b>
+            <button className="primary" onClick={shareReady}>Compartir</button>
+            <button onClick={saveReady}>Guardar</button>
+            <button onClick={() => setReady(null)} aria-label="Cerrar">✕</button>
           </div>
         )}
       </main>
@@ -653,6 +667,17 @@ export default function App() {
           ))}
         </Sheet>
       )}
+      {sheet === 'export' && (
+        <ExportSheet
+          hasFrames={!!frames}
+          brand={brand}
+          setBrand={setBrand}
+          onClose={() => setSheet(null)}
+          onImage={() => runExport([{ name: 'pizarra', board }], true)}
+          onVideo={doVideo}
+          onMany={runExport}
+        />
+      )}
       {sheet === 'plays' && <PlaysSheet board={board} onOpen={(b) => { load(b); setSheet(null) }} onClose={() => setSheet(null)} onSaved={() => setToast('Jugada guardada')} />}
     </div>
   )
@@ -724,5 +749,71 @@ function ToolIcon({ t }: { t: Tool }) {
       {t === 'free' && <path d="M4 17c3-6 6 2 9-3s4-6 7-5" {...s} />}
       {t === 'erase' && <><path d="M8 20h12" {...s} /><path d="M4 15l9-9 6 6-7 7H8z" {...s} /></>}
     </svg>
+  )
+}
+
+function ExportSheet({ hasFrames, brand, setBrand, onClose, onImage, onVideo, onMany }: {
+  hasFrames: boolean
+  brand: string
+  setBrand: (v: string) => void
+  onClose: () => void
+  onImage: () => void
+  onVideo: () => void
+  onMany: (items: { name: string; board: Board }[]) => void
+}) {
+  const [picked, setPicked] = useState<string[]>([])
+  const plays = listPlays()
+  const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
+  const many = () => onMany(picked.map((id) => {
+    const pl = plays.find((p) => p.id === id)
+    if (pl) return { name: pl.name, board: pl.board }
+    const t = TEMPLATES.find((x) => x.id === id)!
+    return { name: t.name, board: t.build() }
+  }))
+  const Item = ({ id, label, anim }: { id: string; label: string; anim: boolean }) => (
+    <label className="pick">
+      <input type="checkbox" checked={picked.includes(id)} onChange={() => toggle(id)} />
+      <span>{anim && <span className="anim-badge">▶</span>}{label}</span>
+    </label>
+  )
+  return (
+    <Sheet title="Exportar" onClose={onClose}>
+      <section>
+        <h3>Esta pizarra</h3>
+        <div className="row-actions">
+          <button onClick={onImage}>Imagen PNG</button>
+          <button onClick={onVideo} disabled={!hasFrames}>Vídeo MP4</button>
+        </div>
+      </section>
+      <section>
+        <h3>Varias a la vez</h3>
+        <p className="muted small">Marca las que quieras. Las animadas salen en vídeo y las demás en imagen.</p>
+        {plays.length > 0 && (
+          <details className="session" open>
+            <summary><b>Mis jugadas</b><span className="muted small">{plays.length}</span></summary>
+            <div className="picklist">{plays.map((p) => <Item key={p.id} id={p.id} label={p.name} anim={!!p.board.frames} />)}</div>
+          </details>
+        )}
+        {GROUPS.map((g) => {
+          const list = TEMPLATES.filter((t) => t.group === g.id)
+          return (
+            <details key={g.id} className="session">
+              <summary><b>{g.name}</b><span className="muted small">{list.filter((t) => picked.includes(t.id)).length || ''} {list.length}</span></summary>
+              <div className="picklist">{list.map((t) => <Item key={t.id} id={t.id} label={t.name} anim={!!t.animated} />)}</div>
+            </details>
+          )
+        })}
+        <button className="primary wide" disabled={!picked.length} onClick={many}>
+          {picked.length ? `Exportar ${picked.length} seleccionada${picked.length > 1 ? 's' : ''}` : 'Elige al menos una'}
+        </button>
+      </section>
+      <section>
+        <h3>Tu marca</h3>
+        <label className="field brand">
+          <input id="brand" value={brand} maxLength={30} placeholder="Sin marca" onChange={(e) => setBrand(e.target.value)} />
+        </label>
+        <p className="muted small">Aparece pequeña y transparente en el margen de abajo, fuera de las líneas del campo, en la pizarra, las imágenes y los vídeos. Déjala vacía para quitarla.</p>
+      </section>
+    </Sheet>
   )
 }

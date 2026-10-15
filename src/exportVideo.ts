@@ -59,7 +59,9 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[
   return out
 }
 
-export async function exportVideo(board: Board, opts: { zones?: boolean; onProgress?: (k: number) => void } = {}): Promise<Result> {
+export interface ExportOpts { zones?: boolean; brand?: string; onProgress?: (k: number) => void }
+
+export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<Result> {
   const n = board.frames?.length ?? 0
   const picked = await pickCodec()
   if (!picked || n < 2) return 'unsupported'
@@ -72,7 +74,7 @@ export async function exportVideo(board: Board, opts: { zones?: boolean; onProgr
   const viewBox = `${-PAD} ${-PAD} ${vbW} ${vbH}`
 
   // El césped no cambia: se dibuja una sola vez.
-  const grass = await svgImage(renderToStaticMarkup(createElement(Pitch, { kind: board.pitch, zones: opts.zones })), viewBox, bw, bh)
+  const grass = await svgImage(renderToStaticMarkup(createElement(Pitch, { kind: board.pitch, zones: opts.zones, brand: opts.brand })), viewBox, bw, bh)
 
   const canvas = document.createElement('canvas')
   canvas.width = WIDTH
@@ -117,11 +119,6 @@ export async function exportVideo(board: Board, opts: { zones?: boolean; onProgr
       ctx.font = '600 22px system-ui, sans-serif'
       wrap(ctx, note, WIDTH - 56).slice(0, 2).forEach((l, i) => ctx.fillText(l, 28, 56 + i * 24))
     }
-    ctx.font = '800 20px system-ui, sans-serif'
-    ctx.textAlign = 'right'
-    ctx.fillStyle = 'rgba(255,255,255,.75)'
-    ctx.fillText('TacticalPro', WIDTH - 28, 28)
-    ctx.textAlign = 'left'
 
     const frame = new VideoFrame(canvas, { timestamp: Math.round((f * 1e6) / FPS), duration: Math.round(1e6 / FPS) })
     encoder.encode(frame, { keyFrame: f % (FPS * 2) === 0 })
@@ -139,18 +136,61 @@ export async function exportVideo(board: Board, opts: { zones?: boolean; onProgr
   return { file: new File([blob], `tacticalpro-${new Date().toISOString().slice(0, 10)}.mp4`, { type: 'video/mp4' }) }
 }
 
-export function saveFile(file: File) {
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(file)
-  a.download = file.name
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(a.href), 10000)
+// Imagen PNG de una pizarra (siempre en horizontal), en el paso `s`.
+export async function exportImage(board: Board, opts: ExportOpts & { s?: number } = {}): Promise<File> {
+  const { w: W, h: H } = PITCH[board.pitch]
+  const vbW = W + 2 * PAD, vbH = H + 2 * PAD
+  const scale = 2000 / vbW
+  const w = 2000, h = Math.round(vbH * scale)
+  const markup = renderToStaticMarkup(createElement('g', null, createElement(Markers),
+    createElement(Scene, { board, s: opts.s ?? 0, zones: opts.zones, brand: opts.brand })))
+  const img = await svgImage(markup, `${-PAD} ${-PAD} ${vbW} ${vbH}`, w, h)
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'))
+  if (!blob) throw new Error('png')
+  return new File([blob], `tacticalpro-${new Date().toISOString().slice(0, 10)}.png`, { type: 'image/png' })
 }
 
-export async function shareFile(file: File): Promise<boolean> {
-  if (!navigator.canShare?.({ files: [file] })) return false
+const slug = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'jugada'
+
+// Exporta varias pizarras seguidas: las animadas en vídeo y las demás en imagen.
+export async function exportMany(items: { name: string; board: Board }[], opts: ExportOpts & { onItem?: (i: number) => void }): Promise<File[]> {
+  const out: File[] = []
+  const used = new Set<string>()
+  for (const [i, it] of items.entries()) {
+    opts.onItem?.(i)
+    let file: File
+    if ((it.board.frames?.length ?? 0) > 1) {
+      const res = await exportVideo(it.board, opts)
+      file = res === 'unsupported' ? await exportImage(it.board, opts) : res.file
+    } else file = await exportImage(it.board, opts)
+    let name = `${i + 1}-${slug(it.name)}`
+    while (used.has(name)) name += '-b'
+    used.add(name)
+    out.push(new File([file], `${name}.${file.type === 'image/png' ? 'png' : 'mp4'}`, { type: file.type }))
+  }
+  return out
+}
+
+export async function saveFiles(files: File[]) {
+  for (const file of files) {
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(file)
+    a.download = file.name
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(a.href), 20000)
+    // Pequeña pausa entre descargas para que el navegador no bloquee las siguientes.
+    await new Promise((r) => setTimeout(r, 400))
+  }
+}
+
+export async function shareFiles(files: File[]): Promise<boolean> {
+  if (!navigator.canShare?.({ files })) return false
   try {
-    await navigator.share({ files: [file], title: 'TacticalPro' })
+    await navigator.share({ files, title: 'TacticalPro' })
     return true
   } catch {
     return false

@@ -5,8 +5,9 @@ import { DrawingShape, TokenShape } from './Shapes'
 
 // Lo que se dibuja dentro del campo en el instante `s` (puede ser fraccionario): césped, trazos y fichas.
 // Se usa en la pizarra y al exportar el vídeo, para que ambos se vean igual.
-export function Scene({ board, s, zones, upright = false, selected = null, live = null, grass = true }: {
+export function Scene({ board, s, zones, brand, upright = false, selected = null, live = null, grass = true }: {
   board: Board
+  brand?: string
   s: number
   zones?: boolean
   upright?: boolean
@@ -18,7 +19,7 @@ export function Scene({ board, s, zones, upright = false, selected = null, live 
   const step = board.frames?.[drawStep(board, s)]
   return (
     <>
-      {grass && <Pitch kind={board.pitch} zones={zones} />}
+      {grass && <Pitch kind={board.pitch} zones={zones} brand={brand} />}
       {board.drawings.map((d) => <DrawingShape key={d.id} d={d} />)}
       {step?.drawings.map((d) => <DrawingShape key={d.id} d={d} />)}
       {live && <DrawingShape d={live} />}

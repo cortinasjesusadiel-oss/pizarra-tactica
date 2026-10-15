@@ -42,7 +42,8 @@ function Zones({ kind, w, h }: { kind: PitchKind; w: number; h: number }) {
 }
 
 // Césped con corte profesional: franjas a lo largo, franjas suaves a lo ancho (efecto damero) y viñeta de luz.
-export const Pitch = memo(function Pitch({ kind, zones }: { kind: PitchKind; zones?: boolean }) {
+// `brand`: marca de agua pequeña y transparente en el margen inferior, fuera de las líneas del campo.
+export const Pitch = memo(function Pitch({ kind, zones, brand }: { kind: PitchKind; zones?: boolean; brand?: string }) {
   const { w, h } = PITCH[kind]
   const stripeW = kind === 'grid' ? 5 : 105 / 18
   const stripes = Math.ceil(w / stripeW)
@@ -70,6 +71,9 @@ export const Pitch = memo(function Pitch({ kind, zones }: { kind: PitchKind; zon
       )}
       <rect x={-5} y={-5} width={w + 10} height={h + 10} fill="url(#light)" />
       {zones && <Zones kind={kind} w={w} h={h} />}
+      {brand && (
+        <text x={w} y={h + 2.05} textAnchor="end" fontSize={1.2} fontWeight={800} letterSpacing={0.12} fill="#fff" opacity={0.3} fontFamily="system-ui, sans-serif">{brand}</text>
+      )}
       <rect x={0} y={0} width={w} height={h} {...L} />
       {kind === 'full' && (
         <>
