@@ -10,6 +10,7 @@ import { SESSIONS } from './sessions'
 import { TEMPLATES, emptyBoard } from './templates'
 import { GROUPS } from './anim'
 import { TIPS } from './tips'
+import { GLOSSARY, LESSONS } from './fundamentos'
 import { deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay } from './storage'
 
 const PAD = 3
@@ -41,7 +42,7 @@ export default function App() {
   const [selected, setSelected] = useState<string | null>(null)
   const [live, setLive] = useState<Drawing | null>(null)
   const [penSeen, setPenSeen] = useState(false)
-  const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | null>(null)
+  const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | 'learn' | null>(null)
   const [showHint, setShowHint] = useState(hint)
   const [toast, setToast] = useState<string | null>(null)
   const [zones, setZones] = useState(() => { try { return localStorage.getItem('pizarra.zonas') === '1' } catch { return false } })
@@ -454,6 +455,7 @@ export default function App() {
             </button>
           ))}
         </div>
+        <button onClick={() => setSheet('learn')}>Fundamentos</button>
         <button onClick={() => setSheet('templates')}>Plantillas</button>
         <button onClick={() => setSheet('sessions')}>Sesiones</button>
         <button onClick={() => setSheet('tips')}>Consejos</button>
@@ -648,6 +650,37 @@ export default function App() {
               </ol>
             </details>
           ))}
+        </Sheet>
+      )}
+      {sheet === 'learn' && (
+        <Sheet title="Fundamentos" onClose={() => setSheet(null)}>
+          <p className="muted small">Lo esencial para leer un partido y entender cada jugada de la app. Toca un tema y ábrelo en la pizarra.</p>
+          {LESSONS.map((l) => (
+            <details key={l.id} className="session">
+              <summary><b>{l.title}</b><span className="muted small">{l.summary}</span></summary>
+              <ul className="tips">
+                {l.points.map((pt) => <li key={pt}><span>{pt}</span></li>)}
+              </ul>
+              {l.templates && (
+                <div className="row-actions lesson-links">
+                  {l.templates.map((id) => TEMPLATES.find((t) => t.id === id)).filter((t) => t !== undefined).map((t) => (
+                    <button key={t.id} onClick={() => {
+                      load(t.build())
+                      setSheet(null)
+                      if (l.zones && !zones) toggleZones()
+                      if (t.animated) setAutoplay(true)
+                    }}>{t.animated ? '▶ ' : ''}{t.name}</button>
+                  ))}
+                </div>
+              )}
+            </details>
+          ))}
+          <details className="session">
+            <summary><b>Diccionario</b><span className="muted small">Las palabras que más se oyen en análisis y entrenamientos.</span></summary>
+            <dl className="glossary">
+              {GLOSSARY.map(([term, def]) => <div key={term}><dt>{term}</dt><dd>{def}</dd></div>)}
+            </dl>
+          </details>
         </Sheet>
       )}
       {sheet === 'tips' && (

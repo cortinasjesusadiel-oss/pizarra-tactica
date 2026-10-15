@@ -152,3 +152,9 @@ button.toggle.on { border-color: var(--accent); color: var(--accent); }
 .pick input { width: 20px; height: 20px; min-height: 0; accent-color: var(--accent); }
 button.wide { width: 100%; margin-top: 10px; }
 .field.brand input { width: 100%; text-align: left; }
+.lesson-links { margin-top: 10px; }
+.lesson-links button { font-size: 13px; }
+.glossary { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.glossary div { padding: 8px 12px; background: var(--panel-2); border-radius: 10px; }
+.glossary dt { font-weight: 700; }
+.glossary dd { margin: 2px 0 0; font-size: 14px; color: var(--muted); }

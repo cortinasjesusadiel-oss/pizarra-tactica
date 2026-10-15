@@ -1,6 +1,7 @@
 import { line, type Board, type Drawing, type Frame, type Pt, type Token } from './model'
 
 export const GROUPS = [
+  { id: 'Fundamentos', name: 'Fundamentos' },
   { id: 'Sistemas', name: 'Sistemas' },
   { id: 'Bloques', name: 'Bloques defensivos' },
   { id: 'Presión alta', name: 'Presión alta' },
