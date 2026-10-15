@@ -1011,8 +1011,8 @@ export default function App() {
           {frames && frames.some((f) => f.note) && (
             <div className="present-note" aria-live="polite">
               {/* Al cambiar de paso el texto nuevo aparece fundido sobre el anterior, sin corte. */}
-              <span style={{ opacity: cap.fade }}><b>{t('Paso')}{' '}{cap.k + 1}/{nFrames}</b> {tr(frames[cap.k].note)}</span>
-              {cap.fade < 1 && <span aria-hidden="true" style={{ opacity: 1 - cap.fade }}><b>{t('Paso')}{' '}{cap.prev + 1}/{nFrames}</b> {tr(frames[cap.prev].note)}</span>}
+              <span style={{ opacity: Math.max(0, cap.fade * 2 - 1) }}><b>{t('Paso')}{' '}{cap.k + 1}/{nFrames}</b> {tr(frames[cap.k].note)}</span>
+              {cap.fade < 0.5 && <span aria-hidden="true" style={{ opacity: 1 - cap.fade * 2 }}><b>{t('Paso')}{' '}{cap.prev + 1}/{nFrames}</b> {tr(frames[cap.prev].note)}</span>}
             </div>
           )}
           <svg viewBox={`${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`} className="present-board">

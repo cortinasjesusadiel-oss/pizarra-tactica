@@ -186,8 +186,9 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
       }
       ctx.globalAlpha = 1
     }
-    if (cap.fade < 1) drawCaption(cap.prev, 1 - cap.fade)
-    drawCaption(cap.k, cap.fade)
+    // Primero se va la explicación anterior y luego entra la nueva, para que no se monten las dos.
+    if (cap.fade < 0.5) drawCaption(cap.prev, 1 - cap.fade * 2)
+    else drawCaption(cap.k, cap.fade * 2 - 1)
 
     // La identidad va en la franja libre a la derecha del campo, abajo: nunca tapa jugadores, flechas ni líneas.
     if (opts.ident) {
