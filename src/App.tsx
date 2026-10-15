@@ -498,6 +498,12 @@ export default function App() {
     setTool('move')
   }
 
+  // Empezar de cero: pizarra vacía con el mismo campo. Se puede deshacer con ↶.
+  const newBoard = () => {
+    load(emptyBoard(board.pitch))
+    setToast('Pizarra vacía. Si no querías borrarla, pulsa ↶')
+  }
+
   const setPitch = (pitch: PitchKind) => {
     if (pitch === board.pitch) return
     load(emptyBoard(pitch))
@@ -525,6 +531,7 @@ export default function App() {
     <div className="app">
       <header className="top">
         <strong className="brand"><img src={tpSymbol} alt="" />Tactical<span>Pro</span></strong>
+        <button className="primary" onClick={newBoard}>+ Nueva</button>
         <div className="seg" role="group" aria-label="Tipo de campo">
           {(Object.keys(PITCH) as PitchKind[]).map((k) => (
             <button key={k} className={board.pitch === k ? 'on' : ''} onClick={() => setPitch(k)}>
