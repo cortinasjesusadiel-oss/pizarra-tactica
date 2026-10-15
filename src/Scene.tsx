@@ -1,4 +1,4 @@
-import { PITCH, posAt, type Board, type Drawing, type Look } from './model'
+import { DEFAULT_LOOK, PITCH, posAt, type Board, type Drawing, type Look, type Pt } from './model'
 import { drawParts, sampleAt } from './motion'
 import { Pitch } from './Pitch'
 import { DrawingShape, TokenShape } from './Shapes'
@@ -26,6 +26,7 @@ export function Scene({ board, s, zones, brand, look, upright = false, selected 
       {ghost && <Ghost board={board} step={Math.round(s)} upright={upright} look={look} />}
       {parts.map(({ d, part }) => <DrawingShape key={d.id} d={d} part={part} />)}
       {live && <DrawingShape d={live} />}
+      <Motion board={board} s={s} look={look} />
       {board.tokens.map((t) => {
         const [x, y] = sampleAt(board, t, s)
         return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} look={look} />
@@ -51,6 +52,56 @@ function Ghost({ board, step, upright, look }: { board: Board; step: number; upr
           </g>
         )
       })}
+    </g>
+  )
+}
+
+// Para que se vea al instante quién se mueve y hacia dónde: mientras una ficha viaja deja una estela de su
+// color y lleva un halo que aparece al arrancar y se apaga al llegar. Además, el jugador que lleva el balón
+// tiene un aro claro debajo.
+function Motion({ board, s, look = DEFAULT_LOOK }: { board: Board; s: number; look?: Look }) {
+  const n = board.frames?.length ?? 0
+  if (n < 2) return null
+  const { r } = PITCH[board.pitch]
+  const c = Math.max(0, Math.min(n - 1, s))
+  const i = Math.min(Math.floor(c), n - 2), u = c - i
+  const now = Object.fromEntries(board.tokens.map((t) => [t.id, sampleAt(board, t, c)])) as Record<string, Pt>
+  const ball = board.tokens.find((t) => t.kind === 'ball')
+  let holder: string | null = null
+  if (ball) {
+    let bd = r * 1.3
+    for (const t of board.tokens) {
+      if (t.kind !== 'player') continue
+      const d = Math.hypot(now[t.id][0] - now[ball.id][0], now[t.id][1] - now[ball.id][1])
+      if (d < bd) { bd = d; holder = t.id }
+    }
+  }
+  const moving = u > 1e-3 ? board.tokens.filter((t) => {
+    if (t.kind !== 'player' && t.kind !== 'ball') return false
+    const a = posAt(board, t, i), b = posAt(board, t, i + 1)
+    return Math.hypot(b[0] - a[0], b[1] - a[1]) > 0.3
+  }) : []
+  const glow = Math.sin(Math.PI * Math.min(1, u * 1.15))
+  return (
+    <g pointerEvents="none" style={{ pointerEvents: 'none' }}>
+      {moving.map((t) => {
+        const col = t.kind === 'ball' ? '#ffffff' : t.team === 'home' ? look.home : t.team === 'away' ? look.away : '#f4f4f4'
+        const N = 14
+        const pts = Array.from({ length: N + 1 }, (_, k) => sampleAt(board, t, i + (u * k) / N))
+        const w = t.kind === 'ball' ? r * 0.22 : r * 0.5
+        return (
+          <g key={t.id}>
+            {pts.slice(1).map((p, k) => (
+              <line key={k} x1={pts[k][0]} y1={pts[k][1]} x2={p[0]} y2={p[1]} stroke={col} strokeWidth={w * (0.35 + (0.65 * (k + 1)) / N)}
+                strokeOpacity={0.5 * ((k + 1) / N) * Math.min(1, glow * 1.6)} strokeLinecap="round" />
+            ))}
+            {t.kind === 'player' && (
+              <circle cx={now[t.id][0]} cy={now[t.id][1]} r={r * 1.55} fill={col} fillOpacity={0.12 * glow} stroke={col} strokeWidth={r * 0.16} strokeOpacity={0.85 * glow} />
+            )}
+          </g>
+        )
+      })}
+      {holder && <circle cx={now[holder][0]} cy={now[holder][1]} r={r * 1.32} fill="none" stroke="#ffffff" strokeWidth={r * 0.1} strokeOpacity={0.6} />}
     </g>
   )
 }

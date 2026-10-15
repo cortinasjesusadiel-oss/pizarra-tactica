@@ -58,14 +58,15 @@ export function DrawingShape({ d, faded, part }: { d: Drawing; faded?: boolean; 
   const [from, to] = part ?? [0, 1]
   if (to - from < 0.001) return null
   const trimmed = from > 0.001 || to < 0.999
-  const opacity = (faded ? 0.6 : 1) * (d.type === 'zone' && trimmed ? to - from : 1)
+  const area = d.type === 'zone' || d.type === 'focus'
+  const opacity = (faded ? 0.6 : 1) * (area && trimmed ? to - from : 1)
   const common = { 'data-draw': d.id, opacity }
   const marker = `url(#ah-${d.color.slice(1)})`
   const sw = d.width
   const a = p[0], b = p[p.length - 1]
   const path = d.type === 'pass' ? `M${a[0]} ${a[1]} L${b[0]} ${b[1]}` : d.type === 'dribble' ? wavy(p) : smooth(p)
   // Máscara que deja ver solo el tramo pedido (pathLength=1 hace que las medidas vayan de 0 a 1).
-  const mask = trimmed && d.type !== 'zone' ? `m${mid}` : undefined
+  const mask = trimmed && !area ? `m${mid}` : undefined
   const defs = mask && (
     <defs>
       <mask id={mask} maskUnits="userSpaceOnUse" x={-200} y={-200} width={600} height={600}>
@@ -87,6 +88,25 @@ export function DrawingShape({ d, faded, part }: { d: Drawing; faded?: boolean; 
     case 'zone': {
       const x = Math.min(a[0], b[0]), y = Math.min(a[1], b[1])
       return <rect {...common} x={x} y={y} width={Math.abs(b[0] - a[0])} height={Math.abs(b[1] - a[1])} fill={d.color} fillOpacity={0.18} stroke={d.color} strokeWidth={0.25} strokeDasharray="1 0.7" rx={0.4} />
+    }
+    case 'focus': {
+      // Foco: un círculo de luz suave para señalar a un jugador o una zona clave. Se dibuja del centro hacia fuera.
+      const r = Math.max(1.2, Math.hypot(b[0] - a[0], b[1] - a[1]))
+      const gid = `f${mid}`
+      return (
+        <g {...common}>
+          <defs>
+            <radialGradient id={gid}>
+              <stop offset="0%" stopColor={d.color} stopOpacity={0.05} />
+              <stop offset="70%" stopColor={d.color} stopOpacity={0.16} />
+              <stop offset="100%" stopColor={d.color} stopOpacity={0.32} />
+            </radialGradient>
+          </defs>
+          <circle cx={a[0]} cy={a[1]} r={r} fill={`url(#${gid})`} />
+          <circle cx={a[0]} cy={a[1]} r={r} fill="none" stroke={d.color} strokeWidth={0.3} strokeOpacity={0.9} />
+          <circle cx={a[0]} cy={a[1]} r={r + 0.6} fill="none" stroke={d.color} strokeWidth={0.15} strokeOpacity={0.35} />
+        </g>
+      )
     }
   }
 }

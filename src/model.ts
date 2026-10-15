@@ -17,7 +17,7 @@ export const EQUIPMENT: { kind: TokenKind; name: string }[] = [
   { kind: 'flag', name: 'Banderín' },
 ]
 export const KIND_NAME = (k: TokenKind) => (k === 'player' ? 'Jugador' : k === 'ball' ? 'Balón' : EQUIPMENT.find((e) => e.kind === k)?.name ?? '')
-export type DrawTool = 'pass' | 'run' | 'dribble' | 'zone' | 'free'
+export type DrawTool = 'pass' | 'run' | 'dribble' | 'zone' | 'focus' | 'free'
 export type Tool = 'move' | DrawTool | 'erase'
 export type Pt = [number, number]
 
@@ -83,6 +83,7 @@ export const DEFAULT_COLOR: Record<DrawTool, string> = {
   run: '#ffd23f',
   dribble: '#ffffff',
   zone: '#ffd23f',
+  focus: '#ffffff',
   free: '#ff6b5e',
 }
 
@@ -92,6 +93,7 @@ export const TOOL_NAME: Record<Tool, string> = {
   run: 'Carrera',
   dribble: 'Conducción',
   zone: 'Zona',
+  focus: 'Foco',
   free: 'Libre',
   erase: 'Borrar',
 }

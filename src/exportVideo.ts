@@ -6,6 +6,7 @@ import { DEFAULT_PACE, caption, paceAt, paceTotal, type Pace } from './motion'
 import { Pitch } from './Pitch'
 import { Scene } from './Scene'
 import { Markers } from './Shapes'
+import logoFull from './logoFull.webp'
 
 // Exporta la jugada animada a un vídeo MP4 fluido (30 imágenes por segundo).
 // Cada imagen se dibuja aparte con la posición exacta de cada ficha en ese instante, así no hay saltos
@@ -14,7 +15,7 @@ import { Markers } from './Shapes'
 const WIDTH = 1280
 const HEIGHT = 720
 const FPS = 30
-const CAPTION = 84
+const OUTRO = 3.2
 const PAD = 3
 
 type Result = { file: File } | 'unsupported'
@@ -45,6 +46,41 @@ function svgImage(markup: string, viewBox: string, w: number, h: number): Promis
   return img.decode().then(() => img)
 }
 
+function loadImage(src: string): Promise<HTMLImageElement> {
+  const img = new Image()
+  img.src = src
+  return img.decode().then(() => img)
+}
+
+// Pantalla final: la jugada se funde a negro y aparece el logo con el lema.
+function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, t: number) {
+  const e = (a: number, b: number) => { const x = Math.max(0, Math.min(1, (t - a) / (b - a))); return 1 - Math.pow(1 - x, 3) }
+  ctx.globalAlpha = e(0, 0.6)
+  ctx.fillStyle = '#0f1712'
+  ctx.fillRect(0, 0, WIDTH, HEIGHT)
+  const glow = ctx.createRadialGradient(WIDTH / 2, HEIGHT * 0.42, 0, WIDTH / 2, HEIGHT * 0.42, 420)
+  glow.addColorStop(0, 'rgba(79,209,139,0.18)')
+  glow.addColorStop(1, 'rgba(79,209,139,0)')
+  ctx.fillStyle = glow
+  ctx.fillRect(0, 0, WIDTH, HEIGHT)
+  const a = e(0.3, 1.0)
+  const lw = 380, lh = (lw * logo.naturalHeight) / logo.naturalWidth
+  const sc = 0.92 + 0.08 * a
+  ctx.globalAlpha = a
+  ctx.drawImage(logo, WIDTH / 2 - (lw * sc) / 2, HEIGHT * 0.4 - (lh * sc) / 2, lw * sc, lh * sc)
+  const b = e(0.8, 1.5)
+  ctx.globalAlpha = b
+  ctx.fillStyle = '#cfe9da'
+  ctx.font = '800 26px Montserrat, system-ui, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '6px'
+  ctx.fillText('APRENDE · PLANIFICA · ENTRENA', WIDTH / 2, HEIGHT * 0.4 + lh / 2 + 52 - (1 - b) * 12)
+  if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '0px'
+  ctx.textAlign = 'left'
+  ctx.globalAlpha = 1
+}
+
 // Parte el texto en líneas que quepan en el ancho dado.
 function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[] {
   const out: string[] = []
@@ -57,13 +93,17 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[
   return out
 }
 
-export interface ExportOpts { zones?: boolean; brand?: string; look?: Look; pace?: Pace; onProgress?: (k: number) => void }
+export interface ExportOpts { zones?: boolean; brand?: string; look?: Look; pace?: Pace
+  // Letra grande para verlo en el móvil (WhatsApp, redes) y pantalla final con el logo y el lema.
+  big?: boolean; outro?: boolean
+  onProgress?: (k: number) => void }
 
 export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<Result> {
   const n = board.frames?.length ?? 0
   const picked = await pickCodec()
   if (!picked || n < 2) return 'unsupported'
 
+  const CAPTION = opts.big ? 176 : 84
   const { w: W, h: H } = PITCH[board.pitch]
   const vbW = W + 2 * PAD, vbH = H + 2 * PAD
   const scale = Math.min(WIDTH / vbW, (HEIGHT - CAPTION) / vbH)
@@ -73,6 +113,8 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
 
   // El césped no cambia: se dibuja una sola vez.
   const grass = await svgImage(renderToStaticMarkup(createElement(Pitch, { kind: board.pitch, zones: opts.zones, brand: opts.brand })), viewBox, bw, bh)
+
+  const logo = opts.outro ? await loadImage(logoFull) : null
 
   const canvas = document.createElement('canvas')
   canvas.width = WIDTH
@@ -96,13 +138,17 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
 
     // Cada paso dura lo elegido (5, 8 o 10 s): quietos para leer y luego el movimiento al siguiente.
     const pace = opts.pace ?? DEFAULT_PACE
-    const total = Math.round(paceTotal(n, pace) * FPS)
+    const animSec = paceTotal(n, pace)
+    const total = Math.round((animSec + (logo ? OUTRO : 0)) * FPS)
+    let lastScene: HTMLImageElement | null = null
     for (let f = 0; f < total; f++) {
       if (failed) { if (encoder.state !== 'closed') encoder.close(); throw failed }
       const sec = f / FPS
-      const s = paceAt(n, pace, sec)
-      const markup = renderToStaticMarkup(createElement('g', null, createElement(Markers), createElement(Scene, { board, s, grass: false, look: opts.look })))
-      const scene = await svgImage(markup, viewBox, bw, bh)
+      const outroT = sec - animSec
+      const s = paceAt(n, pace, Math.min(sec, animSec))
+      const scene: HTMLImageElement = outroT > 0 && lastScene ? lastScene
+        : await svgImage(renderToStaticMarkup(createElement('g', null, createElement(Markers), createElement(Scene, { board, s, grass: false, look: opts.look }))), viewBox, bw, bh)
+      lastScene = scene
 
       ctx.fillStyle = '#0f1712'
       ctx.fillRect(0, 0, WIDTH, HEIGHT)
@@ -114,19 +160,21 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
       const drawCaption = (j: number, alpha: number) => {
         ctx.globalAlpha = alpha
         ctx.fillStyle = '#4fd18b'
-        ctx.font = '700 22px system-ui, sans-serif'
+        ctx.font = opts.big ? '800 30px system-ui, sans-serif' : '700 22px system-ui, sans-serif'
         ctx.textBaseline = 'middle'
-        ctx.fillText(`PASO ${j + 1}/${n}`, 28, 28)
+        ctx.fillText(`PASO ${j + 1}/${n}`, 28, opts.big ? 32 : 28)
         const note = board.frames![j].note
         if (note) {
-          ctx.fillStyle = '#e8eee9'
-          ctx.font = '600 22px system-ui, sans-serif'
-          wrap(ctx, note, WIDTH - 56).slice(0, 2).forEach((l, i) => ctx.fillText(l, 28, 56 + i * 24))
+          ctx.fillStyle = '#ffffff'
+          ctx.font = opts.big ? '700 34px system-ui, sans-serif' : '600 22px system-ui, sans-serif'
+          if (opts.big) wrap(ctx, note, WIDTH - 56).slice(0, 3).forEach((l, i) => ctx.fillText(l, 28, 76 + i * 42))
+          else wrap(ctx, note, WIDTH - 56).slice(0, 2).forEach((l, i) => ctx.fillText(l, 28, 56 + i * 24))
         }
         ctx.globalAlpha = 1
       }
       if (cap.fade < 1) drawCaption(cap.prev, 1 - cap.fade)
       drawCaption(cap.k, cap.fade)
+      if (logo && outroT > 0) drawOutro(ctx, logo, outroT)
 
       const frame = new VideoFrame(canvas, { timestamp: Math.round((f * 1e6) / FPS), duration: Math.round(1e6 / FPS) })
       encoder.encode(frame, { keyFrame: f % (FPS * 2) === 0 })
