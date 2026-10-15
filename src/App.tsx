@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MOVES_BALL, MOVES_PLAYER, STRAIGHT,
   COLORS, DEFAULT_COLOR, DEFAULT_LOOK, TEAM_COLORS, type Look, type TokenShapeKind, type TokenText, EQUIPMENT, KIND_NAME, PITCH, TOOL_NAME, ballAt, item, player, posAt, uid,
   type Board, type TokenKind, type DrawTool, type Drawing, type PitchKind, type Pt, type Team, type Token, type Tool,
-  LABEL_BG_COLORS, LABEL_DEFAULT_BG, LABEL_SIZES, LABEL_TEXT_COLORS,
+  LABEL_BG_COLORS, LABEL_DEFAULT_BG, lobBend, LABEL_SIZES, LABEL_TEXT_COLORS,
 } from './model'
 import { Equipment, Markers, TokenShape } from './Shapes'
 import { Scene } from './Scene'
@@ -30,7 +30,7 @@ const TOOLS: Tool[] = ['move', ...DRAW_TOOLS, 'erase']
 
 type Action =
   | { kind: 'move'; id: string; dx: number; dy: number; ball?: { id: string; ox: number; oy: number } }
-  | { kind: 'draw'; drawing: Drawing }
+  | { kind: 'draw'; drawing: Drawing; raw?: Pt[] }
   | { kind: 'erase' }
   | { kind: 'moveText'; id: string; dx: number; dy: number; edit?: Drawing }
   | { kind: 'none' }
@@ -534,6 +534,8 @@ export default function App() {
       if (Math.hypot(p[0] - last[0], p[1] - last[1]) < 0.35) return
       const width = e.pointerType === 'pen' ? +(a.drawing.width * 0.8 + widthFor(e) * 0.2).toFixed(2) : a.drawing.width
       a.drawing = { ...a.drawing, width, points: STRAIGHT.includes(a.drawing.type) || a.drawing.type === 'zone' ? [pts[0], p] : [...pts, p] }
+      // Pase aéreo: se guarda el trazo entero para saber si lo curvas a un lado o lo dejas recto.
+      if (a.drawing.type === 'lob') { a.raw = [...(a.raw ?? [pts[0]]), p]; a.drawing.bend = lobBend(a.raw) }
       setLive(a.drawing)
     } else if (a.kind === 'erase') {
       eraseAt(e.clientX, e.clientY)

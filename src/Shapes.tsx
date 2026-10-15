@@ -65,7 +65,7 @@ export function DrawingShape({ d, faded, part, upright }: { d: Drawing; faded?: 
   const marker = `url(#ah-${d.color.slice(1)})`
   const sw = d.width
   const a = p[0], b = p[p.length - 1]
-  const path = d.type === 'lob' ? lobPath(a, b) : d.type === 'pass' || d.type === 'shot' || d.type === 'line' ? `M${a[0]} ${a[1]} L${b[0]} ${b[1]}` : d.type === 'dribble' ? wavy(p) : smooth(p)
+  const path = d.type === 'lob' ? lobPath(a, b, d.bend) : d.type === 'pass' || d.type === 'shot' || d.type === 'line' ? `M${a[0]} ${a[1]} L${b[0]} ${b[1]}` : d.type === 'dribble' ? wavy(p) : smooth(p)
   // Máscara que deja ver solo el tramo pedido (pathLength=1 hace que las medidas vayan de 0 a 1).
   const mask = trimmed && !area ? `m${mid}` : undefined
   const defs = mask && (
@@ -84,10 +84,12 @@ export function DrawingShape({ d, faded, part, upright }: { d: Drawing; faded?: 
       return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw} strokeDasharray={`${sw * 2.6} ${sw * 2}`} strokeLinecap="round" markerEnd={marker} /></>
     case 'lob': {
       // Pase aéreo: parábola gruesa por el aire y, debajo, su sombra recta por el suelo.
-      const arr = lobArrow(a, b, sw)
+      const arr = lobArrow(a, b, sw, d.bend)
+      // Recto por el centro: la sombra va un poco desplazada, como si el balón fuera alto.
+      const sh = d.bend === 0 ? Math.min(1.6, Math.hypot(b[0] - a[0], b[1] - a[1]) * 0.05) : 0
       return (
         <g {...common}>
-          <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke="#000" strokeOpacity={0.35 * (to - from)} strokeWidth={sw * 1.1} strokeLinecap="round" />
+          <line x1={a[0] + sh * 0.6} y1={a[1] + sh} x2={b[0] + sh * 0.6} y2={b[1] + sh} stroke="#000" strokeOpacity={0.35 * (to - from)} strokeWidth={sw * 1.1} strokeLinecap="round" />
           {defs}
           <g {...m}>
             <polygon points={arr.body} fill={d.color} />
@@ -151,28 +153,28 @@ export function DrawingShape({ d, faded, part, upright }: { d: Drawing; faded?: 
 }
 
 // Curva del pase aéreo: una parábola alta (ver lobControl).
-function lobPath(a: Pt, b: Pt): string {
-  const c = lobControl(a, b)
+function lobPath(a: Pt, b: Pt, bend?: number): string {
+  const c = lobControl(a, b, bend)
   return `M${a[0]} ${a[1]} Q${c[0]} ${c[1]} ${b[0]} ${b[1]}`
 }
 
 // Flecha gruesa del pase aéreo: el trazo se ensancha hacia el final y acaba en una punta grande.
-function lobArrow(a: Pt, b: Pt, sw: number): { body: string; head: string } {
+function lobArrow(a: Pt, b: Pt, sw: number, bend?: number): { body: string; head: string } {
   const N = 48, head = sw * 6
   // La punta se queda un poco antes de la llegada para que no la tape la ficha que recibe.
   let uTip = 1
-  while (uTip > 0.6 && Math.hypot(lobAt(a, b, uTip)[0] - b[0], lobAt(a, b, uTip)[1] - b[1]) < 2.2) uTip -= 0.005
-  const e = lobAt(a, b, uTip)
+  while (uTip > 0.6 && Math.hypot(lobAt(a, b, uTip, bend)[0] - b[0], lobAt(a, b, uTip, bend)[1] - b[1]) < 2.2) uTip -= 0.005
+  const e = lobAt(a, b, uTip, bend)
   let uEnd = uTip
-  while (uEnd > 0.4 && Math.hypot(lobAt(a, b, uEnd)[0] - e[0], lobAt(a, b, uEnd)[1] - e[1]) < head) uEnd -= 0.005
+  while (uEnd > 0.4 && Math.hypot(lobAt(a, b, uEnd, bend)[0] - e[0], lobAt(a, b, uEnd, bend)[1] - e[1]) < head) uEnd -= 0.005
   const left: Pt[] = [], right: Pt[] = []
   for (let k = 0; k <= N; k++) {
-    const u = (k / N) * uEnd, p = lobAt(a, b, u), q = lobAt(a, b, Math.min(1, u + 0.01))
+    const u = (k / N) * uEnd, p = lobAt(a, b, u, bend), q = lobAt(a, b, Math.min(1, u + 0.01), bend)
     const len = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1
     const nx = -(q[1] - p[1]) / len, ny = (q[0] - p[0]) / len, w = sw * (0.45 + 1.05 * (u / uEnd))
     left.push([p[0] + nx * w, p[1] + ny * w]); right.push([p[0] - nx * w, p[1] - ny * w])
   }
-  const s = lobAt(a, b, uEnd)
+  const s = lobAt(a, b, uEnd, bend)
   const len = Math.hypot(e[0] - s[0], e[1] - s[1]) || 1
   const nx = -(e[1] - s[1]) / len, ny = (e[0] - s[0]) / len, hw = sw * 3.4
   const f = (p: Pt) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`

@@ -15,7 +15,7 @@ export function sampleAt(b: Board, t: Token, s: number): Pt {
   if (p1[0] === p2[0] && p1[1] === p2[1]) return p1
   if (t.kind === 'ball') {
     const lob = lobFor(b, i, p1, p2)
-    return lob ? lobAt(lob[0], lob[1], u) : [p1[0] + (p2[0] - p1[0]) * u, p1[1] + (p2[1] - p1[1]) * u]
+    return lob ? lobAt(p1, p2, u, lob.bend) : [p1[0] + (p2[0] - p1[0]) * u, p1[1] + (p2[1] - p1[1]) * u]
   }
   const p0 = i > 0 ? posAt(b, t, i - 1) : p1
   const p3 = i + 2 < n ? posAt(b, t, i + 2) : p2
@@ -32,10 +32,10 @@ export function sampleAt(b: Board, t: Token, s: number): Pt {
 }
 
 // Si el balón sale y llega donde empieza y acaba un pase aéreo del paso `i`, ese pase (salida y llegada del balón).
-function lobFor(b: Board, i: number, p1: Pt, p2: Pt): [Pt, Pt] | null {
+function lobFor(b: Board, i: number, p1: Pt, p2: Pt): Drawing | null {
   const near = (a: Pt, z: Pt) => Math.hypot(a[0] - z[0], a[1] - z[1]) < 4
   const d = b.frames?.[i]?.drawings.find((x) => x.type === 'lob' && near(x.points[0], p1) && near(x.points[x.points.length - 1], p2))
-  return d ? [p1, p2] : null
+  return d ?? null
 }
 
 // Altura del balón (0 en el suelo, 1 en lo más alto) y su sombra en el suelo, cuando va por el aire.
@@ -46,8 +46,12 @@ export function ballAir(b: Board, t: Token, s: number): { lift: number; shadow: 
   const i = Math.min(Math.floor(c), n - 2), u = c - i
   if (u <= 0 || u >= 1) return null
   const p1 = posAt(b, t, i), p2 = posAt(b, t, i + 1)
-  if (!lobFor(b, i, p1, p2)) return null
-  return { lift: Math.sin(Math.PI * u), shadow: [p1[0] + (p2[0] - p1[0]) * u, p1[1] + (p2[1] - p1[1]) * u] }
+  const lob = lobFor(b, i, p1, p2)
+  if (!lob) return null
+  const lift = Math.sin(Math.PI * u)
+  // Por el centro el balón va recto y su sombra se separa un poco al subir; curvado, la sombra va recta por el suelo.
+  const sh = lob.bend === 0 ? lift * Math.min(1.6, Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) * 0.05) : 0
+  return { lift, shadow: [p1[0] + (p2[0] - p1[0]) * u + sh * 0.6, p1[1] + (p2[1] - p1[1]) * u + sh] }
 }
 
 const smoothstep = (x: number) => { const c = Math.max(0, Math.min(1, x)); return c * c * (3 - 2 * c) }

@@ -58,6 +58,8 @@ export interface Drawing {
   // Letreros: color del fondo ('none' = sin fondo) y tamaño de la letra en metros del campo.
   bg?: string
   fs?: number
+  // Solo en el pase aéreo: hacia qué lado se curva (en metros, con signo; 0 = recto por el centro).
+  bend?: number
 }
 
 export const LABEL_DEFAULT_BG = '#0b1510'
@@ -142,14 +144,30 @@ export const line = (type: DrawTool, points: Pt[]): Drawing => ({
 
 // Pase aéreo: el balón describe una parábola. En la pizarra (vista desde arriba) la curva se arquea hacia arriba
 // de la pantalla y su sombra va recta por el suelo. `lobAt` da el punto de la curva en u (0 = salida, 1 = llegada).
-export function lobControl(a: Pt, b: Pt): Pt {
+export function lobControl(a: Pt, b: Pt, bend?: number): Pt {
   const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1
   let nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L
-  if (ny > 0 || (Math.abs(ny) < 1e-6 && nx > 0)) { nx = -nx; ny = -ny }
-  const h = Math.min(20, L * 0.5)
-  return [(a[0] + b[0]) / 2 + nx * h, (a[1] + b[1]) / 2 + ny * h]
+  // Sin `bend` (pases aéreos antiguos) la curva sale hacia arriba de la pantalla.
+  if (bend === undefined) {
+    if (ny > 0 || (Math.abs(ny) < 1e-6 && nx > 0)) { nx = -nx; ny = -ny }
+    bend = Math.min(20, L * 0.5)
+  }
+  return [(a[0] + b[0]) / 2 + nx * bend, (a[1] + b[1]) / 2 + ny * bend]
 }
-export function lobAt(a: Pt, b: Pt, u: number): Pt {
-  const c = lobControl(a, b), v = 1 - u
+export function lobAt(a: Pt, b: Pt, u: number, bend?: number): Pt {
+  const c = lobControl(a, b, bend), v = 1 - u
   return [v * v * a[0] + 2 * v * u * c[0] + u * u * b[0], v * v * a[1] + 2 * v * u * c[1] + u * u * b[1]]
+}
+// Hacia dónde va el pase aéreo según el trazo: si lo curvas a un lado la parábola sale por ese lado (con la
+// altura que le diste, dentro de unos límites) y si lo trazas casi recto va por el centro (0, en línea recta).
+export function lobBend(raw: Pt[]): number {
+  const a = raw[0], b = raw[raw.length - 1]
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1])
+  if (L < 1) return 0
+  const nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L
+  let dev = 0
+  for (const p of raw) { const d = (p[0] - a[0]) * nx + (p[1] - a[1]) * ny; if (Math.abs(d) > Math.abs(dev)) dev = d }
+  if (Math.abs(dev) < Math.max(1.5, L * 0.08)) return 0
+  // El punto de control de la curva está al doble de distancia que su punto más alto.
+  return Math.sign(dev) * Math.min(Math.max(Math.abs(dev) * 2, L * 0.25), Math.min(24, L * 0.6))
 }
