@@ -37,8 +37,9 @@ function Zones({ kind, w, h }: { kind: PitchKind; w: number; h: number }) {
     <g>
       {lanes.map((y) => <line key={`l${y}`} x1={0} y1={y} x2={w} y2={y} {...z} />)}
       {cols.map((x) => <line key={`c${x}`} x1={x} y1={0} x2={x} y2={h} {...z} />)}
+      {/* El nombre va arriba de cada carril para que no lo tape el portero ni las fichas del centro. */}
       {kind !== 'grid' && names.map((n, i) => (
-        <text key={i} x={1.2} y={(yb[i] + yb[i + 1]) / 2} fontSize={1.6} fill="rgba(255,255,255,.55)" dominantBaseline="central" fontFamily="system-ui, sans-serif" fontWeight={700}>{n.toUpperCase()}</text>
+        <text key={i} x={1.2} y={yb[i] + 1.5} fontSize={1.6} fill="rgba(255,255,255,.55)" dominantBaseline="central" fontFamily="system-ui, sans-serif" fontWeight={700}>{n.toUpperCase()}</text>
       ))}
     </g>
   )
