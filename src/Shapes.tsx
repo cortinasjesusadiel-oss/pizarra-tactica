@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { COLORS, DEFAULT_LOOK, type Drawing, type Look, type Pt, type Token } from './model'
+import { COLORS, DEFAULT_LOOK, lobAt, lobControl, type Drawing, type Look, type Pt, type Token } from './model'
 
 export function Markers() {
   return (
@@ -82,9 +82,20 @@ export function DrawingShape({ d, faded, part, upright }: { d: Drawing; faded?: 
       return <>{defs}<line {...common} {...m} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={d.color} strokeWidth={sw} strokeLinecap="round" markerEnd={marker} /></>
     case 'run':
       return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw} strokeDasharray={`${sw * 2.6} ${sw * 2}`} strokeLinecap="round" markerEnd={marker} /></>
-    case 'lob':
-      // Pase aéreo: flecha en curva, como el balón que va por el aire.
-      return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw} strokeLinecap="round" markerEnd={marker} /></>
+    case 'lob': {
+      // Pase aéreo: parábola gruesa por el aire y, debajo, su sombra recta por el suelo.
+      const arr = lobArrow(a, b, sw)
+      return (
+        <g {...common}>
+          <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke="#000" strokeOpacity={0.35 * (to - from)} strokeWidth={sw * 1.1} strokeLinecap="round" />
+          {defs}
+          <g {...m}>
+            <polygon points={arr.body} fill={d.color} />
+            <polygon points={arr.head} fill={d.color} />
+          </g>
+        </g>
+      )
+    }
     case 'arrow':
       // Flecha continua que sigue el trazo: movimiento sin balón o cualquier indicación.
       return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" markerEnd={marker} /></>
@@ -139,11 +150,36 @@ export function DrawingShape({ d, faded, part, upright }: { d: Drawing; faded?: 
   }
 }
 
-// Curva del pase aéreo: se arquea hacia un lado, más cuanto más largo es el pase.
+// Curva del pase aéreo: una parábola alta (ver lobControl).
 function lobPath(a: Pt, b: Pt): string {
-  const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1
-  const nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L, h = Math.min(12, L * 0.28)
-  return `M${a[0]} ${a[1]} Q${(a[0] + b[0]) / 2 + nx * h} ${(a[1] + b[1]) / 2 + ny * h} ${b[0]} ${b[1]}`
+  const c = lobControl(a, b)
+  return `M${a[0]} ${a[1]} Q${c[0]} ${c[1]} ${b[0]} ${b[1]}`
+}
+
+// Flecha gruesa del pase aéreo: el trazo se ensancha hacia el final y acaba en una punta grande.
+function lobArrow(a: Pt, b: Pt, sw: number): { body: string; head: string } {
+  const N = 48, head = sw * 6
+  // La punta se queda un poco antes de la llegada para que no la tape la ficha que recibe.
+  let uTip = 1
+  while (uTip > 0.6 && Math.hypot(lobAt(a, b, uTip)[0] - b[0], lobAt(a, b, uTip)[1] - b[1]) < 2.2) uTip -= 0.005
+  const e = lobAt(a, b, uTip)
+  let uEnd = uTip
+  while (uEnd > 0.4 && Math.hypot(lobAt(a, b, uEnd)[0] - e[0], lobAt(a, b, uEnd)[1] - e[1]) < head) uEnd -= 0.005
+  const left: Pt[] = [], right: Pt[] = []
+  for (let k = 0; k <= N; k++) {
+    const u = (k / N) * uEnd, p = lobAt(a, b, u), q = lobAt(a, b, Math.min(1, u + 0.01))
+    const len = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1
+    const nx = -(q[1] - p[1]) / len, ny = (q[0] - p[0]) / len, w = sw * (0.45 + 1.05 * (u / uEnd))
+    left.push([p[0] + nx * w, p[1] + ny * w]); right.push([p[0] - nx * w, p[1] - ny * w])
+  }
+  const s = lobAt(a, b, uEnd)
+  const len = Math.hypot(e[0] - s[0], e[1] - s[1]) || 1
+  const nx = -(e[1] - s[1]) / len, ny = (e[0] - s[0]) / len, hw = sw * 3.4
+  const f = (p: Pt) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`
+  return {
+    body: [...left, ...right.reverse()].map(f).join(' '),
+    head: [f([s[0] + nx * hw, s[1] + ny * hw]), f(e), f([s[0] - nx * hw, s[1] - ny * hw])].join(' '),
+  }
 }
 
 // Letrero: el texto sobre una etiqueta oscura para que se lea encima del césped. Varias líneas con saltos de línea.

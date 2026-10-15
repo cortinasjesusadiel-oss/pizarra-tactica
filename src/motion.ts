@@ -1,4 +1,4 @@
-import { posAt, type Board, type Drawing, type Pt, type Token } from './model'
+import { lobAt, posAt, type Board, type Drawing, type Pt, type Token } from './model'
 import { t } from './i18n'
 
 // Posición continua de una ficha en el instante `s`, medido en pasos (1.5 = a mitad entre el paso 1 y el 2).
@@ -13,7 +13,10 @@ export function sampleAt(b: Board, t: Token, s: number): Pt {
   const u = c - i
   const p1 = posAt(b, t, i), p2 = posAt(b, t, i + 1)
   if (p1[0] === p2[0] && p1[1] === p2[1]) return p1
-  if (t.kind === 'ball') return [p1[0] + (p2[0] - p1[0]) * u, p1[1] + (p2[1] - p1[1]) * u]
+  if (t.kind === 'ball') {
+    const lob = lobFor(b, i, p1, p2)
+    return lob ? lobAt(lob[0], lob[1], u) : [p1[0] + (p2[0] - p1[0]) * u, p1[1] + (p2[1] - p1[1]) * u]
+  }
   const p0 = i > 0 ? posAt(b, t, i - 1) : p1
   const p3 = i + 2 < n ? posAt(b, t, i + 2) : p2
   const still = (a: Pt, z: Pt) => a[0] === z[0] && a[1] === z[1]
@@ -26,6 +29,25 @@ export function sampleAt(b: Board, t: Token, s: number): Pt {
     h00 * p1[0] + h10 * m1[0] + h01 * p2[0] + h11 * m2[0],
     h00 * p1[1] + h10 * m1[1] + h01 * p2[1] + h11 * m2[1],
   ]
+}
+
+// Si el balón sale y llega donde empieza y acaba un pase aéreo del paso `i`, ese pase (salida y llegada del balón).
+function lobFor(b: Board, i: number, p1: Pt, p2: Pt): [Pt, Pt] | null {
+  const near = (a: Pt, z: Pt) => Math.hypot(a[0] - z[0], a[1] - z[1]) < 4
+  const d = b.frames?.[i]?.drawings.find((x) => x.type === 'lob' && near(x.points[0], p1) && near(x.points[x.points.length - 1], p2))
+  return d ? [p1, p2] : null
+}
+
+// Altura del balón (0 en el suelo, 1 en lo más alto) y su sombra en el suelo, cuando va por el aire.
+export function ballAir(b: Board, t: Token, s: number): { lift: number; shadow: Pt } | null {
+  const n = b.frames?.length ?? 0
+  if (t.kind !== 'ball' || n < 2) return null
+  const c = Math.max(0, Math.min(n - 1, s))
+  const i = Math.min(Math.floor(c), n - 2), u = c - i
+  if (u <= 0 || u >= 1) return null
+  const p1 = posAt(b, t, i), p2 = posAt(b, t, i + 1)
+  if (!lobFor(b, i, p1, p2)) return null
+  return { lift: Math.sin(Math.PI * u), shadow: [p1[0] + (p2[0] - p1[0]) * u, p1[1] + (p2[1] - p1[1]) * u] }
 }
 
 const smoothstep = (x: number) => { const c = Math.max(0, Math.min(1, x)); return c * c * (3 - 2 * c) }
@@ -87,7 +109,7 @@ export function drawParts(b: Board, s: number): { d: Drawing; part: [number, num
   const i = drawStep(b, s)
   const u = s - i
   if (u < 1e-4 || i >= f.length - 1) return f[i].drawings.map((d) => ({ d, part: [0, 1] }))
-  const out: { d: Drawing; part: [number, number] }[] = f[i].drawings.map((d) => ({ d, part: [d.type === 'pass' ? u : smoothstep(u), 1] }))
+  const out: { d: Drawing; part: [number, number] }[] = f[i].drawings.map((d) => ({ d, part: [d.type === 'pass' || d.type === 'lob' ? u : smoothstep(u), 1] }))
   const grow = smoothstep((u - 0.55) / 0.45)
   if (grow > 0) for (const d of f[i + 1].drawings) out.push({ d, part: [0, grow] })
   return out

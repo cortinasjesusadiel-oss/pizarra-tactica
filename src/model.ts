@@ -131,3 +131,17 @@ export const item = (kind: TokenKind, x: number, y: number, rot = 0): Token => (
 export const line = (type: DrawTool, points: Pt[]): Drawing => ({
   id: uid(), type, color: DEFAULT_COLOR[type], width: 0.4, points,
 })
+
+// Pase aéreo: el balón describe una parábola. En la pizarra (vista desde arriba) la curva se arquea hacia arriba
+// de la pantalla y su sombra va recta por el suelo. `lobAt` da el punto de la curva en u (0 = salida, 1 = llegada).
+export function lobControl(a: Pt, b: Pt): Pt {
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1
+  let nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L
+  if (ny > 0 || (Math.abs(ny) < 1e-6 && nx > 0)) { nx = -nx; ny = -ny }
+  const h = Math.min(20, L * 0.5)
+  return [(a[0] + b[0]) / 2 + nx * h, (a[1] + b[1]) / 2 + ny * h]
+}
+export function lobAt(a: Pt, b: Pt, u: number): Pt {
+  const c = lobControl(a, b), v = 1 - u
+  return [v * v * a[0] + 2 * v * u * c[0] + u * u * b[0], v * v * a[1] + 2 * v * u * c[1] + u * u * b[1]]
+}

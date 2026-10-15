@@ -1,5 +1,5 @@
 import { DEFAULT_LOOK, PITCH, posAt, type Board, type Drawing, type Look, type Pt } from './model'
-import { drawParts, sampleAt } from './motion'
+import { ballAir, drawParts, sampleAt } from './motion'
 import { Pitch } from './Pitch'
 import type { Mark } from './identity'
 import { DrawingShape, TokenShape } from './Shapes'
@@ -31,6 +31,14 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
       <Motion board={board} s={s} look={look} />
       {board.tokens.map((t) => {
         const [x, y] = sampleAt(board, t, s)
+        // Balón por el aire: su sombra va por el suelo y el balón se ve más grande cuanto más alto va.
+        const air = ballAir(board, t, s)
+        if (air) return (
+          <g key={t.id}>
+            <ellipse cx={air.shadow[0]} cy={air.shadow[1]} rx={r * 0.55 * (1 - air.lift * 0.3)} ry={r * 0.38 * (1 - air.lift * 0.3)} fill="#000" fillOpacity={0.5 - air.lift * 0.15} />
+            <TokenShape t={{ ...t, x, y }} r={r * (1 + air.lift * 0.7)} selected={t.id === selected} upright={upright} look={look} />
+          </g>
+        )
         return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} look={look} />
       })}
       {/* Los letreros van encima de todo para que siempre se lean. */}
