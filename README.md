@@ -11,10 +11,11 @@ Pizarra táctica de fútbol 11 pensada para el móvil y el S Pen, con plantillas
 - Animación continua y suave: las fichas siguen curvas que pasan por todos los pasos, sin paradas ni saltos. Reproducir, pausa, paso anterior y siguiente, explicación de cada paso. Puedes crear tus propias animaciones con “+ Paso”.
 - Exportar varias jugadas a la vez (las animadas en vídeo y las demás en imagen) y marca de agua sutil configurable en el margen del campo.
 - Exportar vídeo MP4 (1280×720, 30 imágenes por segundo) de cualquier jugada animada, con la explicación de cada paso. Se crea fotograma a fotograma, así sale fluido aunque el móvil vaya lento.
-- Plantillas (28, 23 animadas) en grupos: sistemas, bloques defensivos (bajo, medio, alto y repliegue), presión alta (al saque del portero con trampa en banda), transiciones (ataque-defensa y defensa-ataque), generar espacios (arrastre del 9, fijar y soltar, cambio de orientación, tercer hombre), ABP y ejercicios.
+- Plantillas (63, 53 animadas) en grupos: sistemas, bloques defensivos (bajo, medio, alto y repliegue), presión alta (al saque del portero con trampa en banda), transiciones (ataque-defensa y defensa-ataque), generar espacios (arrastre del 9, fijar y soltar, cambio de orientación, tercer hombre), ABP y ejercicios.
 - Material de entrenamiento: conos, picas, vallas, aros, escalera, maniquíes, miniporterías, porterías y banderines, con giro de 45°.
-- Sesiones sugeridas (`src/sessions.ts`): 9 sesiones de fútbol 11 de adultos con bloques, minutos y consignas, enlazadas a los ejercicios animados.
-- Consejos (`src/tips.ts`): 58 consejos breves sobre sistemas, ataque, defensa, ABP, entrenamiento, gestión del grupo y análisis.
+- Sesiones sugeridas (`src/sessions.ts`): 21 sesiones de fútbol 11 de adultos con bloques, minutos y consignas, enlazadas a los ejercicios animados.
+- Consejos (`src/tips.ts`): 126 consejos breves sobre sistemas, ataque, defensa, ABP, entrenamiento, gestión del grupo, análisis, posiciones, estrategia de partido, preparación física, cabeza y portero.
+- Fundamentos (`src/fundamentos.ts`): las 4 fases, carriles y zonas, posiciones y dorsales, sistemas, bloques, principios de ataque y defensa y un diccionario, cada tema enlazado a su plantilla.
 - Césped con corte profesional y botón Zonas para ver carriles y franjas del juego de posición.
 - Instalable como app en el móvil y funciona sin conexión.
 - Deshacer y rehacer, jugadas guardadas en el dispositivo y exportar a PNG (en Android abre el menú de compartir).

@@ -3,6 +3,7 @@ import { animate, press, type Template } from './anim'
 import { TACTICS } from './tactics'
 import { FUND_TEMPLATES } from './fundamentos'
 import { EJERCICIOS } from './more/ejercicios'
+import { TACTICAS2 } from './more/tacticas'
 
 type P = [string, number, number]
 
@@ -302,6 +303,7 @@ export const TEMPLATES: Template[] = [
   circuitoAnim, rondoAnim, tercerAnim, salidaAnim, presionAnim, pressingAnim, contraAnim, centroAnim, posesion,
   ...TACTICS,
   ...EJERCICIOS,
+  ...TACTICAS2,
 ]
 
 export const emptyBoard = (pitch: Board['pitch'] = 'full'): Board => ({ pitch, tokens: [], drawings: [] })
