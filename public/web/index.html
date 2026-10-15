@@ -105,6 +105,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 /* De la pizarra al vídeo */
 .demo{padding:80px 0;background:linear-gradient(180deg,transparent,var(--bg2) 12%,var(--bg2) 88%,transparent)}
 .demo-head{max-width:760px;margin:0 auto 46px;text-align:center}
+.demo-head .kick{font-size:13px;font-weight:800;letter-spacing:.2em;color:var(--g);text-transform:uppercase;margin-bottom:10px}
 .demo-head .sub{font-size:clamp(19px,2.2vw,24px);font-weight:800;color:var(--g);margin:12px 0 14px}
 .dstep{display:grid;grid-template-columns:.8fr 1.2fr;gap:44px;align-items:center;padding:30px 0}
 .dstep+.dstep{border-top:1px solid rgba(79,209,139,.1)}
@@ -238,9 +239,51 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   </div>
 </section>
 
+<section class="demo" id="mas">
+  <div class="wrap">
+    <div class="demo-head">
+      <h2>Mucho más que una <span class="g">pizarra táctica</span></h2>
+      <p class="sub">Aprende · Planifica · Entrena</p>
+      <p class="lead">TacticalPro no enseña por el entrenador ni decide por él. Le proporciona recursos para aprender, preparar, representar y comunicar sus ideas de fútbol.</p>
+    </div>
+
+    <div class="dstep">
+      <div class="dtext">
+        <div class="k">Aprende</div>
+        <h3>Consulta lo esencial del juego</h3>
+        <p>Fundamentos explicados de forma sencilla (las fases del juego, los carriles, los sistemas, los bloques y un diccionario) y consejos prácticos de táctica, entrenamiento y gestión del grupo, para consultar cuando los necesites.</p>
+        <p class="note">Grabación real de la app, con el texto ampliado para que se lea bien.</p>
+      </div>
+      <figure class="player">
+        <video data-lazy poster="img/demo-aprende.webp" width="1280" height="1024" muted loop playsinline controls preload="none" aria-label="Grabación de TacticalPro consultando los fundamentos y los consejos">
+          <source data-src="img/demo-aprende.mp4" type="video/mp4">
+          <source data-src="img/demo-aprende.webm" type="video/webm">
+        </video>
+      </figure>
+    </div>
+
+    <div class="dstep">
+      <div class="dtext">
+        <div class="k">Planifica</div>
+        <h3>Sesiones sugeridas y ejercicios disponibles</h3>
+        <p>Sesiones sugeridas de fútbol 11 de adultos, ordenadas según el día de la semana respecto al partido (MD-4, MD-3, MD-1…). Cada sesión trae sus bloques con minutos y objetivo, y cada ejercicio se abre animado en la pizarra para explicarlo o adaptarlo a tu equipo.</p>
+        <p class="note">Son propuestas listas para usar y adaptar, no un calendario de temporada.</p>
+        <p class="note">Grabación real de la app, con el menú ampliado para que se lea bien.</p>
+      </div>
+      <figure class="player">
+        <video data-lazy poster="img/demo-planifica.webp" width="1280" height="1024" muted loop playsinline controls preload="none" aria-label="Grabación de TacticalPro abriendo una sesión de entrenamiento y su ejercicio animado">
+          <source data-src="img/demo-planifica.mp4" type="video/mp4">
+          <source data-src="img/demo-planifica.webm" type="video/webm">
+        </video>
+      </figure>
+    </div>
+  </div>
+</section>
+
 <section class="demo" id="video">
   <div class="wrap">
     <div class="demo-head">
+      <div class="kick">Entrena · Crea y comparte</div>
       <h2>De la pizarra <span class="g">al vídeo</span></h2>
       <p class="sub">Tus ideas tácticas, en movimiento.</p>
       <p class="lead">Crea jugadas paso a paso, anima los movimientos de tus jugadores y exporta tus explicaciones en MP4. Compártelas con tu equipo por WhatsApp o utilízalas en tus charlas tácticas.</p>
@@ -301,57 +344,6 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <figure class="screen">
         <img src="img/charla-entrenador.webp" width="1536" height="1024" loading="lazy" alt="Entrenador explicando a su equipo la salida de balón 11 contra 11 en el modo proyector de TacticalPro">
       </figure>
-    </div>
-  </div>
-</section>
-
-<section class="demo" id="mas">
-  <div class="wrap">
-    <div class="demo-head">
-      <h2>Mucho más que una <span class="g">pizarra táctica</span></h2>
-      <p class="sub">Aprende · Planifica · Entrena</p>
-      <p class="lead">Además de crear y animar jugadas, TacticalPro te ayuda a preparar tus entrenamientos y a consultar lo esencial del juego cuando lo necesites.</p>
-    </div>
-
-    <div class="dstep">
-      <div class="dtext">
-        <div class="k">Planifica</div>
-        <h3>Prepara tus entrenamientos</h3>
-        <p>Sesiones sugeridas de fútbol 11 de adultos, ordenadas según el día de la semana respecto al partido. Cada sesión trae sus bloques con minutos y objetivo, y cada ejercicio se abre animado en la pizarra para explicarlo o adaptarlo.</p>
-        <p class="note">Grabación real de la app, con el menú ampliado para que se lea bien.</p>
-      </div>
-      <figure class="player">
-        <video data-lazy poster="img/demo-planifica.webp" width="1280" height="1024" muted loop playsinline controls preload="none" aria-label="Grabación de TacticalPro abriendo una sesión de entrenamiento y su ejercicio animado">
-          <source data-src="img/demo-planifica.mp4" type="video/mp4">
-          <source data-src="img/demo-planifica.webm" type="video/webm">
-        </video>
-      </figure>
-    </div>
-
-    <div class="dstep">
-      <div class="dtext">
-        <div class="k">Aprende</div>
-        <h3>Consulta lo esencial del juego</h3>
-        <p>Fundamentos explicados de forma sencilla (las fases del juego, los carriles, los sistemas, los bloques y un diccionario) y consejos prácticos de táctica, entrenamiento y gestión del grupo, para consultar cuando los necesites.</p>
-        <p class="note">Grabación real de la app, con el menú ampliado para que se lea bien.</p>
-      </div>
-      <figure class="player">
-        <video data-lazy poster="img/demo-aprende.webp" width="1280" height="1024" muted loop playsinline controls preload="none" aria-label="Grabación de TacticalPro consultando los fundamentos y los consejos">
-          <source data-src="img/demo-aprende.mp4" type="video/mp4">
-          <source data-src="img/demo-aprende.webm" type="video/webm">
-        </video>
-      </figure>
-    </div>
-
-    <div class="dstep">
-      <div class="dtext">
-        <div class="k">Entrena</div>
-        <h3>Del papel al campo</h3>
-        <p>Lleva tus ideas al equipo con las jugadas animadas, el modo proyector en la charla y los vídeos que compartes por WhatsApp, como has visto en <a href="#video">De la pizarra al vídeo</a>.</p>
-      </div>
-      <div class="dtext">
-        <p class="note">TacticalPro es una herramienta de apoyo para aprender y planificar. No sustituye la formación, las decisiones ni la experiencia del entrenador.</p>
-      </div>
     </div>
   </div>
 </section>
