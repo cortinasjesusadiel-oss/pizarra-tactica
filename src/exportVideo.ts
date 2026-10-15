@@ -20,6 +20,9 @@ const WIDTH = 1280
 const HEIGHT = 720
 const K = 1.5
 const OUT_W = WIDTH * K, OUT_H = HEIGHT * K
+// «Campo a todo el ancho»: el fotograma crece hacia abajo para que el campo ocupe todo el ancho.
+// Se saca a 1600 px de ancho para que el vídeo siga siendo compatible con móviles y WhatsApp.
+const K_FULL = 1.25
 const BITRATE = 10e6
 const FPS = 30
 const OUTRO = 3.2
@@ -61,7 +64,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 // Pantalla final: la jugada se funde a negro y aparece el logo con el lema.
-function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, t: number) {
+function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, t: number, HEIGHT: number) {
   const e = (a: number, b: number) => { const x = Math.max(0, Math.min(1, (t - a) / (b - a))); return 1 - Math.pow(1 - x, 3) }
   ctx.globalAlpha = e(0, 0.6)
   ctx.fillStyle = '#0f1712'
@@ -92,6 +95,8 @@ function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, t: num
 export interface ExportOpts { zones?: boolean; brand?: string; look?: Look; pace?: Pace
   // Letra grande para verlo en el móvil (WhatsApp, redes) y pantalla final con el logo y el lema.
   big?: boolean; outro?: boolean
+  // Campo a todo el ancho (fotograma más alto que el 16:9 de siempre).
+  full?: boolean
   // Identidad del entrenador (abajo a la derecha) y su pantalla final con el mensaje.
   ident?: Mark | null; end?: EndView | null
   onProgress?: (k: number) => void }
@@ -109,20 +114,23 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
   // Poco margen alrededor del campo; abajo se deja el sitio de la marca de siempre (logo o texto).
   const M = 1.5
   const vbW = W + 2 * M, vbH = H + M + PAD
-  const scale = Math.min((WIDTH - 16) / vbW, (HEIGHT - CAPTION - 8) / vbH)
+  const scale = opts.full ? WIDTH / vbW : Math.min((WIDTH - 16) / vbW, (HEIGHT - CAPTION - 8) / vbH)
   const bw = Math.round(vbW * scale), bh = Math.round(vbH * scale)
-  const bx = Math.round((WIDTH - bw) / 2), by = CAPTION + Math.round((HEIGHT - CAPTION - bh) / 2)
+  const k = opts.full ? K_FULL : K
+  // Alto del fotograma (en las mismas unidades que el ancho de 1280). Par al multiplicarlo, como piden los códecs.
+  const HEIGHT_ = opts.full ? Math.ceil((CAPTION + bh) * k / 2) * 2 / k : HEIGHT
+  const bx = Math.round((WIDTH - bw) / 2), by = CAPTION + Math.round((HEIGHT_ - CAPTION - bh) / 2)
   const viewBox = `${-M} ${-M} ${vbW} ${vbH}`
 
   await fontsReady()
   // El césped no cambia: se dibuja una sola vez.
-  const grass = await svgImage(renderToStaticMarkup(createElement(Pitch, { kind: board.pitch, zones: opts.zones, brand: opts.brand })), viewBox, bw * K, bh * K)
+  const grass = await svgImage(renderToStaticMarkup(createElement(Pitch, { kind: board.pitch, zones: opts.zones, brand: opts.brand })), viewBox, bw * k, bh * k)
   const logo = opts.outro ? await loadImage(logoFull) : null
   const crest = opts.ident?.crest ? await loadImage(opts.ident.crest).catch(() => null) : null
   const endCrest = opts.end?.crest ? await loadImage(opts.end.crest).catch(() => null) : null
 
-  canvas.width = OUT_W
-  canvas.height = OUT_H
+  canvas.width = Math.round(WIDTH * k)
+  canvas.height = Math.round(HEIGHT_ * k)
   const ctx = canvas.getContext('2d')!
 
   // Cada paso dura lo elegido (5, 8 o 10 s): quietos para leer y luego el movimiento al siguiente.
@@ -136,13 +144,13 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
     const s = paceAt(n, pace, Math.min(sec, animSec))
     // En las pantallas finales la jugada ya no se mueve: se reutiliza la última imagen.
     const scene = lastScene && lastScene.s === s ? lastScene.img
-      : await svgImage(renderToStaticMarkup(createElement('g', null, createElement(Markers), createElement(Scene, { board, s, grass: false, look: opts.look }))), viewBox, bw * K, bh * K)
+      : await svgImage(renderToStaticMarkup(createElement('g', null, createElement(Markers), createElement(Scene, { board, s, grass: false, look: opts.look }))), viewBox, bw * k, bh * k)
     lastScene = { s, img: scene }
 
-    ctx.setTransform(K, 0, 0, K, 0, 0)
+    ctx.setTransform(k, 0, 0, k, 0, 0)
     ctx.imageSmoothingQuality = 'high'
     ctx.fillStyle = '#0f1712'
-    ctx.fillRect(0, 0, WIDTH, HEIGHT)
+    ctx.fillRect(0, 0, WIDTH, HEIGHT_)
     ctx.drawImage(grass, bx, by, bw, bh)
     ctx.drawImage(scene, bx, by, bw, bh)
 
@@ -184,14 +192,14 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
     if (opts.ident) {
       const right0 = bx + bw
       const colW = WIDTH - right0 - 20
-      if (colW >= 100) drawMarkColumn(ctx, opts.ident, crest, right0 + (WIDTH - right0) / 2, HEIGHT - 18, colW, 0.85)
+      if (colW >= 100) drawMarkColumn(ctx, opts.ident, crest, right0 + (WIDTH - right0) / 2, HEIGHT_ - 18, colW, 0.85)
       else drawMarkRow(ctx, opts.ident, crest, bx + bw - M * scale, by + bh - PAD * scale + 0.25 * scale, 2.5 * scale, W * 0.6 * scale, 0.75)
     }
 
     const endT = sec - animSec
-    if (opts.end && endT > 0) drawEndCard(ctx, opts.end, endCrest, endT, WIDTH, HEIGHT)
+    if (opts.end && endT > 0) drawEndCard(ctx, opts.end, endCrest, endT, WIDTH, HEIGHT_)
     const outroT = sec - animSec - endSec
-    if (logo && outroT > 0) drawOutro(ctx, logo, outroT)
+    if (logo && outroT > 0) drawOutro(ctx, logo, outroT, HEIGHT_)
   }
 
   return { canvas, seconds, animSeconds: animSec, draw }
@@ -202,6 +210,7 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
   const picked = await pickCodec()
   if (!picked || n < 2) return 'unsupported'
   const r = await videoRenderer(board, opts)
+  const OUT_W = r.canvas.width, OUT_H = r.canvas.height
 
   // Se dibuja y codifica fotograma a fotograma. Si el codificador del equipo falla (pasa con algunas tarjetas
   // gráficas en Windows), se vuelve a intentar con otro formato o con el codificador por software.

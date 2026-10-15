@@ -993,7 +993,7 @@ function ToolIcon({ t }: { t: Tool }) {
   )
 }
 
-type VideoOpts = { big: boolean; outro: boolean }
+type VideoOpts = { big: boolean; outro: boolean; full?: boolean }
 
 function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, profile, onIdentity, end, setEnd, phrase, setPhrase, onPreview, onClose, onImage, onVideo, onMany, vopts, setVopts }: {
   vopts: VideoOpts
@@ -1051,6 +1051,10 @@ function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, prof
         <label className="pick">
           <input type="checkbox" checked={vopts.big} onChange={(e) => setVopts({ big: e.target.checked })} />
           <span>Letra grande <span className="muted small">para verlo en el móvil, WhatsApp o redes</span></span>
+        </label>
+        <label className="pick">
+          <input type="checkbox" checked={!!vopts.full} onChange={(e) => setVopts({ full: e.target.checked })} />
+          <span>Campo a todo el ancho <span className="muted small">el vídeo sale más alto que una pantalla panorámica</span></span>
         </label>
         <EndEditor end={end} setEnd={setEnd} phrase={phrase} setPhrase={setPhrase} perVideo profile={profile} />
         <label className="pick">
@@ -1352,6 +1356,7 @@ function Preview({ board, opts, vopts, setVopts, end, setEnd, brandMode, setBran
       </div>
       <div className="preview-opts">
         <label className="pick"><input type="checkbox" checked={vopts.big} onChange={(e) => setVopts({ big: e.target.checked })} /><span>Letra grande</span></label>
+        <label className="pick"><input type="checkbox" checked={!!vopts.full} onChange={(e) => setVopts({ full: e.target.checked })} /><span>Campo a todo el ancho</span></label>
         <label className="pick"><input type="checkbox" checked={end.on} onChange={(e) => setEnd({ on: e.target.checked })} /><span>Mensaje final</span></label>
         <label className="pick"><input type="checkbox" checked={vopts.outro} onChange={(e) => setVopts({ outro: e.target.checked })} /><span>Cierre TacticalPro</span></label>
         <label className="pace">
