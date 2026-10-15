@@ -1,8 +1,13 @@
-import { COLORS, type Drawing, type Pt, type Token } from './model'
+import { COLORS, DEFAULT_LOOK, type Drawing, type Look, type Pt, type Token } from './model'
 
 export function Markers() {
   return (
     <defs>
+      <radialGradient id="tok-shine" cx="35%" cy="30%" r="70%">
+        <stop offset="0%" stopColor="#fff" stopOpacity={0.55} />
+        <stop offset="45%" stopColor="#fff" stopOpacity={0.08} />
+        <stop offset="100%" stopColor="#000" stopOpacity={0.18} />
+      </radialGradient>
       {COLORS.map((c) => (
         <marker key={c} id={`ah-${c.slice(1)}`} viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill={c} />
@@ -66,9 +71,17 @@ export function DrawingShape({ d, faded }: { d: Drawing; faded?: boolean }) {
   }
 }
 
-const FILL = { home: 'var(--home)', away: 'var(--away)', neutral: 'var(--neutral)' }
+// Texto oscuro sobre colores claros y blanco sobre colores oscuros.
+function inkFor(hex: string): string {
+  const n = parseInt(hex.slice(1), 16)
+  const l = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255
+  return l > 0.6 ? '#17201a' : '#ffffff'
+}
 
-export function TokenShape({ t, r, selected, upright }: { t: Token; r: number; selected: boolean; upright: boolean }) {
+// Camiseta vista de frente, centrada en (0,0), de unas 2,1 unidades de ancho.
+const SHIRT = 'M-0.42,-0.95 L-1,-0.66 L-1.08,-0.12 L-0.7,-0.02 L-0.7,0.98 L0.7,0.98 L0.7,-0.02 L1.08,-0.12 L1,-0.66 L0.42,-0.95 Q0,-0.62 -0.42,-0.95 Z'
+
+export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK }: { t: Token; r: number; selected: boolean; upright: boolean; look?: Look }) {
   const rot = upright ? 'rotate(-90)' : undefined
   if (t.kind === 'ball')
     return (
@@ -86,16 +99,42 @@ export function TokenShape({ t, r, selected, upright }: { t: Token; r: number; s
         {selected && <circle r={r * 1.1} fill="none" stroke="#fff" strokeWidth={0.2} strokeDasharray="0.6 0.4" />}
       </g>
     )
+  const fill = t.team === 'home' ? look.home : t.team === 'away' ? look.away : '#f4f4f4'
+  const ink = inkFor(fill)
+  const num = look.text !== 'name' ? t.label : ''
+  const name = look.text !== 'number' ? t.name?.trim() : ''
+  const fs = r * (num.length > 2 ? 0.8 : 1.05)
   return (
     <g data-token={t.id} transform={`translate(${t.x} ${t.y})`} className="token">
       <circle r={r * 1.5} fill="transparent" />
-      {selected && <circle r={r * 1.35} fill="none" stroke="#fff" strokeWidth={0.25} />}
-      <circle r={r} fill={FILL[t.team]} stroke="rgba(0,0,0,.5)" strokeWidth={r * 0.12} />
-      {t.label && (
-        <text transform={rot} textAnchor="middle" dominantBaseline="central" fontSize={r * (t.label.length > 2 ? 0.8 : 1.05)} fontWeight={800} fill={t.team === 'away' ? '#08223a' : '#17201a'} fontFamily="system-ui, sans-serif">
-          {t.label}
-        </text>
-      )}
+      {selected && <circle r={r * 1.45} fill="none" stroke="#fff" strokeWidth={0.25} />}
+      <g transform={rot}>
+        {look.shape === 'disc' && <circle r={r} fill={fill} stroke="rgba(0,0,0,.5)" strokeWidth={r * 0.12} />}
+        {look.shape === 'pro' && (
+          <>
+            <ellipse cx={r * 0.12} cy={r * 0.22} rx={r * 1.05} ry={r * 1.0} fill="rgba(0,0,0,.35)" />
+            <circle r={r} fill={fill} stroke="#fff" strokeWidth={r * 0.16} />
+            <circle r={r * 0.92} fill="url(#tok-shine)" />
+          </>
+        )}
+        {look.shape === 'shirt' && (
+          <>
+            <path d={SHIRT} transform={`translate(${r * 0.1} ${r * 0.14}) scale(${r * 1.05})`} fill="rgba(0,0,0,.35)" />
+            <path d={SHIRT} transform={`scale(${r * 1.05})`} fill={fill} stroke="rgba(0,0,0,.55)" strokeWidth={0.07} strokeLinejoin="round" />
+            <path d="M-0.42,-0.95 Q0,-0.62 0.42,-0.95" transform={`scale(${r * 1.05})`} fill="none" stroke={ink} strokeOpacity={0.5} strokeWidth={0.08} />
+          </>
+        )}
+        {num && (
+          <text y={look.shape === 'shirt' ? r * 0.18 : 0} textAnchor="middle" dominantBaseline="central" fontSize={look.shape === 'shirt' ? fs * 0.95 : fs} fontWeight={800} fill={ink} fontFamily="system-ui, sans-serif">
+            {num}
+          </text>
+        )}
+        {name && (
+          <text y={r * (look.shape === 'shirt' ? 1.95 : 1.85)} textAnchor="middle" dominantBaseline="central" fontSize={r * 0.62} fontWeight={700} fill="#fff" stroke="rgba(0,0,0,.75)" strokeWidth={r * 0.16} paintOrder="stroke" strokeLinejoin="round" fontFamily="system-ui, sans-serif">
+            {name}
+          </text>
+        )}
+      </g>
     </g>
   )
 }

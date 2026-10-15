@@ -1,13 +1,14 @@
-import { PITCH, type Board, type Drawing } from './model'
+import { PITCH, type Board, type Drawing, type Look } from './model'
 import { drawStep, sampleAt } from './motion'
 import { Pitch } from './Pitch'
 import { DrawingShape, TokenShape } from './Shapes'
 
 // Lo que se dibuja dentro del campo en el instante `s` (puede ser fraccionario): césped, trazos y fichas.
 // Se usa en la pizarra y al exportar el vídeo, para que ambos se vean igual.
-export function Scene({ board, s, zones, brand, upright = false, selected = null, live = null, grass = true }: {
+export function Scene({ board, s, zones, brand, look, upright = false, selected = null, live = null, grass = true }: {
   board: Board
   brand?: string
+  look?: Look
   s: number
   zones?: boolean
   upright?: boolean
@@ -25,7 +26,7 @@ export function Scene({ board, s, zones, brand, upright = false, selected = null
       {live && <DrawingShape d={live} />}
       {board.tokens.map((t) => {
         const [x, y] = sampleAt(board, t, s)
-        return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} />
+        return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} look={look} />
       })}
     </>
   )

@@ -5,7 +5,8 @@ Pizarra táctica de fútbol 11 pensada para el móvil y el S Pen, con plantillas
 ## Funciones
 
 - Campo completo, medio campo y espacio reducido 40×30. En el móvil en vertical el campo gira solo para verse más grande.
-- Fichas de jugadores local, rival y comodín, balón y conos. Tocar una ficha permite cambiar dorsal, equipo o eliminarla.
+- Fichas de jugadores local, rival y comodín, balón y conos. Tocar una ficha permite cambiar dorsal, nombre, equipo o eliminarla.
+- Botón Fichas: forma (ficha pro, clásica o camiseta), mostrar número, nombre o ambos, y color de cada equipo.
 - Trazos: pase, carrera, conducción (línea ondulada), zona y dibujo libre, en 4 colores.
 - S Pen: en modo Mover, el lápiz mueve la ficha que toca y dibuja si toca el césped; con una herramienta de dibujo elegida, siempre dibuja. El dedo mueve fichas. La presión cambia el grosor. El botón lateral borra. Se ignora la palma mientras el lápiz está apoyado.
 - Animación continua y suave: las fichas siguen curvas que pasan por todos los pasos, sin paradas ni saltos. Reproducir, pausa, paso anterior y siguiente, explicación de cada paso. Puedes crear tus propias animaciones con “+ Paso”.

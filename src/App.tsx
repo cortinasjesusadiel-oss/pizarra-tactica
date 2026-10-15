@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
-  COLORS, DEFAULT_COLOR, EQUIPMENT, KIND_NAME, PITCH, TOOL_NAME, ballAt, item, player, posAt, uid,
+  COLORS, DEFAULT_COLOR, DEFAULT_LOOK, TEAM_COLORS, type Look, type TokenShapeKind, type TokenText, EQUIPMENT, KIND_NAME, PITCH, TOOL_NAME, ballAt, item, player, posAt, uid,
   type Board, type TokenKind, type DrawTool, type Drawing, type PitchKind, type Pt, type Team, type Token, type Tool,
 } from './model'
-import { Equipment, Markers } from './Shapes'
+import { Equipment, Markers, TokenShape } from './Shapes'
 import { Scene } from './Scene'
 import { SEG_MS, shownStep } from './motion'
 import { SESSIONS } from './sessions'
@@ -42,7 +42,7 @@ export default function App() {
   const [selected, setSelected] = useState<string | null>(null)
   const [live, setLive] = useState<Drawing | null>(null)
   const [penSeen, setPenSeen] = useState(false)
-  const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | 'learn' | null>(null)
+  const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | 'learn' | 'look' | null>(null)
   const [showHint, setShowHint] = useState(hint)
   const [toast, setToast] = useState<string | null>(null)
   const [zones, setZones] = useState(() => { try { return localStorage.getItem('pizarra.zonas') === '1' } catch { return false } })
@@ -195,6 +195,20 @@ export default function App() {
   const nextStep = () => glide(Math.min(nFrames - 1, Math.floor((animRef.current ?? cur) + 1e-6) + 1))
   const prevStep = () => glide(Math.max(0, Math.ceil((animRef.current ?? cur) - 1e-6) - 1))
 
+  // Aspecto de las fichas (forma, número/nombre y colores de cada equipo), guardado en el dispositivo.
+  const [look, setLookState] = useState<Look>(() => {
+    try { return { ...DEFAULT_LOOK, ...JSON.parse(localStorage.getItem('pizarra.fichas') ?? '{}') } } catch { return DEFAULT_LOOK }
+  })
+  const setLook = (patch: Partial<Look>) => setLookState((l) => {
+    const n = { ...l, ...patch }
+    try { localStorage.setItem('pizarra.fichas', JSON.stringify(n)) } catch { /* sin almacenamiento */ }
+    return n
+  })
+  useEffect(() => {
+    document.documentElement.style.setProperty('--home', look.home)
+    document.documentElement.style.setProperty('--away', look.away)
+  }, [look.home, look.away])
+
   // Marca de agua (por defecto TacticalPro); vacía = sin marca.
   const [brand, setBrandState] = useState(() => { try { return localStorage.getItem('pizarra.marca') ?? 'TacticalPro' } catch { return 'TacticalPro' } })
   const setBrand = (v: string) => { setBrandState(v); try { localStorage.setItem('pizarra.marca', v) } catch { /* sin almacenamiento */ } }
@@ -213,7 +227,7 @@ export default function App() {
     setVideo(0)
     try {
       const ex = await import('./exportVideo')
-      const opts = { zones, brand: mark }
+      const opts = { zones, brand: mark, look }
       let files: File[]
       if (image) files = [await ex.exportImage(items[0].board, { ...opts, s: cur })]
       else if (items.length === 1 && items[0].board.frames) {
@@ -459,6 +473,7 @@ export default function App() {
         <button onClick={() => setSheet('templates')}>Plantillas</button>
         <button onClick={() => setSheet('sessions')}>Sesiones</button>
         <button onClick={() => setSheet('tips')}>Consejos</button>
+        <button onClick={() => setSheet('look')}>Fichas</button>
         <button className={zones ? 'toggle on' : 'toggle'} onClick={toggleZones} aria-pressed={zones}>Zonas</button>
         <span className="sep" />
         <button className="chip home" onClick={() => addToken('home')} aria-label="Añadir jugador local">+ Local</button>
@@ -485,7 +500,7 @@ export default function App() {
         >
           <Markers />
           <g ref={layer} transform={vertical ? `translate(${H} 0) rotate(90)` : undefined}>
-            <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} upright={vertical} selected={selected} live={live} />
+            <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} look={look} upright={vertical} selected={selected} live={live} />
           </g>
         </svg>
         {frames && frames[shown].note && !showHint && (
@@ -520,6 +535,10 @@ export default function App() {
               <label className="field">
                 Dorsal
                 <input id="dorsal" value={sel.label} maxLength={3} onChange={(e) => updateSel({ label: e.target.value.toUpperCase() })} />
+              </label>
+              <label className="field">
+                Nombre
+                <input id="nombre" className="name-input" value={sel.name ?? ''} maxLength={14} placeholder="Opcional" onChange={(e) => updateSel({ name: e.target.value })} />
               </label>
               <div className="seg" role="group" aria-label="Equipo">
                 {(['home', 'away', 'neutral'] as Team[]).map((tm) => (
@@ -683,6 +702,7 @@ export default function App() {
           </details>
         </Sheet>
       )}
+      {sheet === 'look' && <LookSheet look={look} setLook={setLook} onClose={() => setSheet(null)} />}
       {sheet === 'tips' && (
         <Sheet title="Consejos" onClose={() => setSheet(null)}>
           <p className="muted small">Ideas prácticas de táctica, entrenamiento y gestión del grupo, inspiradas en entrenadores de referencia.</p>
@@ -865,6 +885,57 @@ function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, onCl
         <p className="muted small">Aparece pequeña y transparente en el margen de abajo a la derecha, fuera de las líneas del campo, en la pizarra, las imágenes y los vídeos.</p>
       </section>
       <p className="muted small">Versión {__BUILD__}</p>
+    </Sheet>
+  )
+}
+
+function LookSheet({ look, setLook, onClose }: { look: Look; setLook: (p: Partial<Look>) => void; onClose: () => void }) {
+  const preview = (shape: TokenShapeKind) => (
+    <svg viewBox="-6 -3.2 12 7.4" width="120" height="74" aria-hidden="true">
+      <Markers />
+      <rect x="-10" y="-10" width="20" height="20" fill="var(--pitch)" />
+      <TokenShape t={{ id: 'a', kind: 'player', team: 'home', label: '10', name: 'Pedri', x: -2.6, y: -0.4 }} r={1.5} selected={false} upright={false} look={{ ...look, shape }} />
+      <TokenShape t={{ id: 'b', kind: 'player', team: 'away', label: '9', name: 'Kane', x: 2.6, y: -0.4 }} r={1.5} selected={false} upright={false} look={{ ...look, shape }} />
+    </svg>
+  )
+  const swatches = (team: 'home' | 'away') => (
+    <div className="colors" role="group" aria-label={team === 'home' ? 'Color del local' : 'Color del rival'}>
+      {TEAM_COLORS.map((c) => (
+        <button key={c} aria-label={`Color ${c}`} className={look[team] === c ? 'on' : ''} style={{ background: c }} onClick={() => setLook({ [team]: c })} />
+      ))}
+    </div>
+  )
+  return (
+    <Sheet title="Fichas" onClose={onClose}>
+      <section>
+        <h3>Forma</h3>
+        <div className="shapes">
+          {(['pro', 'disc', 'shirt'] as TokenShapeKind[]).map((sh) => (
+            <button key={sh} className={look.shape === sh ? 'on' : ''} onClick={() => setLook({ shape: sh })}>
+              {preview(sh)}
+              <span>{sh === 'pro' ? 'Ficha pro' : sh === 'disc' ? 'Clásica' : 'Camiseta'}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+      <section>
+        <h3>Mostrar</h3>
+        <div className="seg" role="group" aria-label="Qué mostrar">
+          {(['number', 'name', 'both'] as TokenText[]).map((tx) => (
+            <button key={tx} className={look.text === tx ? 'on' : ''} onClick={() => setLook({ text: tx })}>
+              {tx === 'number' ? 'Número' : tx === 'name' ? 'Nombre' : 'Número y nombre'}
+            </button>
+          ))}
+        </div>
+        <p className="muted small">Para poner el nombre, toca un jugador en la pizarra y escríbelo en “Nombre”, junto al dorsal.</p>
+      </section>
+      <section>
+        <h3>Color del local</h3>
+        {swatches('home')}
+        <h3>Color del rival</h3>
+        {swatches('away')}
+      </section>
+      <p className="muted small">Se aplica a todas las pizarras, imágenes y vídeos.</p>
     </Sheet>
   )
 }

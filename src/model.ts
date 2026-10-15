@@ -26,10 +26,19 @@ export interface Token {
   kind: TokenKind
   team: Team
   label: string
+  // Nombre del jugador (opcional), se muestra debajo de la ficha.
+  name?: string
   x: number
   y: number
   rot?: number
 }
+
+// Aspecto de las fichas, elegido por el usuario y común a todas las pizarras.
+export type TokenShapeKind = 'disc' | 'pro' | 'shirt'
+export type TokenText = 'number' | 'name' | 'both'
+export interface Look { shape: TokenShapeKind; text: TokenText; home: string; away: string }
+export const DEFAULT_LOOK: Look = { shape: 'pro', text: 'both', home: '#ffd23f', away: '#5bb6ff' }
+export const TEAM_COLORS = ['#ffd23f', '#5bb6ff', '#ff6b5e', '#ffffff', '#1d1d1f', '#2ecc71', '#ff9f1c', '#9b59ff', '#e84393', '#14365d']
 
 export interface Drawing {
   id: string

@@ -1,7 +1,7 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer'
-import { PITCH, type Board } from './model'
+import { PITCH, type Board, type Look } from './model'
 import { SEG_MS, shownStep } from './motion'
 import { Pitch } from './Pitch'
 import { Scene } from './Scene'
@@ -59,7 +59,7 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[
   return out
 }
 
-export interface ExportOpts { zones?: boolean; brand?: string; onProgress?: (k: number) => void }
+export interface ExportOpts { zones?: boolean; brand?: string; look?: Look; onProgress?: (k: number) => void }
 
 export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<Result> {
   const n = board.frames?.length ?? 0
@@ -99,7 +99,7 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
     if (failed) throw failed
     const sec = f / FPS
     const s = Math.max(0, Math.min(n - 1, ((sec - HOLD_START) * 1000) / SEG_MS))
-    const markup = renderToStaticMarkup(createElement('g', null, createElement(Markers), createElement(Scene, { board, s, grass: false })))
+    const markup = renderToStaticMarkup(createElement('g', null, createElement(Markers), createElement(Scene, { board, s, grass: false, look: opts.look })))
     const scene = await svgImage(markup, viewBox, bw, bh)
 
     ctx.fillStyle = '#0f1712'
@@ -143,7 +143,7 @@ export async function exportImage(board: Board, opts: ExportOpts & { s?: number 
   const scale = 2000 / vbW
   const w = 2000, h = Math.round(vbH * scale)
   const markup = renderToStaticMarkup(createElement('g', null, createElement(Markers),
-    createElement(Scene, { board, s: opts.s ?? 0, zones: opts.zones, brand: opts.brand })))
+    createElement(Scene, { board, s: opts.s ?? 0, zones: opts.zones, brand: opts.brand, look: opts.look })))
   const img = await svgImage(markup, `${-PAD} ${-PAD} ${vbW} ${vbH}`, w, h)
   const canvas = document.createElement('canvas')
   canvas.width = w

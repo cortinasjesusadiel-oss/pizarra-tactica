@@ -158,3 +158,9 @@ button.wide { width: 100%; margin-top: 10px; }
 .glossary div { padding: 8px 12px; background: var(--panel-2); border-radius: 10px; }
 .glossary dt { font-weight: 700; }
 .glossary dd { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
+.shapes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.shapes button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; }
+.shapes button svg { width: 100%; height: auto; max-width: 120px; border-radius: 8px; }
+.shapes button.on { outline: 2px solid var(--accent); }
+.name-input { width: 120px !important; text-align: left !important; font-weight: 600 !important; }
+.sheet .colors { flex-wrap: wrap; margin-bottom: 6px; }
