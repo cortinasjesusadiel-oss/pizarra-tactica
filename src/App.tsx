@@ -257,8 +257,10 @@ export default function App() {
         })
       }
       setReady(files)
-    } catch {
-      setToast('No se pudo exportar')
+    } catch (e) {
+      // El motivo se enseña para poder arreglarlo si vuelve a pasar.
+      console.error(e)
+      setToast(`No se pudo exportar: ${e instanceof Error ? e.message : String(e)}`.slice(0, 160))
     } finally {
       setVideo(null)
       setProgressLabel('')

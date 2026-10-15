@@ -79,66 +79,81 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
   canvas.height = HEIGHT
   const ctx = canvas.getContext('2d')!
 
-  const muxer = new Muxer({
-    target: new ArrayBufferTarget(),
-    video: { codec: picked.mux, width: WIDTH, height: HEIGHT, frameRate: FPS },
-    fastStart: 'in-memory',
-  })
-  let failed: unknown = null
-  const encoder = new VideoEncoder({
-    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-    error: (e) => { failed = e },
-  })
-  encoder.configure({ codec: picked.codec, width: WIDTH, height: HEIGHT, bitrate: 6e6, framerate: FPS })
+  // Se dibuja y codifica fotograma a fotograma. Si el codificador del equipo falla (pasa con algunas tarjetas
+  // gráficas en Windows), se vuelve a intentar con otro formato o con el codificador por software.
+  const attempt = async (c: (typeof CODECS)[number], hw: HardwareAcceleration): Promise<Blob> => {
+    const muxer = new Muxer({
+      target: new ArrayBufferTarget(),
+      video: { codec: c.mux, width: WIDTH, height: HEIGHT, frameRate: FPS },
+      fastStart: 'in-memory',
+    })
+    let failed: unknown = null
+    const encoder = new VideoEncoder({
+      output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+      error: (e) => { failed = e },
+    })
+    encoder.configure({ codec: c.codec, width: WIDTH, height: HEIGHT, bitrate: 6e6, framerate: FPS, hardwareAcceleration: hw })
 
-  // Cada paso dura lo elegido (5, 8 o 10 s): quietos para leer y luego el movimiento al siguiente.
-  const pace = opts.pace ?? DEFAULT_PACE
-  const total = Math.round(paceTotal(n, pace) * FPS)
-  for (let f = 0; f < total; f++) {
-    if (failed) throw failed
-    const sec = f / FPS
-    const s = paceAt(n, pace, sec)
-    const markup = renderToStaticMarkup(createElement('g', null, createElement(Markers), createElement(Scene, { board, s, grass: false, look: opts.look })))
-    const scene = await svgImage(markup, viewBox, bw, bh)
+    // Cada paso dura lo elegido (5, 8 o 10 s): quietos para leer y luego el movimiento al siguiente.
+    const pace = opts.pace ?? DEFAULT_PACE
+    const total = Math.round(paceTotal(n, pace) * FPS)
+    for (let f = 0; f < total; f++) {
+      if (failed) { if (encoder.state !== 'closed') encoder.close(); throw failed }
+      const sec = f / FPS
+      const s = paceAt(n, pace, sec)
+      const markup = renderToStaticMarkup(createElement('g', null, createElement(Markers), createElement(Scene, { board, s, grass: false, look: opts.look })))
+      const scene = await svgImage(markup, viewBox, bw, bh)
 
-    ctx.fillStyle = '#0f1712'
-    ctx.fillRect(0, 0, WIDTH, HEIGHT)
-    ctx.drawImage(grass, bx, by, bw, bh)
-    ctx.drawImage(scene, bx, by, bw, bh)
+      ctx.fillStyle = '#0f1712'
+      ctx.fillRect(0, 0, WIDTH, HEIGHT)
+      ctx.drawImage(grass, bx, by, bw, bh)
+      ctx.drawImage(scene, bx, by, bw, bh)
 
-    // Explicación del paso arriba. Al cambiar de paso, el texto nuevo se funde sobre el anterior.
-    const cap = caption(board, s)
-    const drawCaption = (j: number, alpha: number) => {
-      ctx.globalAlpha = alpha
-      ctx.fillStyle = '#4fd18b'
-      ctx.font = '700 22px system-ui, sans-serif'
-      ctx.textBaseline = 'middle'
-      ctx.fillText(`PASO ${j + 1}/${n}`, 28, 28)
-      const note = board.frames![j].note
-      if (note) {
-        ctx.fillStyle = '#e8eee9'
-        ctx.font = '600 22px system-ui, sans-serif'
-        wrap(ctx, note, WIDTH - 56).slice(0, 2).forEach((l, i) => ctx.fillText(l, 28, 56 + i * 24))
+      // Explicación del paso arriba. Al cambiar de paso, el texto nuevo se funde sobre el anterior.
+      const cap = caption(board, s)
+      const drawCaption = (j: number, alpha: number) => {
+        ctx.globalAlpha = alpha
+        ctx.fillStyle = '#4fd18b'
+        ctx.font = '700 22px system-ui, sans-serif'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(`PASO ${j + 1}/${n}`, 28, 28)
+        const note = board.frames![j].note
+        if (note) {
+          ctx.fillStyle = '#e8eee9'
+          ctx.font = '600 22px system-ui, sans-serif'
+          wrap(ctx, note, WIDTH - 56).slice(0, 2).forEach((l, i) => ctx.fillText(l, 28, 56 + i * 24))
+        }
+        ctx.globalAlpha = 1
       }
-      ctx.globalAlpha = 1
-    }
-    if (cap.fade < 1) drawCaption(cap.prev, 1 - cap.fade)
-    drawCaption(cap.k, cap.fade)
+      if (cap.fade < 1) drawCaption(cap.prev, 1 - cap.fade)
+      drawCaption(cap.k, cap.fade)
 
-    const frame = new VideoFrame(canvas, { timestamp: Math.round((f * 1e6) / FPS), duration: Math.round(1e6 / FPS) })
-    encoder.encode(frame, { keyFrame: f % (FPS * 2) === 0 })
-    frame.close()
-    while (encoder.encodeQueueSize > 8) await new Promise((r) => setTimeout(r, 5))
-    if (f % 5 === 0) opts.onProgress?.(f / total)
+      const frame = new VideoFrame(canvas, { timestamp: Math.round((f * 1e6) / FPS), duration: Math.round(1e6 / FPS) })
+      encoder.encode(frame, { keyFrame: f % (FPS * 2) === 0 })
+      frame.close()
+      while (encoder.encodeQueueSize > 8) await new Promise((r) => setTimeout(r, 5))
+      if (f % 5 === 0) opts.onProgress?.(f / total)
+    }
+    await encoder.flush()
+    encoder.close()
+    if (failed) throw failed
+    muxer.finalize()
+    opts.onProgress?.(1)
+    return new Blob([muxer.target.buffer], { type: 'video/mp4' })
   }
-  await encoder.flush()
-  encoder.close()
-  if (failed) throw failed
-  muxer.finalize()
-  opts.onProgress?.(1)
-  const type = picked.mux === 'avc' ? 'video/mp4' : 'video/mp4; codecs=vp9'
-  const blob = new Blob([muxer.target.buffer], { type })
-  return { file: new File([blob], `tacticalpro-${new Date().toISOString().slice(0, 10)}.mp4`, { type: 'video/mp4' }) }
+
+  let lastError: unknown = null
+  for (const c of [picked, ...CODECS.filter((x) => x !== picked)]) {
+    for (const hw of ['no-preference', 'prefer-software'] as HardwareAcceleration[]) {
+      try {
+        const { supported } = await VideoEncoder.isConfigSupported({ codec: c.codec, width: WIDTH, height: HEIGHT, bitrate: 6e6, framerate: FPS, hardwareAcceleration: hw })
+        if (!supported) continue
+        const blob = await attempt(c, hw)
+        return { file: new File([blob], `tacticalpro-${new Date().toISOString().slice(0, 10)}.mp4`, { type: 'video/mp4' }) }
+      } catch (e) { lastError = e; opts.onProgress?.(0) }
+    }
+  }
+  throw lastError ?? new Error('sin codificador')
 }
 
 // Imagen PNG de una pizarra (siempre en horizontal), en el paso `s`.
