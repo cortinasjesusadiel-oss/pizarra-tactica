@@ -894,8 +894,8 @@ function LookSheet({ look, setLook, onClose }: { look: Look; setLook: (p: Partia
     <svg viewBox="-6 -3.2 12 7.4" width="120" height="74" aria-hidden="true">
       <Markers />
       <rect x="-10" y="-10" width="20" height="20" fill="var(--pitch)" />
-      <TokenShape t={{ id: 'a', kind: 'player', team: 'home', label: '10', name: 'Pedri', x: -2.6, y: -0.4 }} r={1.5} selected={false} upright={false} look={{ ...look, shape }} />
-      <TokenShape t={{ id: 'b', kind: 'player', team: 'away', label: '9', name: 'Kane', x: 2.6, y: -0.4 }} r={1.5} selected={false} upright={false} look={{ ...look, shape }} />
+      <TokenShape t={{ id: 'a', kind: 'player', team: 'home', label: '10', name: 'Martín', x: -2.6, y: -0.4 }} r={1.5} selected={false} upright={false} look={{ ...look, shape }} />
+      <TokenShape t={{ id: 'b', kind: 'player', team: 'away', label: '9', name: 'Rivas', x: 2.6, y: -0.4 }} r={1.5} selected={false} upright={false} look={{ ...look, shape }} />
     </svg>
   )
   const swatches = (team: 'home' | 'away') => (
