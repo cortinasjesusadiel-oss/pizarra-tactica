@@ -4,7 +4,7 @@
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
-const dist = 'dist'
+const dist = 'dist/app'
 const files = []
 const walk = (d) => readdirSync(d).forEach((n) => {
   const p = join(d, n)
