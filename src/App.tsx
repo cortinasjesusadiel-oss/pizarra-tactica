@@ -10,6 +10,7 @@ import { SESSIONS } from './sessions'
 import { TEMPLATES, emptyBoard } from './templates'
 import { GROUPS } from './anim'
 import { TIPS } from './tips'
+import tpSymbol from './tpSymbol.svg'
 import { GLOSSARY, LESSONS } from './fundamentos'
 import { deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay } from './storage'
 
@@ -461,7 +462,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="top">
-        <strong className="brand">TacticalPro</strong>
+        <strong className="brand"><img src={tpSymbol} alt="" />Tactical<span>Pro</span></strong>
         <div className="seg" role="group" aria-label="Tipo de campo">
           {(Object.keys(PITCH) as PitchKind[]).map((k) => (
             <button key={k} className={board.pitch === k ? 'on' : ''} onClick={() => setPitch(k)}>
