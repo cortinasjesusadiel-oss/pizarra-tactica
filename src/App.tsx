@@ -774,7 +774,7 @@ export default function App() {
       {present && (
         <div className="present" ref={presentRef} role="dialog" aria-label="Modo proyector">
           {frames && frames[shown].note && (
-            <div className="present-note" aria-live="polite"><b>Paso {shown + 1}/{nFrames}</b> {frames[shown].note}</div>
+            <div className="present-note" aria-live="polite"><span><b>Paso {shown + 1}/{nFrames}</b> {frames[shown].note}</span></div>
           )}
           <svg viewBox={`${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`} className="present-board">
             <Markers />
