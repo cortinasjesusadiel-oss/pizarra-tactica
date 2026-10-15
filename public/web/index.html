@@ -68,9 +68,9 @@ nav .links .btn{padding:9px 20px;font-size:14px;color:#0b1510}
 .feat:nth-of-type(even){background:linear-gradient(180deg,transparent,var(--bg2) 20%,var(--bg2) 80%,transparent)}
 .feat .wrap{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
 .feat.rev .media{order:-1}
-.feat ul{list-style:none;margin-top:22px;display:grid;gap:12px}
-.feat li{display:flex;gap:12px;color:#dbe9e0;font-weight:500}
-.feat li::before{content:"";flex:none;width:22px;height:22px;margin-top:2px;border-radius:50%;background:var(--g) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12l4 4 8-8' fill='none' stroke='%230b1510' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px no-repeat}
+.feat ul,.dtext ul{list-style:none;margin-top:22px;display:grid;gap:12px}
+.feat li,.dtext li{display:flex;gap:12px;color:#dbe9e0;font-weight:500}
+.feat li::before,.dtext li::before{content:"";flex:none;width:22px;height:22px;margin-top:2px;border-radius:50%;background:var(--g) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12l4 4 8-8' fill='none' stroke='%230b1510' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px no-repeat}
 .media img,.media video{border-radius:16px;border:7px solid #05080a;box-shadow:0 26px 70px rgba(0,0,0,.55),0 0 0 1px #2a3a31}
 .media video{display:block;width:100%;height:auto;background:#0f1712}
 .media.phones{display:flex;gap:18px;justify-content:center}
@@ -284,6 +284,34 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       </div>
       <figure class="screen">
         <img src="img/charla-entrenador.webp" width="1536" height="1024" loading="lazy" alt="Entrenador explicando a su equipo la salida de balón 11 contra 11 en el modo proyector de TacticalPro">
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="demo" id="identidad">
+  <div class="wrap">
+    <div class="demo-head">
+      <h2>Tus ejercicios. <span class="g">Tu identidad.</span></h2>
+      <p class="lead">Personaliza tus pizarras, ejercicios y vídeos con tu nombre, el escudo de tu equipo y un mensaje propio. Porque cada entrenador tiene una forma única de vivir y enseñar el fútbol.</p>
+    </div>
+    <div class="dstep">
+      <div class="dtext">
+        <div class="k">Mi identidad</div>
+        <h3>Tu firma en cada vídeo</h3>
+        <ul>
+          <li>Tu nombre y tu cargo, el escudo y el nombre de tu equipo, y tu eslogan</li>
+          <li>Pequeño y discreto abajo a la derecha, sin tapar la jugada</li>
+          <li>Mensaje final opcional con tu frase al terminar el vídeo</li>
+          <li>Varios perfiles guardados en tu dispositivo, sin cuenta y sin internet</li>
+        </ul>
+        <p class="note">Final de un vídeo MP4 real exportado desde la app con el perfil «Jesús Cortinas — Director Técnico» y el mensaje final activado.</p>
+      </div>
+      <figure class="player">
+        <video data-lazy poster="img/demo-identidad.webp" width="1280" height="720" muted loop playsinline controls preload="none" aria-label="Vídeo exportado desde TacticalPro con la firma del entrenador y su mensaje final">
+          <source data-src="img/demo-identidad.mp4" type="video/mp4">
+          <source data-src="img/demo-identidad.webm" type="video/webm">
+        </video>
       </figure>
     </div>
   </div>
