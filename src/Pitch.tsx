@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { PITCH, type PitchKind } from './model'
+import { LOGO, LOGO_RATIO } from './brandLogo'
 
 const CHALK = 'rgba(255,255,255,.92)'
 const L = { fill: 'none', stroke: CHALK, strokeWidth: 0.22 }
@@ -42,7 +43,8 @@ function Zones({ kind, w, h }: { kind: PitchKind; w: number; h: number }) {
 }
 
 // Césped con corte profesional: franjas a lo largo, franjas suaves a lo ancho (efecto damero) y viñeta de luz.
-// `brand`: marca de agua pequeña y transparente en el margen inferior, fuera de las líneas del campo.
+// Marca de agua pequeña y transparente en el margen inferior derecho, fuera de las líneas del campo:
+// `brand` = 'logo' para el logo del autor, otro texto para escribirlo, o nada para no poner marca.
 export const Pitch = memo(function Pitch({ kind, zones, brand }: { kind: PitchKind; zones?: boolean; brand?: string }) {
   const { w, h } = PITCH[kind]
   const stripeW = kind === 'grid' ? 5 : 105 / 18
@@ -71,7 +73,10 @@ export const Pitch = memo(function Pitch({ kind, zones, brand }: { kind: PitchKi
       )}
       <rect x={-5} y={-5} width={w + 10} height={h + 10} fill="url(#light)" />
       {zones && <Zones kind={kind} w={w} h={h} />}
-      {brand && (
+      {brand === 'logo' && (
+        <image href={LOGO} x={w - 2.3 * LOGO_RATIO} y={h + 0.3} width={2.3 * LOGO_RATIO} height={2.3} opacity={0.5} preserveAspectRatio="xMaxYMid meet" />
+      )}
+      {brand && brand !== 'logo' && (
         <text x={w} y={h + 2.05} textAnchor="end" fontSize={1.2} fontWeight={800} letterSpacing={0.12} fill="#fff" opacity={0.3} fontFamily="system-ui, sans-serif">{brand}</text>
       )}
       <rect x={0} y={0} width={w} height={h} {...L} />

@@ -197,6 +197,10 @@ export default function App() {
   // Marca de agua (por defecto TacticalPro); vacía = sin marca.
   const [brand, setBrandState] = useState(() => { try { return localStorage.getItem('pizarra.marca') ?? 'TacticalPro' } catch { return 'TacticalPro' } })
   const setBrand = (v: string) => { setBrandState(v); try { localStorage.setItem('pizarra.marca', v) } catch { /* sin almacenamiento */ } }
+  // Tipo de marca: el logo del autor (por defecto), un texto o ninguna.
+  const [brandMode, setBrandModeState] = useState<BrandMode>(() => { try { return (localStorage.getItem('pizarra.marca.tipo') as BrandMode) || 'logo' } catch { return 'logo' } })
+  const setBrandMode = (m: BrandMode) => { setBrandModeState(m); try { localStorage.setItem('pizarra.marca.tipo', m) } catch { /* sin almacenamiento */ } }
+  const mark = brandMode === 'logo' ? 'logo' : brandMode === 'text' ? brand.trim() || undefined : undefined
 
   // Exportar: los vídeos se crean fotograma a fotograma; al terminar se ofrece compartir (WhatsApp, etc.) o guardar.
   const [ready, setReady] = useState<File[] | null>(null)
@@ -208,7 +212,7 @@ export default function App() {
     setVideo(0)
     try {
       const ex = await import('./exportVideo')
-      const opts = { zones, brand: brand.trim() || undefined }
+      const opts = { zones, brand: mark }
       let files: File[]
       if (image) files = [await ex.exportImage(items[0].board, { ...opts, s: cur })]
       else if (items.length === 1 && items[0].board.frames) {
@@ -481,7 +485,7 @@ export default function App() {
         >
           <Markers />
           <g ref={layer} transform={vertical ? `translate(${H} 0) rotate(90)` : undefined}>
-            <Scene board={board} s={anim ?? cur} zones={zones} brand={brand.trim() || undefined} upright={vertical} selected={selected} live={live} />
+            <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} upright={vertical} selected={selected} live={live} />
           </g>
         </svg>
         {frames && frames[shown].note && !showHint && (
@@ -672,6 +676,8 @@ export default function App() {
           hasFrames={!!frames}
           brand={brand}
           setBrand={setBrand}
+          brandMode={brandMode}
+          setBrandMode={setBrandMode}
           onClose={() => setSheet(null)}
           onImage={() => runExport([{ name: 'pizarra', board }], true)}
           onVideo={doVideo}
@@ -752,10 +758,14 @@ function ToolIcon({ t }: { t: Tool }) {
   )
 }
 
-function ExportSheet({ hasFrames, brand, setBrand, onClose, onImage, onVideo, onMany }: {
+type BrandMode = 'logo' | 'text' | 'none'
+
+function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, onClose, onImage, onVideo, onMany }: {
   hasFrames: boolean
   brand: string
   setBrand: (v: string) => void
+  brandMode: BrandMode
+  setBrandMode: (m: BrandMode) => void
   onClose: () => void
   onImage: () => void
   onVideo: () => void
@@ -809,10 +819,19 @@ function ExportSheet({ hasFrames, brand, setBrand, onClose, onImage, onVideo, on
       </section>
       <section>
         <h3>Tu marca</h3>
-        <label className="field brand">
-          <input id="brand" value={brand} maxLength={30} placeholder="Sin marca" onChange={(e) => setBrand(e.target.value)} />
-        </label>
-        <p className="muted small">Aparece pequeña y transparente en el margen de abajo, fuera de las líneas del campo, en la pizarra, las imágenes y los vídeos. Déjala vacía para quitarla.</p>
+        <div className="seg" role="group" aria-label="Tipo de marca">
+          {(['logo', 'text', 'none'] as BrandMode[]).map((m) => (
+            <button key={m} className={brandMode === m ? 'on' : ''} onClick={() => setBrandMode(m)}>
+              {m === 'logo' ? 'Mi logo' : m === 'text' ? 'Texto' : 'Sin marca'}
+            </button>
+          ))}
+        </div>
+        {brandMode === 'text' && (
+          <label className="field brand">
+            <input id="brand" value={brand} maxLength={30} placeholder="Escribe tu marca" onChange={(e) => setBrand(e.target.value)} />
+          </label>
+        )}
+        <p className="muted small">Aparece pequeña y transparente en el margen de abajo a la derecha, fuera de las líneas del campo, en la pizarra, las imágenes y los vídeos.</p>
       </section>
     </Sheet>
   )
