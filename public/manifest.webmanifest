@@ -1,30 +1,67 @@
 {
   "name": "TacticalPro · Pizarra táctica",
   "short_name": "TacticalPro",
-  "description": "Pizarra táctica de fútbol con S Pen, animaciones, sistemas y ABP.",
+  "description": "Pizarra táctica de fútbol: planifica, anima y explica tus jugadas. Más de 60 plantillas, modo proyector y vídeo MP4.",
   "lang": "es",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0f1712",
-  "theme_color": "#14231a",
+  "theme_color": "#0f1712",
   "icons": [
     {
       "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "id": "./",
+  "categories": [
+    "sports",
+    "education"
+  ],
+  "screenshots": [
+    {
+      "src": "screens/movil-1.webp",
+      "sizes": "1080x2254",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Jugada de presión alta animada"
+    },
+    {
+      "src": "screens/movil-2.webp",
+      "sizes": "1080x2254",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Fundamentos para empezar desde cero"
+    },
+    {
+      "src": "screens/ancha-1.webp",
+      "sizes": "1920x1200",
+      "type": "image/webp",
+      "form_factor": "wide",
+      "label": "Pizarra en tablet"
+    },
+    {
+      "src": "screens/ancha-2.webp",
+      "sizes": "1920x1080",
+      "type": "image/webp",
+      "form_factor": "wide",
+      "label": "Modo proyector"
     }
   ]
 }
