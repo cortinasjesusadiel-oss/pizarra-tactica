@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
+import { MOVES_BALL, MOVES_PLAYER, STRAIGHT,
   COLORS, DEFAULT_COLOR, DEFAULT_LOOK, TEAM_COLORS, type Look, type TokenShapeKind, type TokenText, EQUIPMENT, KIND_NAME, PITCH, TOOL_NAME, ballAt, item, player, posAt, uid,
   type Board, type TokenKind, type DrawTool, type Drawing, type PitchKind, type Pt, type Team, type Token, type Tool,
 } from './model'
@@ -24,7 +24,7 @@ import type { ExportOpts, Renderer } from './exportVideo'
 import { lang, setLang, t, tr } from './i18n'
 
 const PAD = 3
-const DRAW_TOOLS: DrawTool[] = ['pass', 'run', 'dribble', 'zone', 'focus', 'free']
+const DRAW_TOOLS: DrawTool[] = ['pass', 'run', 'arrow', 'dribble', 'press', 'shot', 'line', 'zone', 'focus', 'free']
 const TOOLS: Tool[] = ['move', ...DRAW_TOOLS, 'erase']
 
 type Action =
@@ -328,7 +328,7 @@ export default function App() {
   const addStep = () => {
     stopAnim()
     const b = board
-    const isArrow = (d: Drawing) => d.type === 'pass' || d.type === 'run' || d.type === 'dribble'
+    const isArrow = (d: Drawing) => MOVES_PLAYER.includes(d.type) || MOVES_BALL.includes(d.type)
     const first = b.frames ? null : b.drawings.filter(isArrow)
     const f = b.frames ?? [{ pos: {}, drawings: first!, note: '' }]
     const pos = movesFromArrows({ ...b, frames: f }, cur, f[cur].drawings)
@@ -498,7 +498,7 @@ export default function App() {
       const last = pts[pts.length - 1]
       if (Math.hypot(p[0] - last[0], p[1] - last[1]) < 0.35) return
       const width = e.pointerType === 'pen' ? +(a.drawing.width * 0.8 + widthFor(e) * 0.2).toFixed(2) : a.drawing.width
-      a.drawing = { ...a.drawing, width, points: a.drawing.type === 'pass' || a.drawing.type === 'zone' ? [pts[0], p] : [...pts, p] }
+      a.drawing = { ...a.drawing, width, points: STRAIGHT.includes(a.drawing.type) || a.drawing.type === 'zone' ? [pts[0], p] : [...pts, p] }
       setLive(a.drawing)
     } else if (a.kind === 'erase') {
       eraseAt(e.clientX, e.clientY)
@@ -1047,6 +1047,10 @@ function ToolIcon({ t }: { t: Tool }) {
       {t === 'move' && <><circle cx="12" cy="12" r="5" {...s} /><path d="M12 2v4M12 18v4M2 12h4M18 12h4" {...s} /></>}
       {t === 'pass' && <><path d="M4 18L18 6" {...s} /><path d="M12 6h6v6" {...s} /></>}
       {t === 'run' && <><path d="M4 18L18 6" {...s} strokeDasharray="3 3" /><path d="M12 6h6v6" {...s} /></>}
+      {t === 'arrow' && <><path d="M4 18c3-8 8-11 14-12" {...s} /><path d="M13 4l5 2-3 4.5" {...s} /></>}
+      {t === 'press' && <><path d="M4 18L16 8" {...s} /><path d="M13.5 4.5l6 7" {...s} /></>}
+      {t === 'shot' && <><path d="M3 16L15 7M5 19L17 10" {...s} /><path d="M14 4.5l6 3-2.5 6" {...s} /></>}
+      {t === 'line' && <path d="M4 18L20 6" {...s} />}
       {t === 'dribble' && <><path d="M3 14c2-4 4 4 6 0s4 4 6 0 3 2 4 0" {...s} /><path d="M17 9l3 4-4 2" {...s} /></>}
       {t === 'zone' && <rect x="4" y="6" width="16" height="12" rx="1" {...s} strokeDasharray="3 2" />}
       {t === 'focus' && <><circle cx="12" cy="12" r="7" {...s} /><circle cx="12" cy="12" r="2.5" {...s} /></>}

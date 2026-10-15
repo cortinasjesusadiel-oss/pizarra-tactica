@@ -18,7 +18,13 @@ export const EQUIPMENT: { kind: TokenKind; name: string }[] = [
   { kind: 'flag', name: t('Banderín') },
 ]
 export const KIND_NAME = (k: TokenKind) => (k === 'player' ? t('Jugador') : k === 'ball' ? t('Balón') : EQUIPMENT.find((e) => e.kind === k)?.name ?? '')
-export type DrawTool = 'pass' | 'run' | 'dribble' | 'zone' | 'focus' | 'free'
+export type DrawTool = 'pass' | 'run' | 'arrow' | 'dribble' | 'press' | 'shot' | 'line' | 'zone' | 'focus' | 'free'
+// Flechas que mueven a un jugador al crear un paso (con o sin balón).
+export const MOVES_PLAYER: DrawTool[] = ['run', 'arrow', 'dribble', 'press']
+// Flechas que mueven el balón.
+export const MOVES_BALL: DrawTool[] = ['pass', 'shot']
+// Trazos rectos: solo cuentan el inicio y el final.
+export const STRAIGHT: DrawTool[] = ['pass', 'shot', 'line']
 export type Tool = 'move' | DrawTool | 'erase'
 export type Pt = [number, number]
 
@@ -82,7 +88,11 @@ export const COLORS = ['#ffffff', '#ffd23f', '#ff6b5e', '#5bb6ff']
 export const DEFAULT_COLOR: Record<DrawTool, string> = {
   pass: '#ffffff',
   run: '#ffd23f',
+  arrow: '#ffffff',
   dribble: '#ffffff',
+  press: '#ff6b5e',
+  shot: '#ffd23f',
+  line: '#ffffff',
   zone: '#ffd23f',
   focus: '#ffffff',
   free: '#ff6b5e',
@@ -92,7 +102,11 @@ export const TOOL_NAME: Record<Tool, string> = {
   move: t('Mover'),
   pass: t('Pase'),
   run: t('Carrera'),
+  arrow: t('Flecha'),
   dribble: t('Conducción'),
+  press: t('Presión'),
+  shot: t('Tiro'),
+  line: t('Línea'),
   zone: t('Zona'),
   focus: t('Foco'),
   free: t('Libre'),

@@ -64,7 +64,7 @@ export function DrawingShape({ d, faded, part }: { d: Drawing; faded?: boolean; 
   const marker = `url(#ah-${d.color.slice(1)})`
   const sw = d.width
   const a = p[0], b = p[p.length - 1]
-  const path = d.type === 'pass' ? `M${a[0]} ${a[1]} L${b[0]} ${b[1]}` : d.type === 'dribble' ? wavy(p) : smooth(p)
+  const path = d.type === 'pass' || d.type === 'shot' || d.type === 'line' ? `M${a[0]} ${a[1]} L${b[0]} ${b[1]}` : d.type === 'dribble' ? wavy(p) : smooth(p)
   // Máscara que deja ver solo el tramo pedido (pathLength=1 hace que las medidas vayan de 0 a 1).
   const mask = trimmed && !area ? `m${mid}` : undefined
   const defs = mask && (
@@ -81,6 +81,30 @@ export function DrawingShape({ d, faded, part }: { d: Drawing; faded?: boolean; 
       return <>{defs}<line {...common} {...m} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={d.color} strokeWidth={sw} strokeLinecap="round" markerEnd={marker} /></>
     case 'run':
       return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw} strokeDasharray={`${sw * 2.6} ${sw * 2}`} strokeLinecap="round" markerEnd={marker} /></>
+    case 'arrow':
+      // Flecha continua que sigue el trazo: movimiento sin balón o cualquier indicación.
+      return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" markerEnd={marker} /></>
+    case 'line':
+      return <>{defs}<line {...common} {...m} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={d.color} strokeWidth={sw} strokeLinecap="round" /></>
+    case 'press': {
+      // Presión: trazo continuo que acaba en una barra, el jugador sale a tapar o a encimar.
+      const q = p[p.length - 2], L = Math.hypot(b[0] - q[0], b[1] - q[1]) || 1
+      const nx = -(b[1] - q[1]) / L, ny = (b[0] - q[0]) / L, h = sw * 3.2
+      return <g {...common} {...m}>{defs}<path d={path} fill="none" stroke={d.color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" /><line x1={b[0] + nx * h} y1={b[1] + ny * h} x2={b[0] - nx * h} y2={b[1] - ny * h} stroke={d.color} strokeWidth={sw * 1.3} strokeLinecap="round" /></g>
+    }
+    case 'shot': {
+      // Tiro: doble línea con punta, la convención de las pizarras.
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1
+      const nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L, o = sw * 0.9
+      const ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, e = sw * 2.2
+      return (
+        <g {...common} {...m}>{defs}
+          <line x1={a[0] + nx * o} y1={a[1] + ny * o} x2={b[0] + nx * o - ux * e} y2={b[1] + ny * o - uy * e} stroke={d.color} strokeWidth={sw * 0.7} strokeLinecap="round" />
+          <line x1={a[0] - nx * o} y1={a[1] - ny * o} x2={b[0] - nx * o - ux * e} y2={b[1] - ny * o - uy * e} stroke={d.color} strokeWidth={sw * 0.7} strokeLinecap="round" />
+          <polygon points={`${b[0]},${b[1]} ${b[0] - ux * e * 1.6 + nx * o * 2.4},${b[1] - uy * e * 1.6 + ny * o * 2.4} ${b[0] - ux * e * 1.6 - nx * o * 2.4},${b[1] - uy * e * 1.6 - ny * o * 2.4}`} fill={d.color} />
+        </g>
+      )
+    }
     case 'dribble':
       return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw * 0.85} strokeLinejoin="round" markerEnd={marker} /></>
     case 'free':
