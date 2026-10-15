@@ -12,6 +12,7 @@ Pizarra táctica de fútbol 11 pensada para el móvil y el S Pen, con plantillas
 - Animación continua y suave: las fichas siguen curvas que pasan por todos los pasos, sin paradas ni saltos. Reproducir, pausa, paso anterior y siguiente, explicación de cada paso. Puedes crear tus propias animaciones con “+ Paso”.
 - Exportar varias jugadas a la vez (las animadas en vídeo y las demás en imagen) y marca de agua sutil configurable en el margen del campo.
 - Exportar vídeo MP4 (1280×720, 30 imágenes por segundo) de cualquier jugada animada, con la explicación de cada paso. Se crea fotograma a fotograma, así sale fluido aunque el móvil vaya lento.
+- Modo proyector: botón Proyectar para mostrar la jugada a pantalla completa en la charla. Se pasa de paso con las flechas, con un mando de presentaciones o tocando a los lados; espacio para reproducir y Esc para salir.
 - Plantillas (63, 53 animadas) en grupos: sistemas, bloques defensivos (bajo, medio, alto y repliegue), presión alta (al saque del portero con trampa en banda), transiciones (ataque-defensa y defensa-ataque), generar espacios (arrastre del 9, fijar y soltar, cambio de orientación, tercer hombre), ABP y ejercicios.
 - Material de entrenamiento: conos, picas, vallas, aros, escalera, maniquíes, miniporterías, porterías y banderines, con giro de 45°.
 - Sesiones sugeridas (`src/sessions.ts`): 21 sesiones de fútbol 11 de adultos con bloques, minutos y consignas, enlazadas a los ejercicios animados.

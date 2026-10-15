@@ -166,3 +166,15 @@ button.wide { width: 100%; margin-top: 10px; }
 .shapes button.on { outline: 2px solid var(--accent); }
 .name-input { width: 120px !important; text-align: left !important; font-weight: 600 !important; }
 .sheet .colors { flex-wrap: wrap; margin-bottom: 6px; }
+
+/* Modo proyector */
+.present { position: fixed; inset: 0; z-index: 50; background: #0f1712; display: flex; flex-direction: column; align-items: center; padding: 1.5vh 1.5vw; gap: 1vh; }
+.present-board { flex: 1; min-height: 0; width: 100%; }
+.present-note { max-width: min(1300px, 96vw); background: rgba(79, 209, 139, .08); border: 1px solid rgba(79, 209, 139, .3); border-radius: 12px; padding: .8vh 1.6vw; font-size: clamp(14px, 2.6vh, 34px); font-weight: 600; line-height: 1.3; text-align: center; color: #fff; }
+.present-note b { color: var(--accent); margin-right: .4em; }
+.present-zone { position: absolute; top: 15vh; bottom: 10vh; width: 22vw; background: none; border: 0; padding: 0; cursor: pointer; opacity: 0; }
+.present-zone.left { left: 0; }
+.present-zone.right { right: 0; }
+.present-bar { display: flex; gap: 8px; opacity: .45; transition: opacity .2s; position: relative; z-index: 1; }
+.present-bar:hover, .present-bar:focus-within { opacity: 1; }
+.present-bar button { font-size: clamp(13px, 2vh, 18px); padding: .8vh 16px; }

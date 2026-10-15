@@ -292,9 +292,42 @@ export default function App() {
   const setNote = (note: string) =>
     commit((b) => ({ ...b, frames: b.frames!.map((f, i) => (i === cur ? { ...f, note } : f)) }))
 
+  // Modo proyector: la pizarra a pantalla completa para la charla. Se maneja con las flechas,
+  // con un mando de presentaciones (envía Av Pág / Re Pág) o tocando a los lados de la pantalla.
+  const [present, setPresent] = useState(false)
+  const presentRef = useRef<HTMLDivElement>(null)
+  const openPresent = () => {
+    setSheet(null); setSelected(null); setPresent(true)
+    requestAnimationFrame(() => presentRef.current?.requestFullscreen?.().catch(() => { /* sin pantalla completa */ }))
+  }
+  const closePresent = () => {
+    setPresent(false)
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => { /* ya salió */ })
+  }
+  useEffect(() => {
+    if (!present) return
+    const onFs = () => { if (!document.fullscreenElement) setPresent(false) }
+    document.addEventListener('fullscreenchange', onFs)
+    return () => document.removeEventListener('fullscreenchange', onFs)
+  }, [present])
+  const presentKeys = useRef({ nextStep, prevStep, play, closePresent })
+  presentKeys.current = { nextStep, prevStep, play, closePresent }
+  useEffect(() => {
+    if (!present) return
+    const onKey = (e: KeyboardEvent) => {
+      const k = presentKeys.current
+      if (['ArrowRight', 'ArrowDown', 'PageDown', 'Enter'].includes(e.key)) { e.preventDefault(); k.nextStep() }
+      else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); k.prevStep() }
+      else if (e.key === ' ' || e.key.toLowerCase() === 'p') { e.preventDefault(); k.play() }
+      else if (e.key === 'Escape') k.closePresent()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [present])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).tagName === 'INPUT') return
+      if ((e.target as HTMLElement).tagName === 'INPUT' || document.querySelector('.present')) return
       const mod = e.ctrlKey || e.metaKey
       if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo() }
       else if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo() }
@@ -485,6 +518,7 @@ export default function App() {
         <button onClick={undo} disabled={!past.current.length} aria-label="Deshacer">↶</button>
         <button onClick={redo} disabled={!future.current.length} aria-label="Rehacer">↷</button>
         <button onClick={() => setSheet('plays')}>Jugadas</button>
+        <button onClick={openPresent}>Proyectar</button>
         <button onClick={() => setSheet('export')}>Exportar</button>
       </header>
 
@@ -737,6 +771,29 @@ export default function App() {
         />
       )}
       {sheet === 'plays' && <PlaysSheet board={board} onOpen={(b) => { load(b); setSheet(null) }} onClose={() => setSheet(null)} onSaved={() => setToast('Jugada guardada')} />}
+      {present && (
+        <div className="present" ref={presentRef} role="dialog" aria-label="Modo proyector">
+          {frames && frames[shown].note && (
+            <div className="present-note" aria-live="polite"><b>Paso {shown + 1}/{nFrames}</b> {frames[shown].note}</div>
+          )}
+          <svg viewBox={`${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`} className="present-board">
+            <Markers />
+            <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} look={look} />
+          </svg>
+          {frames && <button className="present-zone left" onClick={prevStep} aria-label="Paso anterior" />}
+          {frames && <button className="present-zone right" onClick={nextStep} aria-label="Paso siguiente" />}
+          <div className="present-bar">
+            {frames && (
+              <>
+                <button onClick={prevStep} disabled={cur === 0 && anim === null} aria-label="Paso anterior">‹</button>
+                <button className="primary" onClick={play}>{playing ? '❚❚ Pausa' : '▶ Reproducir'}</button>
+                <button onClick={nextStep} disabled={cur >= nFrames - 1 && anim === null} aria-label="Paso siguiente">›</button>
+              </>
+            )}
+            <button onClick={closePresent}>Salir</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
