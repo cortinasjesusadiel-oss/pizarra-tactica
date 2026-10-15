@@ -112,6 +112,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .dtext h3{font-size:clamp(22px,2.6vw,30px);margin:10px 0 12px}
 .dtext p{color:#dbe9e0;font-weight:500}
 .dtext .note{margin-top:12px;font-size:13px;color:var(--mut)}
+.dtext a{color:var(--g);text-decoration:underline;text-underline-offset:2px}
 .player,.screen{margin:0}
 .player video{display:block;width:100%;height:auto;background:#0b120e;border-radius:14px;border:6px solid #05080a;box-shadow:0 26px 70px rgba(0,0,0,.55),0 0 0 1px #2a3a31}
 .screen{position:relative;padding:14px 14px 22px;background:#05080a;border-radius:16px;box-shadow:0 26px 70px rgba(0,0,0,.55),0 0 0 1px #2a3a31,0 0 60px rgba(79,209,139,.12)}
@@ -250,7 +251,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
         <div class="k">1 · Crea tu jugada</div>
         <h3>Así se crea una jugada</h3>
         <p>Grabación real de TacticalPro: un 11 contra 11 creado desde cero en el campo entero. Colocas a los jugadores, dibujas pases y carreras y añades los pasos que quieras. A cada paso le puedes poner una descripción, y saldrá en el vídeo que exportes.</p>
-        <p class="note">Grabación real de la app, a velocidad normal. Solo la colocación de los jugadores va algo más rápida.</p>
+        <p class="note">Grabación real de la app, resumida con cortes. <a href="img/demo-crear-completo.mp4">Ver la grabación completa (2 min)</a>.</p>
       </div>
       <figure class="player">
         <video data-lazy poster="img/demo-crear.webp" width="1280" height="1024" muted loop playsinline controls preload="none" aria-label="Grabación de TacticalPro creando un 11 contra 11 paso a paso">
@@ -265,7 +266,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
         <div class="k">2 · Exporta</div>
         <h3>Así se exporta</h3>
         <p>Pulsa «Exportar vídeo», elige tu marca (tu logo, tu nombre o tu escudo), activa la letra grande y el campo a todo el ancho, mira la vista previa y crea el MP4. Al terminar lo guardas o lo compartes.</p>
-        <p class="note">Grabación real de la app. Se salta la espera mientras se crea el vídeo.</p>
+        <p class="note">Grabación real de la app, con el menú ampliado para que se lea bien. Se salta la espera mientras se crea el vídeo. <a href="img/demo-exportar-completo.mp4">Ver la grabación completa</a>.</p>
       </div>
       <figure class="player">
         <video data-lazy poster="img/demo-exportar.webp" width="1280" height="1024" muted loop playsinline controls preload="none" aria-label="Grabación de TacticalPro exportando una jugada en vídeo MP4 paso a paso">
@@ -300,6 +301,57 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <figure class="screen">
         <img src="img/charla-entrenador.webp" width="1536" height="1024" loading="lazy" alt="Entrenador explicando a su equipo la salida de balón 11 contra 11 en el modo proyector de TacticalPro">
       </figure>
+    </div>
+  </div>
+</section>
+
+<section class="demo" id="mas">
+  <div class="wrap">
+    <div class="demo-head">
+      <h2>Mucho más que una <span class="g">pizarra táctica</span></h2>
+      <p class="sub">Aprende · Planifica · Entrena</p>
+      <p class="lead">Además de crear y animar jugadas, TacticalPro te ayuda a preparar tus entrenamientos y a consultar lo esencial del juego cuando lo necesites.</p>
+    </div>
+
+    <div class="dstep">
+      <div class="dtext">
+        <div class="k">Planifica</div>
+        <h3>Prepara tus entrenamientos</h3>
+        <p>Sesiones sugeridas de fútbol 11 de adultos, ordenadas según el día de la semana respecto al partido. Cada sesión trae sus bloques con minutos y objetivo, y cada ejercicio se abre animado en la pizarra para explicarlo o adaptarlo.</p>
+        <p class="note">Grabación real de la app, con el menú ampliado para que se lea bien.</p>
+      </div>
+      <figure class="player">
+        <video data-lazy poster="img/demo-planifica.webp" width="1280" height="1024" muted loop playsinline controls preload="none" aria-label="Grabación de TacticalPro abriendo una sesión de entrenamiento y su ejercicio animado">
+          <source data-src="img/demo-planifica.mp4" type="video/mp4">
+          <source data-src="img/demo-planifica.webm" type="video/webm">
+        </video>
+      </figure>
+    </div>
+
+    <div class="dstep">
+      <div class="dtext">
+        <div class="k">Aprende</div>
+        <h3>Consulta lo esencial del juego</h3>
+        <p>Fundamentos explicados de forma sencilla (las fases del juego, los carriles, los sistemas, los bloques y un diccionario) y consejos prácticos de táctica, entrenamiento y gestión del grupo, para consultar cuando los necesites.</p>
+        <p class="note">Grabación real de la app, con el menú ampliado para que se lea bien.</p>
+      </div>
+      <figure class="player">
+        <video data-lazy poster="img/demo-aprende.webp" width="1280" height="1024" muted loop playsinline controls preload="none" aria-label="Grabación de TacticalPro consultando los fundamentos y los consejos">
+          <source data-src="img/demo-aprende.mp4" type="video/mp4">
+          <source data-src="img/demo-aprende.webm" type="video/webm">
+        </video>
+      </figure>
+    </div>
+
+    <div class="dstep">
+      <div class="dtext">
+        <div class="k">Entrena</div>
+        <h3>Del papel al campo</h3>
+        <p>Lleva tus ideas al equipo con las jugadas animadas, el modo proyector en la charla y los vídeos que compartes por WhatsApp, como has visto en <a href="#video">De la pizarra al vídeo</a>.</p>
+      </div>
+      <div class="dtext">
+        <p class="note">TacticalPro es una herramienta de apoyo para aprender y planificar. No sustituye la formación, las decisiones ni la experiencia del entrenador.</p>
+      </div>
     </div>
   </div>
 </section>
