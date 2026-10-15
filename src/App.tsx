@@ -10,7 +10,7 @@ import { SESSIONS } from './sessions'
 import { TEMPLATES, emptyBoard } from './templates'
 import { GROUPS } from './anim'
 import { TIPS } from './tips'
-import tpSymbol from './tpSymbol.svg'
+import tpSymbol from './tpSymbol.png'
 import { GLOSSARY, LESSONS } from './fundamentos'
 import { deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay } from './storage'
 
