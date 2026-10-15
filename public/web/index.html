@@ -102,6 +102,22 @@ details p{color:var(--mut);margin-top:10px}
 footer{border-top:1px solid rgba(79,209,139,.1);padding:28px 0;color:var(--mut);font-size:13px}
 footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
+/* De la pizarra al vídeo */
+.demo{padding:80px 0;background:linear-gradient(180deg,transparent,var(--bg2) 12%,var(--bg2) 88%,transparent)}
+.demo-head{max-width:760px;margin:0 auto 46px;text-align:center}
+.demo-head .sub{font-size:clamp(19px,2.2vw,24px);font-weight:800;color:var(--g);margin:12px 0 14px}
+.dstep{display:grid;grid-template-columns:.8fr 1.2fr;gap:44px;align-items:center;padding:30px 0}
+.dstep+.dstep{border-top:1px solid rgba(79,209,139,.1)}
+.dtext .k{font-size:13px;font-weight:800;letter-spacing:.2em;color:var(--g);text-transform:uppercase}
+.dtext h3{font-size:clamp(22px,2.6vw,30px);margin:10px 0 12px}
+.dtext p{color:#dbe9e0;font-weight:500}
+.dtext .note{margin-top:12px;font-size:13px;color:var(--mut)}
+.player,.screen{margin:0}
+.player video{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#0b120e;border-radius:14px;border:6px solid #05080a;box-shadow:0 26px 70px rgba(0,0,0,.55),0 0 0 1px #2a3a31}
+.screen{position:relative;padding:14px 14px 22px;background:#05080a;border-radius:16px;box-shadow:0 26px 70px rgba(0,0,0,.55),0 0 0 1px #2a3a31,0 0 60px rgba(79,209,139,.12)}
+.screen img{border-radius:6px;width:100%;height:auto}
+.screen::after{content:"";position:absolute;left:50%;bottom:8px;width:44px;height:4px;margin-left:-22px;border-radius:2px;background:#1d2a23}
+
 @media (max-width:860px){
   nav .links a:not(.btn){display:none}
   .hero{padding:40px 0 20px}
@@ -111,6 +127,9 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   .pillars .grid{grid-template-columns:1fr}
   .stats .grid{grid-template-columns:repeat(2,1fr)}
   .feat{padding:50px 0}
+  .demo{padding:56px 0}
+  .dstep{grid-template-columns:1fr;gap:20px;padding:24px 0}
+  .player video{border-width:4px;border-radius:10px}
 }
 </style>
 </head>
@@ -218,13 +237,55 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   </div>
 </section>
 
-<section class="feat">
+<section class="demo" id="video">
   <div class="wrap">
-    <div>
+    <div class="demo-head">
       <h2>De la pizarra <span class="g">al vídeo</span></h2>
-      <p class="lead" style="margin-top:16px">Exporta en MP4 para proyectarlas en la charla o enviarlas al equipo por WhatsApp. También en imagen, y varias a la vez.</p>
+      <p class="sub">Tus ideas tácticas, en movimiento.</p>
+      <p class="lead">Crea jugadas paso a paso, anima los movimientos de tus jugadores y exporta tus explicaciones en MP4. Compártelas con tu equipo por WhatsApp o utilízalas en tus charlas tácticas.</p>
     </div>
-    <div class="media"><video src="img/rondo.mp4" poster="img/rondo-poster.webp" autoplay muted loop playsinline aria-label="Rondo 5 contra 2 animado en modo proyector"></video></div>
+
+    <div class="dstep">
+      <div class="dtext">
+        <div class="k">1 · Crea tu jugada</div>
+        <h3>Así se crea una jugada</h3>
+        <p>Grabación real de TacticalPro: pizarra nueva, campo, jugadores, pases y carreras, pasos, reproducción y exportación en MP4.</p>
+        <p class="note">Grabación real de la app, acelerada para que dure 30 segundos.</p>
+      </div>
+      <figure class="player">
+        <video data-lazy poster="img/demo-crear.webp" width="1280" height="720" muted loop playsinline controls preload="none" aria-label="Grabación de TacticalPro creando una jugada paso a paso">
+          <source data-src="img/demo-crear.mp4" type="video/mp4">
+          <source data-src="img/demo-crear.webm" type="video/webm">
+        </video>
+      </figure>
+    </div>
+
+    <div class="dstep">
+      <div class="dtext">
+        <div class="k">2 · Anima y comparte</div>
+        <h3>Así se ve el resultado</h3>
+        <p>Salida de balón ante presión alta, 11 contra 11, en 6 pasos. Es el vídeo MP4 tal como sale de la app, con la opción de letra grande para verlo bien en el móvil.</p>
+        <p class="note">Esta jugada está en la app: Plantillas › Generar espacios.</p>
+      </div>
+      <figure class="player">
+        <video data-lazy poster="img/demo-resultado.webp" width="1280" height="720" muted loop playsinline controls preload="none" aria-label="Vídeo exportado desde TacticalPro: salida de balón ante presión alta, 11 contra 11">
+          <source data-src="img/demo-resultado.mp4" type="video/mp4">
+          <source data-src="img/demo-resultado.webm" type="video/webm">
+        </video>
+      </figure>
+    </div>
+
+    <div class="dstep">
+      <div class="dtext">
+        <div class="k">3 · Lleva tus ideas al equipo</div>
+        <h3>Tus ideas, frente a tu equipo</h3>
+        <p>Utiliza TacticalPro para explicar movimientos, preparar charlas tácticas y comunicar tus ideas de juego de forma visual y clara.</p>
+        <p class="note">La misma jugada en el modo proyector, a pantalla completa para la charla.</p>
+      </div>
+      <figure class="screen">
+        <img src="img/charla-proyector.webp" width="1400" height="788" loading="lazy" alt="Modo proyector de TacticalPro con la salida de balón 11 contra 11">
+      </figure>
+    </div>
   </div>
 </section>
 
@@ -267,6 +328,39 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     <span>Creado por Jesús Cortinas · Scout &amp; Analyst</span>
   </div>
 </footer>
+
+<script>
+// Vídeos de la demostración: se cargan solo al acercarse a ellos y se reproducen en silencio mientras se ven.
+// Con "reducir movimiento" activado no arrancan solos: se reproducen con el botón.
+(function () {
+  var vids = document.querySelectorAll('.player video[data-lazy]')
+  var calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches
+  var load = function (v) {
+    if (v.dataset.loaded) return
+    v.dataset.loaded = '1'
+    v.querySelectorAll('source[data-src]').forEach(function (s) { s.src = s.getAttribute('data-src') })
+    v.preload = 'metadata'
+    v.load()
+  }
+  if (!('IntersectionObserver' in window)) { vids.forEach(load); return }
+  var near = new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) { load(e.target); near.unobserve(e.target) } })
+  }, { rootMargin: '400px 0px' })
+  var seen = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      var v = e.target
+      if (e.isIntersecting && !calm && !v.dataset.user) { load(v); var p = v.play(); if (p && p.catch) p.catch(function () {}) }
+      else if (!e.isIntersecting && !v.paused) { v.dataset.auto = '1'; v.pause() }
+    })
+  }, { threshold: 0.5 })
+  vids.forEach(function (v) {
+    near.observe(v); seen.observe(v)
+    // Si el visitante la pausa, no se vuelve a reproducir sola.
+    v.addEventListener('pause', function () { if (v.dataset.auto) delete v.dataset.auto; else if (document.visibilityState === 'visible' && !v.ended) v.dataset.user = '1' })
+    v.addEventListener('play', function () { delete v.dataset.user })
+  })
+})()
+</script>
 
 </body>
 </html>

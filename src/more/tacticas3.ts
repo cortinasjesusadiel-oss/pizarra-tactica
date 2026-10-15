@@ -158,7 +158,22 @@ const defensaUnoContraUno = T('t3-ej-defensa-1c1', 'Ejercicios', 'Defender un 1 
     { n: 'El atacante, encerrado, deja el balón un poco largo y el defensa mete el pie y roba. Se cambian los papeles. Robar vale 1 punto.', b: 'h2', s: true, d: -1, m: { h2: [39, 57], a: [37, 60] } },
   ], () => cones([[16, 20], [16, 48]]))
 
+// ---------- Salida de balón ante presión alta (es la jugada de la demostración de la web) ----------
+
+const salidaPresion = T('t3-salida-presion-alta', 'Generar espacios', 'Salida de balón ante presión alta (4-3-3 contra 4-4-2)', 'full',
+  { h1: [5, 34], h4: [14, 25], h5: [14, 43], h3: [26, 7], h2: [26, 61], h6: [25, 34], h8: [38, 22], h10: [38, 46], h11: [56, 9], h7: [56, 59], h9: [62, 34] },
+  { r9: [27, 28], r10: [27, 40], r7: [36, 11], r11: [36, 57], r8: [38, 27], r6: [38, 41], r2: [55, 13], r5: [57, 28], r4: [57, 40], r3: [55, 55], g: [100, 34] },
+  'h1', [
+    { n: 'Saque de portería. El rival presiona alto en 4-4-2: sus dos delanteros vigilan a nuestros centrales y sus extremos saltan a los laterales.' },
+    { n: 'El portero juega con el central 4. Un delantero sale a presionarle y el otro tapa el pase al otro central.', b: 'h4', m: { r9: [19, 26], r10: [22, 36] }, pr: ['r9', 'r10'] },
+    { n: 'El 6 baja a dar apoyo y recibe. Su marcador (el 8 rival) le persigue y deja un hueco a su espalda. Nuestro 8 se mete en ese hueco.', b: 'h6', m: { h6: [21, 31], r8: [24.5, 26.5], h8: [33, 21] }, run: ['h6', 'h8'], pr: ['r8'] },
+    { n: 'Tercer hombre: el 6, de cara, toca de primeras para el 8, que recibe libre y de frente. La presión ya queda atrás.', b: 'h8', m: { r6: [33, 33] }, pr: ['r6'] },
+    { n: 'El 8 conduce hacia delante. El 9 baja para arrastrar a un central y el 11 ataca la espalda del lateral rival.', m: { h8: [45, 22], h9: [55, 30], r5: [59, 29], h11: [68, 7], r2: [60, 10] }, run: ['h9', 'h11'] },
+    { n: 'Pase al espacio para el 11, que llega lanzado. Hemos superado la presión con tres pases y atacamos con ventaja.', b: 'h11', m: { h11: [76, 10], r2: [70, 12] }, run: ['h11'], pr: ['r2'] },
+  ])
+
 export const TACTICAS3: Template[] = [
+  salidaPresion,
   basculacion, bloque541,
   presionTres,
   vigilancias,

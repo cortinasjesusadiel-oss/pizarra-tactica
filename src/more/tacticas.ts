@@ -21,11 +21,12 @@ export interface S {
   pr?: Mv[] // salidas a presionar (rojo)
 }
 
-// Las fichas de casa se llaman h + dorsal (h9 es el 9). El portero rival se llama g.
+// Las fichas de casa se llaman h + dorsal (h9 es el 9). El portero rival se llama g. Si un rival se llama
+// r + dorsal (r9), lleva ese dorsal; los demás rivales van sin número.
 function cast(home: Shape, away: Shape, ball: Pt): Record<string, Token> {
   const c: Record<string, Token> = {}
   for (const [k, [x, y]] of Object.entries(home)) c[k] = player('home', k.slice(1), x, y)
-  for (const [k, [x, y]] of Object.entries(away)) c[k] = player('away', k === 'g' ? '1' : '', x, y)
+  for (const [k, [x, y]] of Object.entries(away)) c[k] = player('away', k === 'g' ? '1' : /^r\d+$/.test(k) ? k.slice(1) : '', x, y)
   c.b = ballAt(...ball)
   return c
 }
