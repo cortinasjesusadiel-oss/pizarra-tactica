@@ -14,6 +14,7 @@ import { TIPS } from './tips'
 import tpSymbol from './tpSymbol.png'
 import { GLOSSARY, LESSONS } from './fundamentos'
 import { deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay } from './storage'
+import { backupFile, describeImport, downloadBackup, importBackup, parseBackup } from './backup'
 import {
   BRAND_MODES, ROLES, endFor, isIdentityMode, loadEnd, loadIdentity, markFor, newProfile, profileLabel, readCrest, saveEnd, saveIdentity,
   type BrandMode, type EndCard, type IdentityStore, type Profile,
@@ -94,6 +95,21 @@ export default function App() {
   }, [])
 
   useEffect(() => { saveLast(board) }, [board])
+
+  // Tras importar una copia de seguridad se vuelve a leer lo guardado, para que «Mi identidad» y las preferencias nuevas se vean ya.
+  const reloadSaved = () => {
+    const j = <T,>(k: string, f: T): T => { try { return { ...f, ...JSON.parse(localStorage.getItem(k) ?? '{}') } } catch { return f } }
+    setIdStoreState(loadIdentity())
+    setEndState(loadEnd())
+    setPaceState(j('pizarra.ritmo', DEFAULT_PACE))
+    setLookState(j('pizarra.fichas', DEFAULT_LOOK))
+    setVoptsState(j<VideoOpts>('pizarra.video', { big: false, outro: false }))
+    try {
+      setBrandState(localStorage.getItem('pizarra.marca') ?? 'TacticalPro')
+      setBrandModeState((localStorage.getItem('pizarra.marca.tipo') as BrandMode) || 'logo')
+      setZones(localStorage.getItem('pizarra.zonas') === '1')
+    } catch { /* sin almacenamiento */ }
+  }
 
   useEffect(() => {
     if (!toast) return
@@ -891,7 +907,7 @@ export default function App() {
           onExport={() => { setPreview(false); doVideo() }}
         />
       )}
-      {sheet === 'plays' && <PlaysSheet board={board} onOpen={(b) => { load(b); setSheet(null) }} onClose={() => setSheet(null)} onSaved={() => setToast('Jugada guardada')} />}
+      {sheet === 'plays' && <PlaysSheet board={board} onOpen={(b) => { load(b); setSheet(null) }} onClose={() => setSheet(null)} onSaved={() => setToast('Jugada guardada')} onImported={reloadSaved} />}
       {present && (
         <div className="present" ref={presentRef} role="dialog" aria-label="Modo proyector">
           {frames && frames.some((f) => f.note) && (
@@ -937,7 +953,7 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
   )
 }
 
-function PlaysSheet({ board, onOpen, onClose, onSaved }: { board: Board; onOpen: (b: Board) => void; onClose: () => void; onSaved: () => void }) {
+function PlaysSheet({ board, onOpen, onClose, onSaved, onImported }: { board: Board; onOpen: (b: Board) => void; onClose: () => void; onSaved: () => void; onImported: () => void }) {
   const [plays, setPlays] = useState<SavedPlay[]>(listPlays)
   const [name, setName] = useState('')
   const [confirm, setConfirm] = useState<string | null>(null)
@@ -948,6 +964,37 @@ function PlaysSheet({ board, onOpen, onClose, onSaved }: { board: Board; onOpen:
     setPlays(listPlays())
     setName('')
     onSaved()
+  }
+  // Copia de seguridad: llevar las jugadas y «Mi identidad» a otro navegador o dispositivo con un archivo.
+  const [backupMsg, setBackupMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const exportBackup = async () => {
+    // En iPhone y iPad la descarga directa no siempre deja el archivo a mano: se abre «Compartir» para guardarlo en Archivos.
+    const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1)
+    if (ios) {
+      const f = backupFile()
+      if (navigator.canShare?.({ files: [f] })) {
+        try { await navigator.share({ files: [f], title: f.name }); setBackupMsg({ ok: true, text: 'Elige «Guardar en Archivos» para conservar la copia.' }); return }
+        catch (e) { if (e instanceof DOMException && e.name === 'AbortError') return }
+      }
+    }
+    try {
+      const f = downloadBackup()
+      setBackupMsg({ ok: true, text: `Copia guardada en tus descargas como «${f.name}».` })
+    } catch { setBackupMsg({ ok: false, text: 'No se pudo crear la copia en este navegador.' }) }
+  }
+  const pickBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      const r = importBackup(parseBackup(await file.text()))
+      setPlays(listPlays())
+      onImported()
+      setBackupMsg({ ok: true, text: describeImport(r) })
+    } catch (err) {
+      setBackupMsg({ ok: false, text: err instanceof Error ? err.message : 'No se pudo importar la copia.' })
+    }
   }
   return (
     <Sheet title="Mis jugadas" onClose={onClose}>
@@ -973,6 +1020,17 @@ function PlaysSheet({ board, onOpen, onClose, onSaved }: { board: Board; onOpen:
           </div>
         ))}
       </div>
+      <section className="backup" aria-labelledby="backup-title">
+        <h3 id="backup-title">Copia de seguridad</h3>
+        <p className="muted small">Guarda en un archivo tus jugadas (con sus pasos, movimientos y textos) y «Mi identidad» con tu escudo. Ábrelo en otro navegador, móvil u ordenador para recuperarlo todo. No necesitas cuenta: el archivo es tuyo.</p>
+        <div className="backup-actions">
+          <button className="primary" onClick={exportBackup}>Exportar copia de seguridad</button>
+          <button onClick={() => fileRef.current?.click()}>Importar copia de seguridad</button>
+          <input ref={fileRef} id="backup-file" type="file" accept=".json,application/json" hidden onChange={pickBackup} />
+        </div>
+        <p className="muted small">Al importar se añade lo que falta y se conserva todo lo que ya tienes aquí. Lo repetido no se duplica.</p>
+        {backupMsg && <p className={backupMsg.ok ? 'backup-msg' : 'backup-msg error'} role="status">{backupMsg.text}</p>}
+      </section>
     </Sheet>
   )
 }

@@ -220,3 +220,10 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 .preview-opts .pick { padding: 4px 6px; }
 .preview .time { font-variant-numeric: tabular-nums; min-width: 84px; text-align: center; }
 @media (max-width: 600px) { .endcard-body { padding-left: 0; } }
+.backup { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.backup h3 { margin: 0; font-size: 1rem; }
+.backup p { margin: 0; }
+.backup-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.backup-actions button { flex: 1 1 220px; }
+.backup-msg { padding: 8px 10px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); }
+.backup-msg.error { border-color: #ff6b5e; }
