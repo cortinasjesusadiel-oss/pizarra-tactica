@@ -3,7 +3,7 @@
   "short_name": "TacticalPro",
   "description": "Pizarra táctica de fútbol: planifica, anima y explica tus jugadas. Más de 60 plantillas, modo proyector y vídeo MP4.",
   "lang": "es",
-  "start_url": "./",
+  "start_url": "./instalada/",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

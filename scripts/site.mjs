@@ -29,4 +29,8 @@ writeFileSync(join(dist, 'web', 'privacidad.html'), go('../privacidad.html'))
 // Dirección anterior de la pizarra
 mkdirSync(join(dist, 'app'), { recursive: true })
 writeFileSync(join(dist, 'app', 'index.html'), go('../pizarra/', true))
+// La app instalada se abre en /pizarra/instalada/: la misma pizarra (con <base> a la carpeta de arriba),
+// así el recuento anónimo distingue la app instalada de la pizarra abierta en el navegador.
+mkdirSync(join(dist, 'pizarra', 'instalada'), { recursive: true })
+writeFileSync(join(dist, 'pizarra', 'instalada', 'index.html'), readFileSync(join(dist, 'pizarra', 'index.html'), 'utf8').replace('<head>', '<head>\n    <base href="../" />'))
 console.log('web en la raíz, pizarra en /pizarra/')
