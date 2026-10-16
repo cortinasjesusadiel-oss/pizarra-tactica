@@ -18,7 +18,7 @@
 <meta property="og:locale:alternate" content="en_US">
 <script>
 // Si el visitante eligió inglés (o su navegador está en otro idioma y aún no ha elegido), va a la versión en inglés.
-try{var l=localStorage.getItem('pizarra.idioma'),n=(navigator.languages&&navigator.languages[0])||navigator.language||'es';if(l==='en'||(!l&&!/^es\b/i.test(n)&&!/bot|crawl|spider|slurp|lighthouse|preview/i.test(navigator.userAgent)))location.replace('en/'+location.hash)}catch(e){}
+try{var l=localStorage.getItem('pizarra.idioma'),n=(navigator.languages&&navigator.languages[0])||navigator.language||'es';if(l==='en'||(!l&&!/^es\b/i.test(n)&&!/bot|crawl|spider|slurp|lighthouse|preview/i.test(navigator.userAgent)))location.replace('en/'+location.search+location.hash)}catch(e){}
 </script>
 <meta property="og:type" content="website">
 <link rel="icon" type="image/png" href="../favicon-32.png">

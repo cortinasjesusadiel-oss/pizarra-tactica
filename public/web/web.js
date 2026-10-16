@@ -80,6 +80,8 @@
   if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) { var m = /[?&]api=([^&]+)/.exec(q); if (m) API = decodeURIComponent(m[1]) }
   if (!API || !(PUBLICO || /[?&]prueba\b/.test(q))) return
   sec.hidden = false
+  // En modo prueba, el cambio de idioma conserva ?prueba y la sección.
+  if (!PUBLICO) document.querySelectorAll('.lang a[hreflang]').forEach(function (a) { a.href = a.getAttribute('href').split(/[?#]/)[0] + q + '#opinion' })
   var store = function (k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v) } catch (e) { return null } }
   var post = function (d) { return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(d) }).then(function (r) { return r.json() }) }
   var fmt = function (n) { return Number(n).toLocaleString(document.documentElement.lang || 'es') }
