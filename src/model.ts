@@ -20,7 +20,8 @@ export const EQUIPMENT: { kind: TokenKind; name: string }[] = [
 export const KIND_NAME = (k: TokenKind) => (k === 'player' ? t('Jugador') : k === 'ball' ? t('Balón') : EQUIPMENT.find((e) => e.kind === k)?.name ?? '')
 export type DrawTool = 'pass' | 'lob' | 'run' | 'arrow' | 'dribble' | 'press' | 'shot' | 'line' | 'text' | 'zone' | 'focus' | 'free'
 // Flechas que mueven a un jugador al crear un paso (con o sin balón).
-export const MOVES_PLAYER: DrawTool[] = ['run', 'arrow', 'dribble', 'press']
+// «Flecha» no mueve a nadie: es solo un dibujo para explicar.
+export const MOVES_PLAYER: DrawTool[] = ['run', 'dribble', 'press']
 // Flechas que mueven el balón.
 export const MOVES_BALL: DrawTool[] = ['pass', 'lob', 'shot']
 // Trazos rectos: solo cuentan el inicio y el final.
