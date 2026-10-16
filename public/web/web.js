@@ -72,7 +72,7 @@
 // Opiniones y «Me gusta»: se guardan en el servidor de TacticalPro (Google Apps Script, cuenta tacticalproapp).
 // Mientras PUBLICO sea false, la sección solo aparece con ?prueba en la dirección, para comprobarla antes de abrirla.
 ;(function () {
-  var API = ''
+  var API = 'https://script.google.com/macros/s/AKfycbz2COB4DUZGAoX12fiDzCvtl_-sNGQ1ieY6gXODGEKOmVnAT8DE_JZ-Utv9fBVrverUEA/exec'
   var PUBLICO = false
   var sec = document.getElementById('opinion')
   if (!sec) return
