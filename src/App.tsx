@@ -70,7 +70,7 @@ export default function App() {
   // Letrero que se está escribiendo o editando (id vacío = nuevo).
   const [label, setLabel] = useState<LabelEdit | null>(null)
   const [penSeen, setPenSeen] = useState(false)
-  const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | 'learn' | 'look' | 'identity' | null>(null)
+  const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | 'learn' | 'look' | 'identity' | 'help' | null>(null)
   const [showHint, setShowHint] = useState(hint)
   const [toast, setToast] = useState<string | null>(null)
   const [zones, setZones] = useState(() => { try { return localStorage.getItem('pizarra.zonas') === '1' } catch { return false } })
@@ -827,6 +827,7 @@ export default function App() {
         {/* Ajustes generales, a la derecha de la barra inferior: Mi identidad, orientación del campo e idioma. */}
         <div className="tools-end">
           <button onClick={() => setSheet('identity')}>{t('Mi identidad')}</button>
+          <button onClick={() => setSheet('help')}>{t('Ayuda')}</button>
           <button onClick={toggleVertical} aria-label={t('Orientación del campo')}>{vertical ? t('▭ Horizontal') : t('▯ Vertical')}</button>
           <select id="lang" className="lang" aria-label={t('Idioma')} value={lang} onChange={(e) => setLang(e.target.value as 'es' | 'en')}>
             <option value="es">Español</option>
@@ -835,6 +836,16 @@ export default function App() {
         </div>
       </footer>
 
+      {sheet === 'help' && (
+        <Sheet title={t('Ayuda y sugerencias')} onClose={() => setSheet(null)}>
+          <p className="muted">{t('¿Tienes una duda, has encontrado un fallo o se te ocurre una mejora? Escríbenos, nos ayuda mucho a mejorar TacticalPro.')}</p>
+          <div className="help-links">
+            <a className="help-link wa" href={'https://wa.me/34624981522?text=' + encodeURIComponent(t('Hola, tengo una consulta sobre TacticalPro'))} target="_blank" rel="noopener">{t('Escríbenos por WhatsApp')}</a>
+            <a className="help-link" href={'mailto:tacticalproapp@gmail.com?subject=' + encodeURIComponent(t('Consulta sobre TacticalPro'))}>{t('Enviar un correo')}</a>
+          </div>
+          <p className="muted small">tacticalproapp@gmail.com</p>
+        </Sheet>
+      )}
       {sheet === 'templates' && (
         <Sheet title={t('Plantillas')} onClose={() => setSheet(null)}>
           {GROUPS.map((g) => {

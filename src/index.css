@@ -238,3 +238,8 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 .label-opts .colors button.none { background: repeating-linear-gradient(45deg, transparent 0 4px, rgba(255,255,255,.35) 4px 6px); }
 .label-opts .seg { flex-wrap: wrap; }
 @media (max-width: 520px) { .label-opts { grid-template-columns: 1fr; } }
+
+.help-links { display: grid; gap: 10px; margin: 14px 0 6px; }
+.help-link { display: flex; align-items: center; justify-content: center; min-height: 46px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font-weight: 700; text-decoration: none; }
+.help-link:hover { border-color: var(--accent); }
+.help-link.wa { background: #25D366; border-color: #25D366; color: #0b1a10; }
