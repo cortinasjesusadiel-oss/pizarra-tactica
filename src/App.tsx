@@ -70,6 +70,7 @@ export default function App() {
   // Letrero que se está escribiendo o editando (id vacío = nuevo).
   const [label, setLabel] = useState<LabelEdit | null>(null)
   const [penSeen, setPenSeen] = useState(false)
+  const [fingerSeen, setFingerSeen] = useState(false)
   const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | 'learn' | 'look' | 'identity' | 'help' | null>(null)
   const [showHint, setShowHint] = useState(hint)
   const [toast, setToast] = useState<string | null>(null)
@@ -448,13 +449,14 @@ export default function App() {
     // Con el lápiz apoyado se ignora la palma de la mano.
     if (e.pointerType === 'touch' && penDown.current) return
     if (isPen && !penSeen) setPenSeen(true)
+    if (e.pointerType === 'touch' && !fingerSeen) setFingerSeen(true)
     if (playing || anim !== null) stopAnim()
     const p = toBoard(e)
     let tokenId = (e.target as Element).closest('[data-token]')?.getAttribute('data-token') ?? null
-    // Con el dedo, en el móvil las fichas se ven pequeñas: se coge la ficha más cercana a unos 26 px del toque.
+    // Con el dedo, en el móvil las fichas se ven pequeñas: se coge la ficha más cercana a unos 18 px del toque.
     if (!tokenId && e.pointerType === 'touch') {
       const ctm = layer.current!.getScreenCTM()!
-      const reach = 26 / Math.hypot(ctm.a, ctm.b)
+      const reach = 18 / Math.hypot(ctm.a, ctm.b)
       let best = reach
       for (const t of board.tokens) {
         const [x, y] = posAt(board, t, cur)
@@ -490,6 +492,8 @@ export default function App() {
       else { mode = 'draw'; drawTool = tool }
     } else if (fingerWithPen) mode = 'move'
     else if (tool !== 'move') { mode = 'draw'; drawTool = tool }
+    // El dedo en Mover funciona como el S Pen: sobre una ficha la mueve, sobre el césped dibuja.
+    else if (e.pointerType === 'touch' && !tokenId && !labelId) mode = 'draw'
 
     pointer.current = e.pointerId
     if (isPen) penDown.current = true
@@ -834,7 +838,8 @@ export default function App() {
           onClick={() => commit((b) => ({ ...b, drawings: [], frames: b.frames?.map((f, i) => (i === cur ? { ...f, drawings: [] } : f)) }))}
           disabled={!board.drawings.length && !stepDrawings.length}
         >{t('Borrar trazos')}</button>
-        {penSeen && <span className="pen">{t('S Pen · ficha: mover · césped:')}{' '}{TOOL_NAME[activeDraw]}</span>}
+        {penSeen ? <span className="pen">{t('S Pen · ficha: mover · césped:')}{' '}{TOOL_NAME[activeDraw]}</span>
+          : fingerSeen && tool === 'move' && <span className="pen">{t('Ficha: mover · césped:')}{' '}{TOOL_NAME[activeDraw]}</span>}
         {/* Ajustes generales, a la derecha de la barra inferior: Mi identidad, orientación del campo e idioma. */}
         <div className="tools-end">
           <button onClick={() => setSheet('identity')}>{t('Mi identidad')}</button>
