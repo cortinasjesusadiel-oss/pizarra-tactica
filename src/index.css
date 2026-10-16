@@ -33,6 +33,11 @@ body { background: var(--bg); color: var(--fg); overscroll-behavior: none; -webk
   padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
 }
 .app > .selbar { grid-row: 3; }
+/* La barra de la ficha seleccionada flota sobre el borde inferior del campo: al aparecer o
+   desaparecer no cambia el tamaño de la pizarra, así el campo no salta. */
+.app > .stage { grid-row: 2; grid-column: 1; }
+.app > .selbar { grid-row: 2; grid-column: 1; align-self: end; z-index: 3; background: rgba(23, 34, 27, .92); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.animbar > .muted { white-space: nowrap; }
 .app > .animbar { grid-row: 4; }
 .app > .tools { grid-row: 5; }
 
@@ -243,3 +248,40 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 .help-link { display: flex; align-items: center; justify-content: center; min-height: 46px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font-weight: 700; text-decoration: none; }
 .help-link:hover { border-color: var(--accent); }
 .help-link.wa { background: #25D366; border-color: #25D366; color: #0b1a10; }
+
+/* iPhone: con letra de menos de 16 px Safari amplía la página al escribir y la pizarra se mueve. */
+@supports (-webkit-touch-callout: none) { input, select, textarea { font-size: 16px; } }
+
+/* Móvil en horizontal: barras más finas para que el campo tenga sitio. */
+@media (max-height: 500px) {
+  .top, .tools, .selbar, .animbar { padding: 4px 8px; gap: 6px; }
+  button { min-height: 32px; padding: 4px 10px; font-size: 13px; }
+  .seg button { min-height: 28px; }
+  .seg.big button { flex-direction: row; min-height: 30px; min-width: 0; padding: 2px 8px; gap: 4px; }
+  .seg.big button svg { width: 16px; height: 16px; }
+  .colors button { width: 24px; height: 24px; }
+  .steps button { min-width: 30px; padding: 2px 0; }
+  .pace select, select, input { min-height: 32px; padding-top: 3px; padding-bottom: 3px; }
+  .brand img { width: 26px; height: 20px; }
+  .brand { font-size: 15px; }
+  .hint { bottom: 6px; padding: 10px; font-size: 13px; }
+}
+
+/* Móvil en horizontal: menú a la izquierda, herramientas a la derecha y el campo en el centro con toda la altura.
+   La barra de la ficha seleccionada ocupa el sitio de la barra de animación mientras hay una ficha elegida. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .app { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr) 44px; }
+  .app > .top, .app > .tools { grid-row: 1 / span 2; flex-direction: column; align-items: stretch; overflow-x: hidden; overflow-y: auto; border: 0; }
+  .app > .top { grid-column: 1; border-right: 1px solid var(--line); }
+  .app > .tools { grid-column: 3; border-left: 1px solid var(--line); }
+  .app > .stage { grid-column: 2; grid-row: 1; }
+  .app > .animbar { grid-column: 2; grid-row: 2; }
+  .app > .selbar { grid-column: 2; grid-row: 2; align-self: stretch; background: var(--panel-2); }
+  .top > *, .tools > * { flex: none; }
+  .top .sep, .tools .sep { width: auto; height: 1px; }
+  .top .seg, .tools .seg.big { flex-direction: column; }
+  .tools .seg.big button { justify-content: flex-start; }
+  .tools .colors { flex-wrap: wrap; justify-content: center; max-width: 116px; align-self: center; }
+  .tools-end { flex-direction: column; align-items: stretch; margin: 0; padding: 0; }
+  .brand { justify-content: center; margin: 0; }
+}

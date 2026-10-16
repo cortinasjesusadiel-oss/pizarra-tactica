@@ -449,8 +449,19 @@ export default function App() {
     if (e.pointerType === 'touch' && penDown.current) return
     if (isPen && !penSeen) setPenSeen(true)
     if (playing || anim !== null) stopAnim()
-    const tokenId = (e.target as Element).closest('[data-token]')?.getAttribute('data-token') ?? null
     const p = toBoard(e)
+    let tokenId = (e.target as Element).closest('[data-token]')?.getAttribute('data-token') ?? null
+    // Con el dedo, en el móvil las fichas se ven pequeñas: se coge la ficha más cercana a unos 26 px del toque.
+    if (!tokenId && e.pointerType === 'touch') {
+      const ctm = layer.current!.getScreenCTM()!
+      const reach = 26 / Math.hypot(ctm.a, ctm.b)
+      let best = reach
+      for (const t of board.tokens) {
+        const [x, y] = posAt(board, t, cur)
+        const d = Math.hypot(x - p[0], y - p[1])
+        if (d < best) { best = d; tokenId = t.id }
+      }
+    }
     // Letreros: con la herramienta Texto se toca para escribir uno nuevo o para editar uno que ya está.
     const labelId = (e.target as Element).closest('g.label')?.getAttribute('data-draw') ?? null
     const allDrawings = [...board.drawings, ...(board.frames?.[cur]?.drawings ?? [])]
