@@ -8,6 +8,17 @@ const KEY = 'pizarra.idioma'
 
 function detect(): Lang {
   try {
+    // La web abre la pizarra con ?lang=es o ?lang=en: ese idioma se guarda y se quita de la dirección.
+    const q = new URLSearchParams(location.search).get('lang')
+    if (q === 'es' || q === 'en') {
+      try { localStorage.setItem(KEY, q) } catch { /* sin almacenamiento: vale para esta vez */ }
+      const u = new URL(location.href)
+      u.searchParams.delete('lang')
+      history.replaceState(history.state, '', u.pathname + u.search + u.hash)
+      return q
+    }
+  } catch { /* sin almacenamiento */ }
+  try {
     const saved = localStorage.getItem(KEY)
     if (saved === 'es' || saved === 'en') return saved
   } catch { /* sin almacenamiento */ }

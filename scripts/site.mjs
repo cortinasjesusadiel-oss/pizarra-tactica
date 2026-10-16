@@ -15,6 +15,11 @@ for (const f of readdirSync(dist).filter((x) => x.endsWith('.html'))) {
   // Los enlaces a la pizarra y a sus iconos ("../algo") pasan a "pizarra/algo".
   writeFileSync(p, readFileSync(p, 'utf8').replace(/(href|src)="\.\.\/([^"]*)"/g, '$1="pizarra/$2"'))
 }
+// Versión en inglés (en/): sus enlaces a la pizarra son "../../algo" y pasan a "../pizarra/algo".
+for (const f of readdirSync(join(dist, 'en')).filter((x) => x.endsWith('.html'))) {
+  const p = join(dist, 'en', f)
+  writeFileSync(p, readFileSync(p, 'utf8').replace(/(href|src)="\.\.\/\.\.\/([^"]*)"/g, '$1="../pizarra/$2"'))
+}
 // Enlaces antiguos /web/ y /web/privacidad.html
 mkdirSync(join(dist, 'web'), { recursive: true })
 // `clean` quita el modo sin conexión que la pizarra dejó registrado en la dirección anterior.
