@@ -70,7 +70,6 @@ export default function App() {
   // Letrero que se está escribiendo o editando (id vacío = nuevo).
   const [label, setLabel] = useState<LabelEdit | null>(null)
   const [penSeen, setPenSeen] = useState(false)
-  const [fingerSeen, setFingerSeen] = useState(false)
   const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | 'learn' | 'look' | 'identity' | 'help' | null>(null)
   const [showHint, setShowHint] = useState(hint)
   const [toast, setToast] = useState<string | null>(null)
@@ -431,10 +430,33 @@ export default function App() {
     return +(0.22 + p * 0.4).toFixed(2)
   }
 
-  const eraseAt = (cx: number, cy: number) => {
-    const el = document.elementFromPoint(cx, cy)
-    const d = el?.closest('[data-draw]')?.getAttribute('data-draw')
-    const t = el?.closest('[data-token]')?.getAttribute('data-token')
+  // La goma busca trazos alrededor del punto (más amplio con el dedo), porque las líneas son finas.
+  // Las fichas solo se borran tocándolas de lleno, para no llevarse un jugador por error.
+  const eraseAt = (cx: number, cy: number, touch = false) => {
+    const at = (x: number, y: number, sel: string) => document.elementFromPoint(x, y)?.closest(sel)?.getAttribute(sel.slice(1, -1)) ?? null
+    let d: string | null = at(cx, cy, '[data-draw]')
+    if (!d) {
+      // Trazo más cercano a menos de 16 px (7 con ratón o lápiz), medido sobre sus puntos.
+      const ctm = layer.current!.getScreenCTM()!
+      const k = Math.hypot(ctm.a, ctm.b)
+      const q = new DOMPoint(cx, cy).matrixTransform(ctm.inverse())
+      let best = (touch ? 16 : 7) / k
+      const segDist = (a: Pt, b: Pt) => {
+        const vx = b[0] - a[0], vy = b[1] - a[1], l = vx * vx + vy * vy
+        const u = l ? Math.max(0, Math.min(1, ((q.x - a[0]) * vx + (q.y - a[1]) * vy) / l)) : 0
+        return Math.hypot(a[0] + u * vx - q.x, a[1] + u * vy - q.y)
+      }
+      for (const dr of [...board.drawings, ...(board.frames?.[cur]?.drawings ?? [])]) {
+        const ps = dr.points
+        if (dr.type === 'text') continue
+        const pts: Pt[] = dr.type === 'zone' && ps.length === 2 ? [ps[0], [ps[1][0], ps[0][1]], ps[1], [ps[0][0], ps[1][1]], ps[0]] : ps
+        for (let i = 0; i < pts.length; i++) {
+          const dist = segDist(pts[i], pts[Math.min(i + 1, pts.length - 1)])
+          if (dist < best) { best = dist; d = dr.id }
+        }
+      }
+    }
+    const t = d ? null : at(cx, cy, '[data-token]')
     if (d) setBoard((b) => ({
       ...b,
       drawings: b.drawings.filter((x) => x.id !== d),
@@ -449,7 +471,6 @@ export default function App() {
     // Con el lápiz apoyado se ignora la palma de la mano.
     if (e.pointerType === 'touch' && penDown.current) return
     if (isPen && !penSeen) setPenSeen(true)
-    if (e.pointerType === 'touch' && !fingerSeen) setFingerSeen(true)
     if (playing || anim !== null) stopAnim()
     const p = toBoard(e)
     let tokenId = (e.target as Element).closest('[data-token]')?.getAttribute('data-token') ?? null
@@ -492,8 +513,6 @@ export default function App() {
       else { mode = 'draw'; drawTool = tool }
     } else if (fingerWithPen) mode = 'move'
     else if (tool !== 'move') { mode = 'draw'; drawTool = tool }
-    // El dedo en Mover funciona como el S Pen: sobre una ficha la mueve, sobre el césped dibuja.
-    else if (e.pointerType === 'touch' && !tokenId && !labelId) mode = 'draw'
 
     pointer.current = e.pointerId
     if (isPen) penDown.current = true
@@ -525,7 +544,7 @@ export default function App() {
       setLive(drawing)
     } else {
       action.current = { kind: 'erase' }
-      eraseAt(e.clientX, e.clientY)
+      eraseAt(e.clientX, e.clientY, e.pointerType === 'touch')
     }
   }
 
@@ -554,7 +573,7 @@ export default function App() {
       if (a.drawing.type === 'lob') { a.raw = [...(a.raw ?? [pts[0]]), p]; a.drawing.bend = lobBend(a.raw) }
       setLive(a.drawing)
     } else if (a.kind === 'erase') {
-      eraseAt(e.clientX, e.clientY)
+      eraseAt(e.clientX, e.clientY, e.pointerType === 'touch')
     } else if (a.kind === 'moveText') {
       const [x, y] = toBoard(e)
       const pt: Pt = [x + a.dx, y + a.dy]
@@ -839,7 +858,7 @@ export default function App() {
           disabled={!board.drawings.length && !stepDrawings.length}
         >{t('Borrar trazos')}</button>
         {penSeen ? <span className="pen">{t('S Pen · ficha: mover · césped:')}{' '}{TOOL_NAME[activeDraw]}</span>
-          : fingerSeen && tool === 'move' && <span className="pen">{t('Ficha: mover · césped:')}{' '}{TOOL_NAME[activeDraw]}</span>}
+          : null}
         {/* Ajustes generales, a la derecha de la barra inferior: Mi identidad, orientación del campo e idioma. */}
         <div className="tools-end">
           <button onClick={() => setSheet('identity')}>{t('Mi identidad')}</button>
