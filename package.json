@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build --outDir dist/app --emptyOutDir && node scripts/site.mjs && node scripts/precache.mjs",
+    "build": "tsc -b && vite build --outDir dist/pizarra --emptyOutDir && node scripts/site.mjs && node scripts/precache.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "build:demo": "tsc -b && vite build --mode demo"
