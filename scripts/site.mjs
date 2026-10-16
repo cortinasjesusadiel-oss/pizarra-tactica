@@ -6,6 +6,7 @@
 // En el código fuente la web sigue en public/web con enlaces a "../" (la app), así el servidor de desarrollo no cambia.
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { createHash } from 'node:crypto'
 
 const dist = 'dist', app = join(dist, 'pizarra'), web = join(app, 'web')
 cpSync(web, dist, { recursive: true })
@@ -19,6 +20,12 @@ for (const f of readdirSync(dist).filter((x) => x.endsWith('.html'))) {
 for (const f of readdirSync(join(dist, 'en')).filter((x) => x.endsWith('.html'))) {
   const p = join(dist, 'en', f)
   writeFileSync(p, readFileSync(p, 'utf8').replace(/(href|src)="\.\.\/\.\.\/([^"]*)"/g, '$1="../pizarra/$2"'))
+}
+// web.js y web.css llevan ?v=<huella> para que el navegador no siga usando una versión anterior guardada.
+const huella = (f) => createHash('sha1').update(readFileSync(join(dist, f))).digest('hex').slice(0, 8)
+const ver = { 'web.js': huella('web.js'), 'web.css': huella('web.css') }
+for (const p of [...readdirSync(dist).filter((x) => x.endsWith('.html')).map((f) => join(dist, f)), ...readdirSync(join(dist, 'en')).filter((x) => x.endsWith('.html')).map((f) => join(dist, 'en', f))]) {
+  writeFileSync(p, readFileSync(p, 'utf8').replace(/((?:href|src)="(?:\.\.\/)?)(web\.(?:js|css))"/g, (_, a, f) => `${a}${f}?v=${ver[f]}"`))
 }
 // Enlaces antiguos /web/ y /web/privacidad.html
 mkdirSync(join(dist, 'web'), { recursive: true })
