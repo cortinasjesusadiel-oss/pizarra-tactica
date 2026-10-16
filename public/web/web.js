@@ -68,3 +68,67 @@
     })
   })
 })()
+
+// Opiniones y «Me gusta»: se guardan en el servidor de TacticalPro (Google Apps Script, cuenta tacticalproapp).
+// Mientras PUBLICO sea false, la sección solo aparece con ?prueba en la dirección, para comprobarla antes de abrirla.
+;(function () {
+  var API = ''
+  var PUBLICO = false
+  var sec = document.getElementById('opinion')
+  if (!sec) return
+  var q = location.search
+  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) { var m = /[?&]api=([^&]+)/.exec(q); if (m) API = decodeURIComponent(m[1]) }
+  if (!API || !(PUBLICO || /[?&]prueba\b/.test(q))) return
+  sec.hidden = false
+  var store = function (k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v) } catch (e) { return null } }
+  var post = function (d) { return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(d) }).then(function (r) { return r.json() }) }
+  var fmt = function (n) { return Number(n).toLocaleString(document.documentElement.lang || 'es') }
+
+  // Contador «Me gusta»: el navegador recuerda que ya lo diste y el servidor frena pulsaciones repetidas.
+  var like = sec.querySelector('.like'), num = like.querySelector('.like-n'), txt = like.querySelector('.like-t')
+  var id = store('tp.id'); if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()); store('tp.id', id) }
+  var marcar = function () { like.setAttribute('aria-pressed', 'true'); txt.textContent = like.dataset.liked }
+  if (store('tp.megusta')) marcar()
+  fetch(API + (API.indexOf('?') < 0 ? '?' : '&') + 'accion=likes').then(function (r) { return r.json() }).then(function (d) { if (d && d.ok) num.textContent = fmt(d.likes) }).catch(function () {})
+  var ocupado = false
+  like.addEventListener('click', function () {
+    if (ocupado || like.getAttribute('aria-pressed') === 'true') return
+    ocupado = true; marcar(); store('tp.megusta', '1')
+    like.classList.add('pop'); setTimeout(function () { like.classList.remove('pop') }, 180)
+    post({ accion: 'like', id: id }).then(function (d) { if (d && typeof d.likes === 'number') num.textContent = fmt(d.likes) }).catch(function () {}).then(function () { ocupado = false })
+  })
+
+  // Formulario de opiniones.
+  var f = sec.querySelector('.op-form'), st = f.querySelector('.status'), btn = f.querySelector('button[type=submit]')
+  var extra = f.querySelector('.extra'), el = function (n) { return f.elements[n] }
+  el('probador').addEventListener('change', function () { extra.hidden = !this.checked; if (!this.checked) { el('android').checked = false; el('correoPlay').value = '' } })
+  var msg = function (t, cls) { st.textContent = t || ''; st.className = 'status' + (cls ? ' ' + cls : '') }
+  var mail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  var limpiar = function (e) { if (e.target.getAttribute) e.target.removeAttribute('aria-invalid'); if (st.classList.contains('bad')) msg('') }
+  f.addEventListener('input', limpiar); f.addEventListener('change', limpiar)
+  f.addEventListener('submit', function (e) {
+    e.preventDefault()
+    var D = f.dataset, fallo = null
+    var mal = function (campo, texto) { if (!fallo) { fallo = campo; msg(texto, 'bad') } if (campo.setAttribute) campo.setAttribute('aria-invalid', 'true') }
+    ;[].forEach.call(f.querySelectorAll('[aria-invalid]'), function (x) { x.removeAttribute('aria-invalid') })
+    var probado = (f.querySelector('input[name=probado]:checked') || {}).value
+    if (!mail.test(el('correo').value.trim())) mal(el('correo'), D.badEmail)
+    if (!probado) mal(f.querySelector('input[name=probado]'), D.badTried)
+    if (!el('funcion').value) mal(el('funcion'), D.badRole)
+    if (el('opinion').value.trim().length < 3) mal(el('opinion'), D.badOp)
+    if (el('probador').checked) {
+      if (!el('android').checked) mal(el('android'), D.badAndroid)
+      if (!mail.test(el('correoPlay').value.trim())) mal(el('correoPlay'), D.badPlay)
+    }
+    if (fallo) { fallo.focus(); return }
+    btn.disabled = true; msg(D.sending)
+    post({
+      accion: 'opinion', correo: el('correo').value.trim(), probado: probado, funcion: el('funcion').value, opinion: el('opinion').value.trim(),
+      probador: el('probador').checked, android: el('android').checked, correoPlay: el('correoPlay').value.trim(),
+      novedades: el('novedades').checked, idioma: D.lang, web: el('web').value
+    }).then(function (d) {
+      if (d && d.ok) { f.reset(); extra.hidden = true; msg(D.ok, 'ok') }
+      else msg(d && d.error === 'espera' ? D.wait : D.err, 'bad')
+    }).catch(function () { msg(D.err, 'bad') }).then(function () { btn.disabled = false })
+  })
+})()

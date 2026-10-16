@@ -174,3 +174,39 @@ section[id],details[id]{scroll-margin-top:72px}
 .lang a[aria-current]{background:rgba(79,209,139,.16);color:var(--g)}
 @media (max-width:420px){.nav-end{gap:6px}.lang a{min-width:30px;padding:6px 6px;font-size:12px}}
 @media (max-width:360px){.nav-end .btn{padding:8px 11px;font-size:12px;white-space:nowrap}.brand img{width:32px}.burger{width:40px;height:40px}.lang a{min-width:28px;padding:6px 5px}}
+
+/* Opiniones y «Me gusta» */
+.opinion .op-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap}
+.like{display:inline-flex;align-items:center;gap:10px;border:2px solid var(--line);background:transparent;color:#dff5e8;border-radius:999px;padding:12px 20px;font:inherit;font-weight:800;font-size:16px;cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
+.like svg{width:20px;height:20px;flex:none;color:var(--g)}
+.like:hover{border-color:var(--g)}
+.like[aria-pressed="true"]{background:var(--g);border-color:var(--g);color:#0b1510;cursor:default}
+.like[aria-pressed="true"] svg{color:#0b1510}
+.like.pop{transform:scale(1.06)}
+.like-n{min-width:1ch;padding-left:10px;border-left:1.5px solid currentColor;opacity:.9}
+.like-n:empty{display:none}
+.op-form{display:grid;gap:16px;margin-top:24px}
+.op-form .f{display:grid;gap:8px;font-weight:700;font-size:15px;border:0;padding:0;margin:0;min-width:0}
+.op-form legend{font-weight:700;font-size:15px;padding:0;margin-bottom:8px}
+.op-form em{color:var(--g);font-style:normal}
+.op-form small{color:var(--mut);font-weight:500;font-size:13px}
+.op-form input[type=email],.op-form select,.op-form textarea{width:100%;font:inherit;font-weight:500;font-size:16px;color:#fff;background:#0c140f;border:1.5px solid var(--line);border-radius:10px;padding:12px 14px}
+.op-form textarea{resize:vertical;min-height:120px}
+.op-form select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--g) 50%),linear-gradient(135deg,var(--g) 50%,transparent 50%);background-position:calc(100% - 20px) 52%,calc(100% - 14px) 52%;background-size:6px 6px;background-repeat:no-repeat}
+.op-form :is(input,select,textarea):focus-visible{outline:2px solid var(--g);outline-offset:1px;border-color:var(--g)}
+.op-form .opts{display:flex;gap:22px;flex-wrap:wrap;font-weight:600}
+.op-form .opts label,.op-form .chk{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;cursor:pointer}
+.op-form input[type=radio],.op-form input[type=checkbox]{width:20px;height:20px;accent-color:var(--g);flex:none}
+.op-form .extra{display:grid;gap:14px;padding:16px;border:1px dashed var(--line);border-radius:12px}
+.op-form .extra[hidden]{display:none}
+.op-form .hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.op-form .legal{color:var(--mut);font-size:13px}
+.op-form .legal a{color:var(--g)}
+.op-form .send{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.op-form .send .btn{border:0;cursor:pointer;font-family:inherit}
+.op-form .send .btn[disabled]{opacity:.6;cursor:wait}
+.op-form .status{font-weight:700;font-size:15px}
+.op-form .status.ok{color:var(--g)}
+.op-form .status.bad{color:#ff8a7a}
+.op-form [aria-invalid="true"]{border-color:#ff8a7a!important}
+@media (max-width:480px){.like{width:100%;justify-content:center}.op-form .send .btn{width:100%}}

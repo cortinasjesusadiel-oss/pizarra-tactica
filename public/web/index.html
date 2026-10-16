@@ -234,6 +234,35 @@ try{var l=localStorage.getItem('pizarra.idioma'),n=(navigator.languages&&navigat
   </div>
 </section>
 
+<section class="soporte opinion" id="opinion" hidden>
+  <div class="wrap">
+    <div class="box">
+      <div class="op-head">
+        <div>
+          <h2>Ayúdanos a mejorar <span class="g">TacticalPro</span></h2>
+          <p style="margin-top:10px">Cuéntanos qué te parece: leemos todas las respuestas. La app se sigue usando sin registro.</p>
+        </div>
+        <button class="like" type="button" aria-pressed="false" aria-label="Dar «Me gusta» a TacticalPro" data-liked="Te gusta"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2 21h3V9H2v12Zm20-11a2 2 0 0 0-2-2h-6.3l1-4.6v-.3c0-.4-.2-.8-.4-1.1L13.2 1 6.6 7.6C6.2 8 6 8.5 6 9v10a2 2 0 0 0 2 2h9c.8 0 1.5-.5 1.8-1.2l3-7.1c.1-.2.2-.5.2-.7v-2Z"/></svg><span class="like-t">Me gusta</span><b class="like-n" aria-live="polite"></b></button>
+      </div>
+      <form class="op-form" novalidate data-lang="es" data-ok="¡Gracias! Hemos recibido tu opinión." data-err="No se ha podido enviar. Inténtalo de nuevo en un momento." data-wait="Has enviado varias opiniones seguidas. Inténtalo más tarde." data-bad-email="Escribe un correo válido." data-bad-tried="Indica si has probado TacticalPro." data-bad-role="Elige tu función." data-bad-op="Escribe tu opinión." data-bad-android="Confirma que tienes un móvil Android." data-bad-play="Escribe el correo de tu cuenta de Google." data-sending="Enviando…">
+        <label class="f"><span>Correo electrónico <em>*</em></span><input type="email" name="correo" autocomplete="email" maxlength="120" required><small>Lo necesitamos para poder responderte.</small></label>
+        <fieldset class="f"><legend>¿Has probado TacticalPro? <em>*</em></legend><div class="opts"><label><input type="radio" name="probado" value="si" required> Sí</label><label><input type="radio" name="probado" value="no"> Todavía no</label></div></fieldset>
+        <label class="f"><span>Tu función <em>*</em></span><select name="funcion" required><option value="">Elige una opción</option><option value="entrenador">Entrenador</option><option value="asistente">Asistente</option><option value="analista">Analista</option><option value="profesor">Profesor</option><option value="otra">Otra</option></select></label>
+        <label class="f"><span>¿Qué te ha gustado y qué mejorarías o echas en falta? <em>*</em></span><textarea name="opinion" rows="5" maxlength="3000" required></textarea></label>
+        <label class="chk"><input type="checkbox" name="probador"> Quiero participar como probador de la versión para Android</label>
+        <div class="extra" hidden>
+          <label class="chk"><input type="checkbox" name="android"> Confirmo que tengo un móvil Android</label>
+          <label class="f"><span>Correo de la cuenta de Google que utilizo en Play Store <em>*</em></span><input type="email" name="correoPlay" autocomplete="email" maxlength="120"><small>Quedarás como voluntario pendiente. Te escribiremos cuando abramos la prueba en Google Play.</small></label>
+        </div>
+        <label class="chk"><input type="checkbox" name="novedades"> Quiero recibir novedades de TacticalPro</label>
+        <input class="hp" type="text" name="web" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <p class="legal">Usamos tu correo solo para responderte y, si marcas las casillas, para invitarte a la prueba de Android o enviarte novedades. Tus respuestas no se publican. Más información en <a href="privacidad.html#opiniones">Privacidad</a>.</p>
+        <div class="send"><button class="btn pri" type="submit">Enviar opinión</button><p class="status" role="status" aria-live="polite"></p></div>
+      </form>
+    </div>
+  </div>
+</section>
+
 <section class="soporte" id="comunidad">
   <div class="wrap">
     <div class="box">

@@ -232,6 +232,35 @@
   </div>
 </section>
 
+<section class="soporte opinion" id="opinion" hidden>
+  <div class="wrap">
+    <div class="box">
+      <div class="op-head">
+        <div>
+          <h2>Help us improve <span class="g">TacticalPro</span></h2>
+          <p style="margin-top:10px">Tell us what you think: we read every answer. The app still works without signing up.</p>
+        </div>
+        <button class="like" type="button" aria-pressed="false" aria-label="Like TacticalPro" data-liked="You like it"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2 21h3V9H2v12Zm20-11a2 2 0 0 0-2-2h-6.3l1-4.6v-.3c0-.4-.2-.8-.4-1.1L13.2 1 6.6 7.6C6.2 8 6 8.5 6 9v10a2 2 0 0 0 2 2h9c.8 0 1.5-.5 1.8-1.2l3-7.1c.1-.2.2-.5.2-.7v-2Z"/></svg><span class="like-t">Like</span><b class="like-n" aria-live="polite"></b></button>
+      </div>
+      <form class="op-form" novalidate data-lang="en" data-ok="Thank you! We've received your feedback." data-err="It couldn't be sent. Please try again in a moment." data-wait="You've sent several answers in a row. Please try again later." data-bad-email="Enter a valid email." data-bad-tried="Tell us whether you have tried TacticalPro." data-bad-role="Choose your role." data-bad-op="Write your feedback." data-bad-android="Confirm that you have an Android phone." data-bad-play="Enter your Google account email." data-sending="Sending…">
+        <label class="f"><span>Email <em>*</em></span><input type="email" name="correo" autocomplete="email" maxlength="120" required><small>We need it so we can reply to you.</small></label>
+        <fieldset class="f"><legend>Have you tried TacticalPro? <em>*</em></legend><div class="opts"><label><input type="radio" name="probado" value="si" required> Yes</label><label><input type="radio" name="probado" value="no"> Not yet</label></div></fieldset>
+        <label class="f"><span>Your role <em>*</em></span><select name="funcion" required><option value="">Choose an option</option><option value="entrenador">Coach</option><option value="asistente">Assistant coach</option><option value="analista">Analyst</option><option value="profesor">Teacher</option><option value="otra">Other</option></select></label>
+        <label class="f"><span>What did you like, and what would you improve or do you miss? <em>*</em></span><textarea name="opinion" rows="5" maxlength="3000" required></textarea></label>
+        <label class="chk"><input type="checkbox" name="probador"> I want to be a tester for the Android version</label>
+        <div class="extra" hidden>
+          <label class="chk"><input type="checkbox" name="android"> I confirm I have an Android phone</label>
+          <label class="f"><span>Email of the Google account I use on the Play Store <em>*</em></span><input type="email" name="correoPlay" autocomplete="email" maxlength="120"><small>You'll be on our volunteer list. We'll write to you when we open the test on Google Play.</small></label>
+        </div>
+        <label class="chk"><input type="checkbox" name="novedades"> I want to receive TacticalPro news</label>
+        <input class="hp" type="text" name="web" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <p class="legal">We only use your email to reply to you and, if you tick the boxes, to invite you to the Android test or send you news. Your answers are not published. More in our <a href="privacy.html#feedback">Privacy policy</a>.</p>
+        <div class="send"><button class="btn pri" type="submit">Send feedback</button><p class="status" role="status" aria-live="polite"></p></div>
+      </form>
+    </div>
+  </div>
+</section>
+
 <section class="soporte" id="comunidad">
   <div class="wrap">
     <div class="box">
