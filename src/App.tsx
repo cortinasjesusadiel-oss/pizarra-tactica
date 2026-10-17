@@ -14,6 +14,7 @@ import { GROUPS } from './anim'
 import { TIPS } from './tips'
 import tpSymbol from './tpSymbol.png'
 import { GLOSSARY, LESSONS } from './fundamentos'
+import { GUIDE_MANUAL, GUIDE_STEPS, type GuideSection } from './guia'
 import { deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay } from './storage'
 import { backupFile, describeImport, downloadBackup, importBackup, parseBackup } from './backup'
 import {
@@ -72,6 +73,7 @@ export default function App() {
   const [penSeen, setPenSeen] = useState(false)
   const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | 'learn' | 'look' | 'identity' | 'help' | null>(null)
   const [showHint, setShowHint] = useState(hint)
+  const closeHint = () => { setShowHint(false); try { localStorage.setItem('pizarra.ayuda.v2', '1') } catch { /* sin almacenamiento */ } }
   const [toast, setToast] = useState<string | null>(null)
   const [zones, setZones] = useState(() => { try { return localStorage.getItem('pizarra.zonas') === '1' } catch { return false } })
   const toggleZones = () => setZones((z) => { try { localStorage.setItem('pizarra.zonas', z ? '0' : '1') } catch { /* sin almacenamiento */ } return !z })
@@ -727,7 +729,10 @@ export default function App() {
           <div className="hint" role="note">
             <p><b>{t('S Pen:')}</b> {' '}{t('toca una ficha con el lápiz para moverla y toca el césped para dibujar. Mantén el botón lateral para borrar.')}</p>
             <p><b>{t('Animaciones:')}</b> {' '}{t('abre Plantillas y elige una marcada con ▶. Luego pulsa Reproducir.')}</p>
-            <button onClick={() => { setShowHint(false); try { localStorage.setItem('pizarra.ayuda.v2', '1') } catch { /* sin almacenamiento */ } }}>{t('Entendido')}</button>
+            <div className="hint-actions">
+              <button className="primary" onClick={() => { closeHint(); setSheet('help') }}>{t('Cómo empezar')}</button>
+              <button onClick={closeHint}>{t('Entendido')}</button>
+            </div>
           </div>
         )}
         {toast && <div className="toast" role="status">{toast}</div>}
@@ -873,6 +878,14 @@ export default function App() {
 
       {sheet === 'help' && (
         <Sheet title={t('Ayuda y sugerencias')} onClose={() => setSheet(null)}>
+          <h3 className="guide-h">{t('Crea tu primera jugada')}</h3>
+          <p className="muted small">{t('En cinco pasos, de la pizarra vacía a un vídeo para tu equipo.')}</p>
+          {GUIDE_STEPS.map((s, i) => <GuideBlock key={s.id} s={s} label={t('Paso {n}', { n: i + 1 })} open={i === 0} />)}
+          <h3 className="guide-h">{t('Manual por funciones')}</h3>
+          <p className="muted small">{t('Consulta qué hace cada botón cuando lo necesites.')}</p>
+          {GUIDE_MANUAL.map((s) => <GuideBlock key={s.id} s={s} />)}
+          <a className="help-link guide-web" href={lang === 'en' ? 'https://tacticalpro.app/en/guide.html' : 'https://tacticalpro.app/guia.html'} target="_blank" rel="noopener">{t('Ver la guía con imágenes en la web')}</a>
+          <h3 className="guide-h">{t('¿Dudas o ideas?')}</h3>
           <p className="muted">{t('¿Tienes una duda, has encontrado un fallo o se te ocurre una mejora? Escríbenos, nos ayuda mucho a mejorar TacticalPro.')}</p>
           <div className="help-links">
             <a className="help-link wa" href={'https://wa.me/34624981522?text=' + encodeURIComponent(t('Hola, tengo una consulta sobre TacticalPro'))} target="_blank" rel="noopener">{t('Escríbenos por WhatsApp')}</a>
@@ -1083,6 +1096,20 @@ export default function App() {
         </div>
       )}
     </div>
+  )
+}
+
+// Una sección de la guía de uso: título desplegable, explicación, captura y puntos.
+function GuideBlock({ s, label, open = false }: { s: GuideSection; label?: string; open?: boolean }) {
+  return (
+    <details className="session guide" open={open}>
+      <summary><b>{label ? `${label} · ${s.title}` : s.title}</b></summary>
+      {s.intro && <p className="small">{s.intro}</p>}
+      {s.img && <a href={`guia/${lang}/${s.img}.webp`} target="_blank" rel="noopener" aria-label={t('Ver la imagen en grande')}><img className="guide-img" loading="lazy" src={`guia/${lang}/${s.img}.webp`} alt="" /></a>}
+      <ul className="guide-list">
+        {s.items.map((it) => <li key={it.text}>{it.term && <b>{it.term}: </b>}{it.text}</li>)}
+      </ul>
+    </details>
   )
 }
 

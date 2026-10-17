@@ -110,7 +110,7 @@ button.danger { color: var(--danger); }
   display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.45;
 }
 .hint p { margin: 0; }
-.hint button { align-self: flex-end; }
+.hint-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--accent); border-radius: 999px; padding: 8px 16px; font-size: 14px; }
 .videoready { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; padding: 8px 10px 8px 14px; z-index: 5; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
 
@@ -247,6 +247,11 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 .help-links { display: grid; gap: 10px; margin: 14px 0 6px; }
 .help-link { display: flex; align-items: center; justify-content: center; min-height: 46px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font-weight: 700; text-decoration: none; }
 .help-link:hover { border-color: var(--accent); }
+.guide-h { margin: 18px 0 4px; color: var(--accent); }
+.guide-h:first-of-type { margin-top: 4px; }
+.guide-img { width: 100%; border-radius: 8px; border: 1px solid var(--line); margin: 6px 0; }
+.guide-list { margin: 6px 0 4px; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; line-height: 1.45; }
+.help-link.guide-web { margin: 12px 0 4px; }
 .help-link.wa { background: #25D366; border-color: #25D366; color: #0b1a10; }
 
 /* iPhone: con letra de menos de 16 px Safari amplía la página al escribir y la pizarra se mueve. */
