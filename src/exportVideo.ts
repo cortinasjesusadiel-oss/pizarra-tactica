@@ -7,6 +7,7 @@ import { Pitch } from './Pitch'
 import { Scene } from './Scene'
 import { Markers } from './Shapes'
 import logoFull from './logoFull.webp'
+import firmaCreador from './firmaCreador.webp'
 import type { EndView, Mark } from './identity'
 import { drawEndCard, drawMarkColumn, drawMarkRow, endDuration, fontsReady } from './identityDraw'
 import { t, t as i18n, tr } from './i18n'
@@ -26,7 +27,7 @@ const OUT_W = WIDTH * K, OUT_H = HEIGHT * K
 const K_FULL = 1.25
 const BITRATE = 10e6
 const FPS = 30
-const OUTRO = 2.2
+const OUTRO = 3.2
 const PAD = 3
 
 type Result = { file: File } | 'unsupported'
@@ -64,8 +65,8 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   return img.decode().then(() => img)
 }
 
-// Pantalla final: la jugada se funde a negro y aparece el logo con el lema.
-function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, t: number, HEIGHT: number) {
+// Pantalla final: la jugada se funde a negro, aparece el logo con el lema y debajo la firma del creador.
+function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, firma: HTMLImageElement, t: number, HEIGHT: number) {
   const e = (a: number, b: number) => { const x = Math.max(0, Math.min(1, (t - a) / (b - a))); return 1 - Math.pow(1 - x, 3) }
   ctx.globalAlpha = e(0, 0.6)
   ctx.fillStyle = '#0f1712'
@@ -76,10 +77,10 @@ function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, t: num
   ctx.fillStyle = glow
   ctx.fillRect(0, 0, WIDTH, HEIGHT)
   const a = e(0.3, 1.0)
-  const lw = 380, lh = (lw * logo.naturalHeight) / logo.naturalWidth
+  const lw = 320, lh = (lw * logo.naturalHeight) / logo.naturalWidth
   const sc = 0.92 + 0.08 * a
   ctx.globalAlpha = a
-  ctx.drawImage(logo, WIDTH / 2 - (lw * sc) / 2, HEIGHT * 0.4 - (lh * sc) / 2, lw * sc, lh * sc)
+  ctx.drawImage(logo, WIDTH / 2 - (lw * sc) / 2, HEIGHT * 0.33 - (lh * sc) / 2, lw * sc, lh * sc)
   const b = e(0.8, 1.5)
   ctx.globalAlpha = b
   ctx.fillStyle = '#cfe9da'
@@ -87,8 +88,13 @@ function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, t: num
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '6px'
-  ctx.fillText(i18n('APRENDE · PLANIFICA · ENTRENA'), WIDTH / 2, HEIGHT * 0.4 + lh / 2 + 52 - (1 - b) * 12)
+  ctx.fillText(i18n('APRENDE · PLANIFICA · ENTRENA'), WIDTH / 2, HEIGHT * 0.33 + lh / 2 + 44 - (1 - b) * 12)
   if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '0px'
+  // Firma del creador (la imagen que eligió Jesús, sin redibujar).
+  const f = e(1.4, 2.1)
+  const fw = 380, fh = (fw * firma.naturalHeight) / firma.naturalWidth
+  ctx.globalAlpha = f
+  ctx.drawImage(firma, WIDTH / 2 - fw / 2, HEIGHT * 0.33 + lh / 2 + 84 + (1 - f) * 10, fw, fh)
   ctx.textAlign = 'left'
   ctx.globalAlpha = 1
 }
@@ -127,6 +133,7 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
   // El césped no cambia: se dibuja una sola vez.
   const grass = await svgImage(renderToStaticMarkup(createElement(Pitch, { kind: board.pitch, zones: opts.zones, brand: opts.brand })), viewBox, bw * k, bh * k)
   const logo = opts.outro ? await loadImage(logoFull) : null
+  const firma = opts.outro ? await loadImage(firmaCreador) : null
   const crest = opts.ident?.crest ? await loadImage(opts.ident.crest).catch(() => null) : null
   const endCrest = opts.end?.crest ? await loadImage(opts.end.crest).catch(() => null) : null
 
@@ -201,7 +208,7 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
     const endT = sec - animSec
     if (opts.end && endT > 0) drawEndCard(ctx, opts.end, endCrest, endT, WIDTH, HEIGHT_)
     const outroT = sec - animSec - endSec
-    if (logo && outroT > 0) drawOutro(ctx, logo, outroT, HEIGHT_)
+    if (logo && firma && outroT > 0) drawOutro(ctx, logo, firma, outroT, HEIGHT_)
   }
 
   return { canvas, seconds, animSeconds: animSec, draw }
