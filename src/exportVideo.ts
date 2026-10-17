@@ -65,7 +65,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   return img.decode().then(() => img)
 }
 
-// Pantalla final: la jugada se funde a negro, aparece el logo con el lema y debajo la firma del creador.
+// Pantalla final: la jugada se funde a negro, aparece el logo con el lema debajo la firma del creador y la web.
 function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, firma: HTMLImageElement, t: number, HEIGHT: number) {
   const e = (a: number, b: number) => { const x = Math.max(0, Math.min(1, (t - a) / (b - a))); return 1 - Math.pow(1 - x, 3) }
   ctx.globalAlpha = e(0, 0.6)
@@ -94,7 +94,17 @@ function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, firma:
   const f = e(1.4, 2.1)
   const fw = 380, fh = (fw * firma.naturalHeight) / firma.naturalWidth
   ctx.globalAlpha = f
-  ctx.drawImage(firma, WIDTH / 2 - fw / 2, HEIGHT * 0.33 + lh / 2 + 84 + (1 - f) * 10, fw, fh)
+  const fy = HEIGHT * 0.33 + lh / 2 + 84
+  ctx.drawImage(firma, WIDTH / 2 - fw / 2, fy + (1 - f) * 10, fw, fh)
+  // Dirección de la web, bien legible, para que quien vea el vídeo sepa dónde probarla.
+  const w = e(1.7, 2.3)
+  ctx.globalAlpha = w
+  ctx.fillStyle = '#ffffff'
+  ctx.font = '700 30px Montserrat, system-ui, sans-serif'
+  ctx.textAlign = 'center'
+  if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '1px'
+  ctx.fillText('tacticalpro.app', WIDTH / 2, fy + fh + 38 - (1 - w) * 8)
+  if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '0px'
   ctx.textAlign = 'left'
   ctx.globalAlpha = 1
 }
