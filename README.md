@@ -32,6 +32,7 @@ La app se publica sola en GitHub Pages con cada cambio en `main` (`.github/workf
 ```bash
 npm install
 npm run dev          # servidor local
+npm test             # pruebas automáticas (también se ejecutan antes de cada publicación)
 npm run build        # versión de producción en dist/
 npm run build:demo   # un único HTML autocontenido en dist-demo/
 ```
