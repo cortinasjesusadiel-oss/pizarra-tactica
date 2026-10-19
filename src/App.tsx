@@ -890,9 +890,10 @@ export default function App() {
           <div className="help-links">
             <a className="help-link wa" href={'https://wa.me/34624981522?text=' + encodeURIComponent(t('Hola, tengo una consulta sobre TacticalPro'))} target="_blank" rel="noopener">{t('Escríbenos por WhatsApp')}</a>
             <a className="help-link" href={'mailto:tacticalproapp@gmail.com?subject=' + encodeURIComponent(t('Consulta sobre TacticalPro'))}>{t('Enviar un correo')}</a>
-            <a className="help-link wa" href="https://chat.whatsapp.com/GNTKc18jNMfBGGpIKfLkJL" target="_blank" rel="noopener">{t('Únete al grupo de entrenadores')}</a>
+            <a className="help-link wa" href="https://chat.whatsapp.com/GNTKc18jNMfBGGpIKfLkJL" target="_blank" rel="noopener">{t('Únete a TacticalPro · Comunidad')}</a>
             <a className="help-link" href={lang === 'en' ? 'https://tacticalpro.app/en/#opinion' : 'https://tacticalpro.app/#opinion'} target="_blank" rel="noopener">{t('Danos tu opinión')}</a>
           </div>
+          <p className="muted small">{t('Un espacio para aprender y compartir sobre táctica, análisis y entrenamiento de fútbol. Abierto a todos los roles y niveles.')}</p>
           <p className="muted small">tacticalproapp@gmail.com</p>
         </Sheet>
       )}

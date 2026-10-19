@@ -78,7 +78,7 @@ const rondoAnim: Template = {
 }
 
 const cornerAnim: Template = {
-  id: 'anim-corner', group: 'ABP', animated: true, name: t('Córner a favor: bloqueo y 3 carreras'),
+  id: 'anim-corner', group: 'ABP', animated: true, name: t('Córner a favor: 3 carreras y rechace'),
   build: () => {
     const c = {
       t: player('home', '10', 52, 0.6), blk: player('home', '4', 47.5, 31.5), r1: player('home', '5', 38, 28), r2: player('home', '9', 37, 36), r3: player('home', '2', 38, 44),
@@ -88,8 +88,8 @@ const cornerAnim: Template = {
       b: ballAt(51.2, 1.4),
     }
     return animate('half', c, [
-      { note: t('Colocación: el 4 bloquea al portero, tres rematadores fuera del área, el 6 espera el rechace y dos se quedan vigilando la contra.'), draw: [line('run', [[38, 28], [43, 27], [47, 26]]), line('run', [[37, 36], [42, 36.5], [46, 35]]), line('run', [[38, 44], [43, 43.5], [47.5, 42]])] },
-      { note: t('Carreras cruzadas en el momento del saque: cada rematador ataca su zona (primer palo, centro y segundo palo) y suelta a su marcador.'), move: { r1: [47, 26], r2: [45.5, 35], r3: [47.5, 42], m1: [44.5, 27.5], m2: [43, 36.5], m3: [44.5, 44], reb: [35, 33] }, draw: [line('pass', [[51.2, 1.4], [45.8, 34.2]])] },
+      { note: t('Colocación: el 4 se sitúa cerca del portero para disputar el primer balón, sin sujetarlo ni impedirle moverse (eso es falta, Regla 12). Tres rematadores fuera del área, el 6 espera el rechace y dos se quedan vigilando la contra.'), draw: [line('run', [[38, 28], [43, 27], [47, 26]]), line('run', [[37, 36], [42, 36.5], [46, 35]]), line('run', [[38, 44], [43, 43.5], [47.5, 42]])] },
+      { note: t('Carreras cruzadas en el momento del saque: cada rematador ataca su zona (primer palo, centro y segundo palo) y gana la posición a su marcador con el cambio de ritmo, sin agarrar ni empujar.'), move: { r1: [47, 26], r2: [45.5, 35], r3: [47.5, 42], m1: [44.5, 27.5], m2: [43, 36.5], m3: [44.5, 44], reb: [35, 33] }, draw: [line('pass', [[51.2, 1.4], [45.8, 34.2]])] },
       { note: t('Centro al punto de penalti largo y remate del 9, que llega sin marca porque su defensor se quedó atrás.'), move: { b: [45.8, 34.2] }, draw: [line('pass', [[45.8, 34.2], [52.3, 32]])] },
       { note: t('Remate a portería. Si el portero despeja, el 6 está esperando el rechace en la frontal.'), move: { b: [52.2, 32], gk: [52, 33] } },
     ])
@@ -195,8 +195,8 @@ const presionAnim: Template = {
     }
     return animate('grid', c, [
       { note: t('Nuestro equipo ataca hacia la miniportería de la derecha. El 3 intenta un pase al 5.'), draw: [line('pass', [[20.9, 15.3], [28, 24]])] },
-      { note: t('El rival corta el pase: hemos perdido el balón. Empiezan los 5 segundos para recuperarlo.'), move: { b: [23.3, 19.2] }, draw: [press([[20, 15], [22.4, 17.8]]), press([[28, 24], [23.6, 19.6]])] },
-      { note: t('Los dos más cercanos (3 y 5) atacan al que tiene el balón. El 2 y el 6 tapan los pases cortos al rival.'), move: { h3: [21.5, 17.2], h5: [24.6, 20.8], h2: [16, 22.5], h6: [31, 19], a4: [23, 19] } },
+      { note: t('El rival corta el pase: hemos perdido el balón. Condición de esta tarea: 5 segundos para recuperarlo.'), move: { b: [23.3, 19.2] }, draw: [press([[20, 15], [22.4, 17.8]]), press([[28, 24], [23.6, 19.6]])] },
+      { note: t('El 3, el más cercano, presiona al que tiene el balón y le cierra el pase hacia delante. El 5 le cierra la salida por dentro y cubre si lo superan. El 2 y el 6 tapan los pases cortos al rival. Quién presiona depende de la distancia y la posición, no de quién perdió el balón.'), move: { h3: [21.5, 17.2], h5: [24.6, 20.8], h2: [16, 22.5], h6: [31, 19], a4: [23, 19] } },
       { note: t('Recuperación antes de 5 segundos: punto. Ahora hay que atacar rápido, antes de que el rival se reorganice.'), move: { b: [22.2, 18.4] }, draw: [line('pass', [[22.2, 18.4], [30.5, 18.6]])] },
       { note: t('Pase al 6, que conduce y marca en la miniportería. Un gol justo después de recuperar vale doble.'), move: { b: [30.4, 18.5], a6: [34, 19.5] }, draw: [line('dribble', [[31, 19], [35, 17], [38.5, 15.2]])] },
       { note: t('Gol.'), move: { h6: [37, 16.5], b: [39.4, 15] } },
