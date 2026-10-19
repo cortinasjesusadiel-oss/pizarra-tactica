@@ -75,7 +75,7 @@ export const SESSIONS: Session[] = [
     day: t('MD-1 · sesión corta y de baja carga'),
     blocks: [
       { title: t('Activación ligera'), minutes: 10, template: 'anim-rondo', tips: t('Rondo sin presión intensa.') },
-      { title: t('Córner a favor: bloqueo y 3 carreras'), minutes: 15, template: 'anim-corner', tips: t('Repetir desde las dos esquinas.') },
+      { title: t('Córner a favor: 3 carreras y rechace'), minutes: 15, template: 'anim-corner', tips: t('Repetir desde las dos esquinas.') },
       { title: t('Falta lateral'), minutes: 10, template: 'anim-lateral', tips: t('Arrancar las carreras justo en el golpeo.') },
       { title: t('Falta frontal con amago'), minutes: 10, template: 'anim-falta-frontal', tips: t('Probar los dos lanzadores.') },
       { title: t('Saque de banda largo'), minutes: 8, template: 'anim-banda', tips: t('Solo si tenemos un lanzador de saque largo.') },

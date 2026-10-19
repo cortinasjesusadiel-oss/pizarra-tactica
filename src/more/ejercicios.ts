@@ -173,8 +173,8 @@ const presion5c5: Template = {
     }
     return animate('grid', c, [
       { note: t('5 contra 5 con 2 comodines (C) en las bandas, que juegan con el equipo que tiene el balón. Nuestro 3 intenta un pase al 5.'), draw: [line('pass', [[20.9, 13.4], [24.6, 17.05]])] },
-      { note: t('Un rival corta el pase: ¡pérdida! Empieza la cuenta: tenemos 5 segundos para recuperar.'), move: { b: [24.6, 17.05], a3: [25.4, 17.7] }, draw: [press([[20, 13], [23.6, 15.8]]), press([[29, 21], [27.4, 19.8]]), line('run', [[12, 22], [18, 24.5]]), line('run', [[27, 8], [27.5, 10.8]])] },
-      { note: t('Los dos más cercanos (3 y 5) atacan al que tiene el balón. El 2 y el 4 tapan el pase a su compañero y al comodín.'), move: { h3: [23.6, 15.8], h5: [27.4, 19.8], h2: [18, 24.5], h4: [27.5, 10.8], a2: [17, 20] }, draw: [press([[27.4, 19.8], [26.6, 19]])] },
+      { note: t('Un rival corta el pase: ¡pérdida! Condición de esta tarea: 5 segundos para recuperar.'), move: { b: [24.6, 17.05], a3: [25.4, 17.7] }, draw: [press([[20, 13], [23.6, 15.8]]), press([[29, 21], [27.4, 19.8]]), line('run', [[12, 22], [18, 24.5]]), line('run', [[27, 8], [27.5, 10.8]])] },
+      { note: t('El 3, el más cercano, presiona al que tiene el balón y le cierra el pase hacia delante. El 5 le cierra la salida por dentro y cubre si lo superan. El 2 y el 4 tapan el pase a su compañero y al comodín.'), move: { h3: [23.6, 15.8], h5: [27.4, 19.8], h2: [18, 24.5], h4: [27.5, 10.8], a2: [17, 20] }, draw: [press([[27.4, 19.8], [26.6, 19]])] },
       { note: t('Robo en menos de 5 segundos. Ahora hay que atacar rápido, antes de que el rival se ordene.'), move: { b: [26.6, 18.95] }, draw: [line('pass', [[26.6, 18.95], [34.1, 10.3]]), line('run', [[27.5, 10.8], [33.3, 10]])] },
       { note: t('El 4 recibe libre cerca de la miniportería.'), move: { b: [34.1, 10.3], h4: [33.3, 10], a5: [35.5, 16.5] }, draw: [line('pass', [[34.1, 10.3], [39.3, 14.3]])] },
       { note: t('Gol. Un gol justo después de robar vale doble.'), move: { b: [39.3, 14.3] } },

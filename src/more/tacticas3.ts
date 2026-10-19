@@ -130,7 +130,7 @@ const lineaCuatro = T('t3-ej-basculacion-4', 'Ejercicios', t('Línea de 4 contra
   { a1: [26, 8], a2: [24, 22], a3: [22, 34], a4: [24, 46], a5: [26, 60], n: [33, 34] },
   'a3', [
     { n: t('Vista defensiva. 4 defensas contra 6 atacantes que se pasan el balón por fuera del área. Al principio los atacantes no pueden entrar: los defensas solo aprenden a moverse juntos según dónde está el balón.'), d: 1 },
-    { n: t('Balón a una banda. El defensa de ese lado sale a presionar y los otros tres se desplazan hacia él, a unos 8 metros entre ellos.'), b: 'a1', d: 1, m: { h2: [31, 10], h4: [39, 20], h5: [40, 30], h3: [40, 41] }, pr: ['h2'], run: ['h4', 'h5', 'h3'] },
+    { n: t('Balón a una banda. El defensa de ese lado sale a presionar y los otros tres se desplazan hacia él. La distancia entre ellos es una referencia que se ajusta: más juntos si el pasador puede jugar por dentro, algo más separados si hay amenaza a la espalda o en la otra banda.'), b: 'a1', d: 1, m: { h2: [31, 10], h4: [39, 20], h5: [40, 30], h3: [40, 41] }, pr: ['h2'], run: ['h4', 'h5', 'h3'] },
     { n: t('Pase atrás al centro. La línea vuelve a cerrarse en el medio y el que había salido regresa a su sitio.'), b: 'a3', d: 1, m: { h2: [40, 16], h4: [41, 28], h5: [41, 38], h3: [40, 50] }, run: ['h2', 'h4', 'h5', 'h3'] },
     { n: t('Cambio a la otra banda. Ahora presiona el 3 y los demás basculan hacia ese lado. La banda contraria queda libre, pero está lejos del balón.'), b: 'a5', d: 1, m: { h3: [32, 57], h5: [40, 48], h4: [40, 38], h2: [39, 28] }, pr: ['h3'], run: ['h5', 'h4', 'h2'] },
     { n: t('Progresión: ya se puede atacar. Si un atacante corre por el hueco entre dos defensas, el más cercano le sigue y los demás cierran.'), m: { n: [37, 43], h5: [41.5, 45.5] }, run: ['n'] },
