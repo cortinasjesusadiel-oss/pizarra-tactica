@@ -61,10 +61,10 @@ function wavy(p: Pt[], amp = 0.55, wave = 2.2): string {
 
 // `part` muestra solo un tramo del trazo, de 0 (inicio) a 1 (final): en la animación las flechas se van
 // borrando por detrás mientras ocurre el movimiento y las siguientes se dibujan desde su inicio.
-export function DrawingShape({ d, faded, part, upright }: { d: Drawing; faded?: boolean; part?: [number, number]; upright?: boolean }) {
+export function DrawingShape({ d, faded, part, upright, bounds }: { d: Drawing; faded?: boolean; part?: [number, number]; upright?: boolean; bounds?: [number, number] }) {
   const mid = useId().replace(/:/g, '')
   const p = d.points
-  if (d.type === 'text') return <TextLabel d={d} opacity={(faded ? 0.6 : 1) * (part ? part[1] - part[0] : 1)} upright={upright} />
+  if (d.type === 'text') return <TextLabel d={d} opacity={(faded ? 0.6 : 1) * (part ? part[1] - part[0] : 1)} upright={upright} bounds={bounds} />
   if (p.length < 2) return null
   const [from, to] = part ?? [0, 1]
   if (to - from < 0.001) return null
@@ -201,14 +201,20 @@ function lobArrow(a: Pt, b: Pt, sw: number, bend?: number): { body: string; head
 }
 
 // Letrero: el texto sobre una etiqueta oscura para que se lea encima del césped. Varias líneas con saltos de línea.
-function TextLabel({ d, opacity, upright }: { d: Drawing; opacity: number; upright?: boolean }) {
+function TextLabel({ d, opacity, upright, bounds }: { d: Drawing; opacity: number; upright?: boolean; bounds?: [number, number] }) {
   const lines = (d.text ?? '').split('\n').map((l) => l.trim()).filter(Boolean)
   if (!lines.length || opacity < 0.01) return null
   const fs = d.fs ?? 2.1, lh = fs * 1.25
   const bg = d.bg ?? LABEL_DEFAULT_BG
   const w = Math.max(...lines.map((l) => l.length)) * fs * 0.56 + fs * 1.2
   const h = lines.length * lh + fs * 0.7
-  const [x, y] = d.points[0]
+  let [x, y] = d.points[0]
+  // El letrero no se sale del campo (si no, en el vídeo y la imagen quedaría cortado por el borde).
+  if (bounds) {
+    const hx = (upright ? h : w) / 2, hy = (upright ? w : h) / 2, m = 1.2
+    const fit = (v: number, half: number, max: number) => (2 * half > max + 2 * m ? max / 2 : Math.max(-m + half, Math.min(max + m - half, v)))
+    x = fit(x, hx, bounds[0]); y = fit(y, hy, bounds[1])
+  }
   return (
     <g data-draw={d.id} opacity={opacity} transform={`translate(${x} ${y})${upright ? ' rotate(-90)' : ''}`} className="label">
       {bg === 'none'

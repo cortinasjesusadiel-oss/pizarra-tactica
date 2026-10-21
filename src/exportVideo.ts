@@ -37,6 +37,11 @@ const CODECS: { codec: string; mux: 'avc' | 'vp9' }[] = [
   { codec: 'avc1.640028', mux: 'avc' },
   { codec: 'avc1.4d0028', mux: 'avc' },
   { codec: 'avc1.42002a', mux: 'avc' },
+  // «Campo a todo el ancho» sale más alto que Full HD: necesita un nivel H.264 mayor (5.1). Se prueba antes que VP9,
+  // porque WhatsApp y el iPhone no siempre reproducen VP9.
+  { codec: 'avc1.640033', mux: 'avc' },
+  { codec: 'avc1.4d0033', mux: 'avc' },
+  { codec: 'avc1.420033', mux: 'avc' },
   { codec: 'vp09.00.40.08', mux: 'vp9' },
 ]
 
@@ -113,6 +118,8 @@ function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, firma:
 export interface ExportOpts { zones?: boolean; brand?: string; look?: Look; pace?: Pace
   // Letra grande para verlo en el móvil (WhatsApp, redes) y pantalla final con el logo y el lema.
   big?: boolean; outro?: boolean
+  // Solo para «campo a todo el ancho»: escala del fotograma (por defecto 1,25 → 1600 px de ancho).
+  kFull?: number
   // Campo a todo el ancho (fotograma más alto que el 16:9 de siempre).
   full?: boolean
   // Identidad del entrenador (abajo a la derecha) y su pantalla final con el mensaje.
@@ -128,14 +135,14 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
   // Texto del paso en una franja fina arriba y el campo lo más grande posible debajo.
   // Sin explicaciones en los pasos basta con una franja más fina para «PASO 2/5».
   const hasNotes = !!board.frames?.some((f) => f.note.trim())
-  const CAPTION = !hasNotes ? (opts.big ? 52 : 44) : opts.big ? 92 : 68
+  const CAPTION = (!hasNotes ? (opts.big ? 52 : 44) : opts.big ? 92 : 68) * (opts.full ? 1.45 : 1)
   const { w: W, h: H } = PITCH[board.pitch]
   // Poco margen alrededor del campo; abajo se deja el sitio de la marca de siempre (logo o texto).
   const M = 1.5
   const vbW = W + 2 * M, vbH = H + M + PAD
   const scale = opts.full ? WIDTH / vbW : Math.min((WIDTH - 16) / vbW, (HEIGHT - CAPTION - 8) / vbH)
   const bw = Math.round(vbW * scale), bh = Math.round(vbH * scale)
-  const k = opts.full ? K_FULL : K
+  const k = opts.full ? opts.kFull ?? K_FULL : K
   // Alto del fotograma (en las mismas unidades que el ancho de 1280). Par al multiplicarlo, como piden los códecs.
   const HEIGHT_ = opts.full ? Math.ceil((CAPTION + bh) * k / 2) * 2 / k : HEIGHT
   const bx = Math.round((WIDTH - bw) / 2), by = CAPTION + Math.round((HEIGHT_ - CAPTION - bh) / 2)
@@ -177,7 +184,7 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
     // Explicación del paso arriba. Al cambiar de paso, el texto nuevo se funde sobre el anterior.
     const cap = caption(board, s)
     const drawCaption = (j: number, alpha: number) => {
-      const size = opts.big ? 27 : 20, lh = Math.round(size * 1.24), x = 24, y0 = opts.big ? 28 : 22
+      const size = (opts.big ? 27 : 20) * (opts.full ? 1.45 : 1), lh = Math.round(size * 1.24), x = 24, y0 = (opts.big ? 28 : 22) * (opts.full ? 1.45 : 1)
       ctx.globalAlpha = alpha
       ctx.textBaseline = 'middle'
       ctx.textAlign = 'left'
@@ -230,7 +237,18 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
   const n = board.frames?.length ?? 0
   const picked = await pickCodec()
   if (!picked || n < 2) return 'unsupported'
-  const r = await videoRenderer(board, opts)
+  let r = await videoRenderer(board, opts)
+  // Si el equipo no puede hacer H.264 a ese tamaño (pasa con «campo a todo el ancho»), se prueba a 1080 px de ancho
+  // antes de usar VP9, que WhatsApp y el iPhone no siempre reproducen.
+  const avcOk = async (w: number, h: number) => {
+    for (const c of CODECS.filter((x) => x.mux === 'avc'))
+      try { if ((await VideoEncoder.isConfigSupported({ codec: c.codec, width: w, height: h, bitrate: BITRATE, framerate: FPS })).supported) return true } catch { /* sigue */ }
+    return false
+  }
+  if (opts.full && !(await avcOk(r.canvas.width, r.canvas.height))) {
+    const small = await videoRenderer(board, { ...opts, kFull: 1080 / WIDTH })
+    if (await avcOk(small.canvas.width, small.canvas.height)) r = small
+  }
   const OUT_W = r.canvas.width, OUT_H = r.canvas.height
 
   // Se dibuja y codifica fotograma a fotograma. Si el codificador del equipo falla (pasa con algunas tarjetas

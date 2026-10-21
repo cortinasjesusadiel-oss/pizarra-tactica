@@ -19,7 +19,8 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
   grass?: boolean
   ghost?: boolean
 }) {
-  const { r } = PITCH[board.pitch]
+  const { r, w: PW, h: PH } = PITCH[board.pitch]
+  const bounds: [number, number] = [PW, PH]
   const parts = drawParts(board, s)
   return (
     <>
@@ -42,8 +43,8 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
         return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} look={look} />
       })}
       {/* Los letreros van encima de todo para que siempre se lean. */}
-      {board.drawings.filter((d) => d.type === 'text').map((d) => <DrawingShape key={d.id} d={d} upright={upright} />)}
-      {parts.filter(({ d }) => d.type === 'text').map(({ d, part }) => <DrawingShape key={d.id} d={d} part={part} upright={upright} />)}
+      {board.drawings.filter((d) => d.type === 'text').map((d) => <DrawingShape key={d.id} d={d} upright={upright} bounds={bounds} />)}
+      {parts.filter(({ d }) => d.type === 'text').map(({ d, part }) => <DrawingShape key={d.id} d={d} part={part} upright={upright} bounds={bounds} />)}
     </>
   )
 }
