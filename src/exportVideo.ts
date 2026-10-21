@@ -37,6 +37,11 @@ const CODECS: { codec: string; mux: 'avc' | 'vp9' }[] = [
   { codec: 'avc1.640028', mux: 'avc' },
   { codec: 'avc1.4d0028', mux: 'avc' },
   { codec: 'avc1.42002a', mux: 'avc' },
+  // «Campo a todo el ancho» sale más alto que Full HD: necesita un nivel H.264 mayor (5.1). Se prueba antes que VP9,
+  // porque WhatsApp y el iPhone no siempre reproducen VP9.
+  { codec: 'avc1.640033', mux: 'avc' },
+  { codec: 'avc1.4d0033', mux: 'avc' },
+  { codec: 'avc1.420033', mux: 'avc' },
   { codec: 'vp09.00.40.08', mux: 'vp9' },
 ]
 
@@ -67,7 +72,9 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 // Pantalla final: la jugada se funde a negro, aparece el logo con el lema debajo la firma del creador y la web.
-function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, firma: HTMLImageElement, t: number, HEIGHT: number) {
+function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, firma: HTMLImageElement, t: number, HEIGHT: number, WIDTH: number) {
+  // En vertical el fotograma es estrecho: el logo y la firma se achican para que quepan.
+  const z = Math.min(1, WIDTH / 900)
   const e = (a: number, b: number) => { const x = Math.max(0, Math.min(1, (t - a) / (b - a))); return 1 - Math.pow(1 - x, 3) }
   ctx.globalAlpha = e(0, 0.6)
   ctx.fillStyle = '#0f1712'
@@ -78,22 +85,22 @@ function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, firma:
   ctx.fillStyle = glow
   ctx.fillRect(0, 0, WIDTH, HEIGHT)
   const a = e(0.3, 1.0)
-  const lw = 320, lh = (lw * logo.naturalHeight) / logo.naturalWidth
+  const lw = 320 * z, lh = (lw * logo.naturalHeight) / logo.naturalWidth
   const sc = 0.92 + 0.08 * a
   ctx.globalAlpha = a
   ctx.drawImage(logo, WIDTH / 2 - (lw * sc) / 2, HEIGHT * 0.33 - (lh * sc) / 2, lw * sc, lh * sc)
   const b = e(0.8, 1.5)
   ctx.globalAlpha = b
   ctx.fillStyle = '#cfe9da'
-  ctx.font = '800 26px Montserrat, system-ui, sans-serif'
+  ctx.font = `800 ${Math.round(26 * z)}px Montserrat, system-ui, sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '6px'
+  if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${Math.round(6 * z)}px`
   ctx.fillText(i18n('APRENDE · PLANIFICA · ENTRENA'), WIDTH / 2, HEIGHT * 0.33 + lh / 2 + 44 - (1 - b) * 12)
   if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '0px'
   // Firma del creador (la imagen que eligió Jesús, sin redibujar).
   const f = e(1.4, 2.1)
-  const fw = 380, fh = (fw * firma.naturalHeight) / firma.naturalWidth
+  const fw = 380 * z, fh = (fw * firma.naturalHeight) / firma.naturalWidth
   ctx.globalAlpha = f
   const fy = HEIGHT * 0.33 + lh / 2 + 84
   ctx.drawImage(firma, WIDTH / 2 - fw / 2, fy + (1 - f) * 10, fw, fh)
@@ -113,8 +120,12 @@ function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, firma:
 export interface ExportOpts { zones?: boolean; brand?: string; look?: Look; pace?: Pace
   // Letra grande para verlo en el móvil (WhatsApp, redes) y pantalla final con el logo y el lema.
   big?: boolean; outro?: boolean
+  // Solo para «campo a todo el ancho»: escala del fotograma (por defecto 1,25 → 1600 px de ancho).
+  kFull?: number
   // Campo a todo el ancho (fotograma más alto que el 16:9 de siempre).
   full?: boolean
+  // Cancha en vertical, como se ve en la pizarra: el vídeo sale vertical (1080×1920) y la imagen también.
+  vertical?: boolean
   // Identidad del entrenador (abajo a la derecha) y su pantalla final con el mensaje.
   ident?: Mark | null; end?: EndView | null
   onProgress?: (k: number) => void }
@@ -128,28 +139,43 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
   // Texto del paso en una franja fina arriba y el campo lo más grande posible debajo.
   // Sin explicaciones en los pasos basta con una franja más fina para «PASO 2/5».
   const hasNotes = !!board.frames?.some((f) => f.note.trim())
-  const CAPTION = !hasNotes ? (opts.big ? 52 : 44) : opts.big ? 92 : 68
+  const vert = !!opts.vertical
+  const full = !!opts.full && !vert
+  // En vertical el texto del paso tiene más renglones, porque el fotograma es estrecho.
+  const fs = full ? 1.45 : vert ? 1.6 : 1
+  const capSize = (opts.big ? 27 : 20) * fs, capLh = Math.round(capSize * 1.24), capY0 = (opts.big ? 28 : 22) * fs
   const { w: W, h: H } = PITCH[board.pitch]
   // Poco margen alrededor del campo; abajo se deja el sitio de la marca de siempre (logo o texto).
+  // En vertical la cancha se gira igual que en la pizarra y la marca queda en el margen izquierdo.
   const M = 1.5
-  const vbW = W + 2 * M, vbH = H + M + PAD
-  const scale = opts.full ? WIDTH / vbW : Math.min((WIDTH - 16) / vbW, (HEIGHT - CAPTION - 8) / vbH)
+  const vbW = vert ? H + M + PAD : W + 2 * M, vbH = vert ? W + 2 * M : H + M + PAD
+  const viewBox = vert ? `${-PAD} ${-M} ${vbW} ${vbH}` : `${-M} ${-M} ${vbW} ${vbH}`
+  // Ancho y alto del fotograma en unidades de diseño (se amplían ×k al dibujar).
+  const FW = vert ? HEIGHT : WIDTH
+  const FH0 = vert ? WIDTH : HEIGHT
+  // En vertical la cancha ocupa todo el ancho y el texto del paso usa los renglones que quepan encima (hasta 8).
+  // Con explicaciones se dejan al menos 4 renglones: si hace falta, la cancha se achica un poco.
+  const vScale = Math.min((FW - 16) / vbW, hasNotes ? (FH0 - capY0 - 4 * capLh - 26) / vbH : Infinity)
+  const LINES = vert ? Math.max(2, Math.min(8, Math.floor((FH0 - vbH * vScale - capY0 - 24) / capLh))) : 2
+  const CAPTION = vert ? (hasNotes ? capY0 + (LINES - 0.5) * capLh + 16 : capY0 * 2)
+    : (!hasNotes ? (opts.big ? 52 : 44) : opts.big ? 92 : 68) * fs
+  const scale = vert ? vScale : full ? FW / vbW : Math.min((FW - 16) / vbW, (FH0 - CAPTION - 8) / vbH)
   const bw = Math.round(vbW * scale), bh = Math.round(vbH * scale)
-  const k = opts.full ? K_FULL : K
-  // Alto del fotograma (en las mismas unidades que el ancho de 1280). Par al multiplicarlo, como piden los códecs.
-  const HEIGHT_ = opts.full ? Math.ceil((CAPTION + bh) * k / 2) * 2 / k : HEIGHT
-  const bx = Math.round((WIDTH - bw) / 2), by = CAPTION + Math.round((HEIGHT_ - CAPTION - bh) / 2)
-  const viewBox = `${-M} ${-M} ${vbW} ${vbH}`
+  const k = full ? opts.kFull ?? K_FULL : K
+  // Alto del fotograma (en las mismas unidades que el ancho). Par al multiplicarlo, como piden los códecs.
+  const HEIGHT_ = full ? Math.ceil((CAPTION + bh) * k / 2) * 2 / k : FH0
+  const bx = Math.round((FW - bw) / 2), by = CAPTION + Math.round((HEIGHT_ - CAPTION - bh) / 2)
+  const rot = (el: ReturnType<typeof createElement>) => vert ? createElement('g', { transform: `translate(${H} 0) rotate(90)` }, el) : el
 
   await fontsReady()
   // El césped no cambia: se dibuja una sola vez.
-  const grass = await svgImage(renderToStaticMarkup(createElement(Pitch, { kind: board.pitch, zones: opts.zones, brand: opts.brand })), viewBox, bw * k, bh * k)
+  const grass = await svgImage(renderToStaticMarkup(rot(createElement(Pitch, { kind: board.pitch, zones: opts.zones, brand: opts.brand }))), viewBox, bw * k, bh * k)
   const logo = opts.outro ? await loadImage(logoFull) : null
   const firma = opts.outro ? await loadImage(firmaCreador) : null
   const crest = opts.ident?.crest ? await loadImage(opts.ident.crest).catch(() => null) : null
   const endCrest = opts.end?.crest ? await loadImage(opts.end.crest).catch(() => null) : null
 
-  canvas.width = Math.round(WIDTH * k)
+  canvas.width = Math.round(FW * k)
   canvas.height = Math.round(HEIGHT_ * k)
   const ctx = canvas.getContext('2d')!
 
@@ -164,20 +190,20 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
     const s = paceAt(n, pace, Math.min(sec, animSec))
     // En las pantallas finales la jugada ya no se mueve: se reutiliza la última imagen.
     const scene = lastScene && lastScene.s === s ? lastScene.img
-      : await svgImage(renderToStaticMarkup(createElement('g', null, createElement(Markers), createElement(Scene, { board, s, grass: false, look: opts.look }))), viewBox, bw * k, bh * k)
+      : await svgImage(renderToStaticMarkup(createElement('g', null, createElement(Markers), rot(createElement(Scene, { board, s, grass: false, look: opts.look, upright: vert })))), viewBox, bw * k, bh * k)
     lastScene = { s, img: scene }
 
     ctx.setTransform(k, 0, 0, k, 0, 0)
     ctx.imageSmoothingQuality = 'high'
     ctx.fillStyle = '#0f1712'
-    ctx.fillRect(0, 0, WIDTH, HEIGHT_)
+    ctx.fillRect(0, 0, FW, HEIGHT_)
     ctx.drawImage(grass, bx, by, bw, bh)
     ctx.drawImage(scene, bx, by, bw, bh)
 
     // Explicación del paso arriba. Al cambiar de paso, el texto nuevo se funde sobre el anterior.
     const cap = caption(board, s)
     const drawCaption = (j: number, alpha: number) => {
-      const size = opts.big ? 27 : 20, lh = Math.round(size * 1.24), x = 24, y0 = opts.big ? 28 : 22
+      const size = capSize, lh = capLh, x = 24, y0 = capY0
       ctx.globalAlpha = alpha
       ctx.textBaseline = 'middle'
       ctx.textAlign = 'left'
@@ -190,18 +216,18 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
       if (note) {
         ctx.fillStyle = '#ffffff'
         ctx.font = `700 ${size}px system-ui, sans-serif`
-        // Primer renglón al lado de «PASO», el segundo debajo; si no cabe, se corta con «…».
-        const max = WIDTH - 2 * x
+        // Primer renglón al lado de «PASO», los demás debajo; si no cabe, se corta con «…».
+        const max = FW - 2 * x
         const words = note.split(/\s+/)
-        const lines = ['', '']
+        const lines: string[] = Array(LINES).fill('')
         let k = 0
         for (const w of words) {
           const next = lines[k] ? `${lines[k]} ${w}` : w
-          if (ctx.measureText(next).width > max - (k === 0 ? indent : 0) && lines[k]) { if (k === 1) { lines[1] += ' …'; break } k = 1; lines[1] = w } else lines[k] = next
+          if (ctx.measureText(next).width > max - (k === 0 ? indent : 0) && lines[k]) { if (k === LINES - 1) { lines[k] += ' …'; break } k++; lines[k] = w } else lines[k] = next
         }
-        while (ctx.measureText(lines[1]).width > max && lines[1].length > 2) lines[1] = lines[1].slice(0, -3).trimEnd() + ' …'
-        ctx.fillText(lines[0], x + indent, y0)
-        if (lines[1]) ctx.fillText(lines[1], x, y0 + lh)
+        const last = LINES - 1
+        while (ctx.measureText(lines[last]).width > max && lines[last].length > 2) lines[last] = lines[last].slice(0, -3).trimEnd() + ' …'
+        lines.forEach((l, i) => { if (l) ctx.fillText(l, i === 0 ? x + indent : x, y0 + lh * i) })
       }
       ctx.globalAlpha = 1
     }
@@ -212,15 +238,16 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
     // La identidad va en la franja libre a la derecha del campo, abajo: nunca tapa jugadores, flechas ni líneas.
     if (opts.ident) {
       const right0 = bx + bw
-      const colW = WIDTH - right0 - 20
-      if (colW >= 100) drawMarkColumn(ctx, opts.ident, crest, right0 + (WIDTH - right0) / 2, HEIGHT_ - 18, colW, 0.85)
+      const colW = FW - right0 - 20
+      if (vert) drawMarkRow(ctx, opts.ident, crest, bx + bw - M * scale, by + bh + 0.25 * scale, 2.5 * scale, W * 0.8 * scale, 0.85)
+      else if (colW >= 100) drawMarkColumn(ctx, opts.ident, crest, right0 + (FW - right0) / 2, HEIGHT_ - 18, colW, 0.85)
       else drawMarkRow(ctx, opts.ident, crest, bx + bw - M * scale, by + bh - PAD * scale + 0.25 * scale, 2.5 * scale, W * 0.6 * scale, 0.75)
     }
 
     const endT = sec - animSec
-    if (opts.end && endT > 0) drawEndCard(ctx, opts.end, endCrest, endT, WIDTH, HEIGHT_)
+    if (opts.end && endT > 0) drawEndCard(ctx, opts.end, endCrest, endT, FW, HEIGHT_)
     const outroT = sec - animSec - endSec
-    if (logo && firma && outroT > 0) drawOutro(ctx, logo, firma, outroT, HEIGHT_)
+    if (logo && firma && outroT > 0) drawOutro(ctx, logo, firma, outroT, HEIGHT_, FW)
   }
 
   return { canvas, seconds, animSeconds: animSec, draw }
@@ -230,7 +257,18 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
   const n = board.frames?.length ?? 0
   const picked = await pickCodec()
   if (!picked || n < 2) return 'unsupported'
-  const r = await videoRenderer(board, opts)
+  let r = await videoRenderer(board, opts)
+  // Si el equipo no puede hacer H.264 a ese tamaño (pasa con «campo a todo el ancho»), se prueba a 1080 px de ancho
+  // antes de usar VP9, que WhatsApp y el iPhone no siempre reproducen.
+  const avcOk = async (w: number, h: number) => {
+    for (const c of CODECS.filter((x) => x.mux === 'avc'))
+      try { if ((await VideoEncoder.isConfigSupported({ codec: c.codec, width: w, height: h, bitrate: BITRATE, framerate: FPS })).supported) return true } catch { /* sigue */ }
+    return false
+  }
+  if (opts.full && !(await avcOk(r.canvas.width, r.canvas.height))) {
+    const small = await videoRenderer(board, { ...opts, kFull: 1080 / WIDTH })
+    if (await avcOk(small.canvas.width, small.canvas.height)) r = small
+  }
   const OUT_W = r.canvas.width, OUT_H = r.canvas.height
 
   // Se dibuja y codifica fotograma a fotograma. Si el codificador del equipo falla (pasa con algunas tarjetas
@@ -279,15 +317,17 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
   throw lastError ?? new Error(t('sin codificador'))
 }
 
-// Imagen PNG de una pizarra (siempre en horizontal), en el paso `s`.
+// Imagen PNG de una pizarra en el paso `s`, en horizontal o en vertical como se ve en la pizarra.
 export async function exportImage(board: Board, opts: ExportOpts & { s?: number } = {}): Promise<File> {
   await artReady
   const { w: W, h: H } = PITCH[board.pitch]
-  const vbW = W + 2 * PAD, vbH = H + 2 * PAD
-  const scale = 2000 / vbW
-  const w = 2000, h = Math.round(vbH * scale)
+  const vert = !!opts.vertical
+  const vbW = (vert ? H : W) + 2 * PAD, vbH = (vert ? W : H) + 2 * PAD
+  const scale = (vert ? 1400 : 2000) / vbW
+  const w = Math.round(vbW * scale), h = Math.round(vbH * scale)
+  const scene = createElement(Scene, { board, s: opts.s ?? 0, zones: opts.zones, brand: opts.brand, look: opts.look, upright: vert })
   const markup = renderToStaticMarkup(createElement('g', null, createElement(Markers),
-    createElement(Scene, { board, s: opts.s ?? 0, zones: opts.zones, brand: opts.brand, look: opts.look })))
+    vert ? createElement('g', { transform: `translate(${H} 0) rotate(90)` }, scene) : scene))
   const img = await svgImage(markup, `${-PAD} ${-PAD} ${vbW} ${vbH}`, w, h)
   const canvas = document.createElement('canvas')
   canvas.width = w
@@ -297,7 +337,8 @@ export async function exportImage(board: Board, opts: ExportOpts & { s?: number 
   if (opts.ident) {
     await fontsReady()
     const crest = opts.ident.crest ? await loadImage(opts.ident.crest).catch(() => null) : null
-    drawMarkRow(ctx, opts.ident, crest, (PAD + W) * scale, (PAD + H + 0.25) * scale, 2.5 * scale, W * 0.6 * scale, 0.7)
+    if (vert) drawMarkRow(ctx, opts.ident, crest, (PAD + H) * scale, (PAD + W + 0.25) * scale, 2.5 * scale, H * 0.6 * scale, 0.7)
+    else drawMarkRow(ctx, opts.ident, crest, (PAD + W) * scale, (PAD + H + 0.25) * scale, 2.5 * scale, W * 0.6 * scale, 0.7)
   }
   const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'))
   if (!blob) throw new Error('png')

@@ -220,6 +220,7 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 
 .preview { position: fixed; inset: 0; z-index: 20; background: #070c09; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 12px; overflow-y: auto; }
 .preview-frame { width: min(100%, calc((100dvh - 190px) * 16 / 9)); min-width: min(100%, 280px); }
+.preview-frame.vertical { width: min(100%, calc((100dvh - 190px) * 9 / 16)); }
 .preview-frame canvas { width: 100%; height: auto; max-height: calc(100dvh - 190px); object-fit: contain; display: block; border-radius: 10px; border: 1px solid var(--line); background: #0f1712; }
 .preview-bar, .preview-opts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: center; }
 .preview-opts .pick { padding: 4px 6px; }
@@ -232,6 +233,7 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 .backup-actions button { flex: 1 1 220px; }
 .backup-msg { padding: 8px 10px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); }
 .backup-msg.error { border-color: #ff6b5e; }
+.backup-warn { color: #ffd27a; }
 .tools select.lang { flex: none; min-height: 36px; padding: 6px 8px; font-weight: 600; cursor: pointer; }
 .tools-end { display: flex; gap: 8px; align-items: center; margin-left: auto; flex: none; padding-left: 8px; }
 .label-sheet textarea { width: 100%; resize: vertical; font-size: 16px; }
@@ -245,6 +247,12 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 /* Menú desplegable de un grupo de herramientas (Pases, Movimientos, Flechas y líneas, Marcar). */
 .tool-menu { position: fixed; z-index: 60; min-width: 210px; display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
 .tool-menu-title { font-size: 12px; color: var(--muted); padding: 4px 8px 6px; font-weight: 600; }
+.tool-menu-title:not(:first-child) { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 8px; }
+.top-group.open { border-color: var(--accent); }
+.note-editor { position: absolute; top: 8px; left: 8px; right: 8px; z-index: 30; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; padding: 10px; background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+.note-editor-head { display: flex; align-items: center; gap: 8px; }
+.note-editor-head .muted { margin-left: auto; }
+.note-editor textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 96px; font: inherit; font-size: 16px; line-height: 1.4; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; }
 .tool-menu button { display: flex; align-items: center; gap: 10px; justify-content: flex-start; border: 0; background: transparent; min-height: 44px; padding: 6px 10px; text-align: left; }
 .tool-menu button.on { background: var(--panel-2); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .seg.big button.tool-group.open { background: var(--panel-2); }
@@ -302,3 +310,6 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
   .tools-end { flex-direction: column; align-items: stretch; margin: 0; padding: 0; }
   .brand { justify-content: center; margin: 0; }
 }
+
+/* En el móvil la barra de arriba muestra solo el símbolo del logo, así caben más botones a la vista. */
+@media (max-width: 600px) { .top .brand { font-size: 0; margin-right: 0; } }

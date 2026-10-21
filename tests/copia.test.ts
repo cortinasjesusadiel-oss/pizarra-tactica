@@ -41,4 +41,22 @@ describe('Copia de seguridad', () => {
     expect(importBackup(copia).plays).toBe(0)
     expect(listPlays()).toHaveLength(2)
   })
+
+  it('incluye la pizarra abierta aunque no esté guardada, y al importarla no la duplica', () => {
+    const abierta = TEMPLATES[1].build()
+    const b = parseBackup(JSON.stringify(makeBackup(abierta)))
+    expect(b.current).toEqual(abierta)
+    localStorage.clear()
+    const r = importBackup(b)
+    expect(r.current).toBe(true)
+    expect(listPlays().map((p) => p.board)).toEqual([abierta])
+    expect(importBackup(b).current).toBe(false)
+    expect(listPlays()).toHaveLength(1)
+  })
+
+  it('no repite la pizarra abierta si ya está guardada', () => {
+    const p = play('a', 'Guardada')
+    savePlay(p)
+    expect(makeBackup(p.board).current).toBeNull()
+  })
 })

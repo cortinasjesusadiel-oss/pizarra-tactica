@@ -17,7 +17,7 @@ import tpSymbol from './tpSymbol.png'
 import { GLOSSARY, LESSONS } from './fundamentos'
 import { GUIDE_MANUAL, GUIDE_STEPS, type GuideSection } from './guia'
 import { deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay } from './storage'
-import { backupFile, describeImport, downloadBackup, importBackup, parseBackup } from './backup'
+import { backupFile, describeImport, downloadBackup, importBackup, lastBackup, markBackupDone, parseBackup } from './backup'
 import {
   BRAND_MODES, ROLES, endFor, isIdentityMode, loadEnd, loadIdentity, markFor, newProfile, profileLabel, readCrest, saveEnd, saveIdentity,
   type BrandMode, type EndCard, type IdentityStore, type Profile,
@@ -28,6 +28,8 @@ import { lang, setLang, t, tr } from './i18n'
 
 const PAD = 3
 // Barra de herramientas agrupada: cada grupo es un botón que despliega sus herramientas.
+// Nombre corto del campo para el botón de la barra de arriba.
+const pitchName = (k: PitchKind) => (k === 'full' ? t('Campo') : k === 'half' ? t('Medio') : '40×30')
 const TOOL_GROUPS: { id: string; name: string; tools: DrawTool[] }[] = [
   { id: 'pases', name: t('Pases'), tools: ['pass', 'lob', 'shot'] },
   { id: 'mov', name: t('Movimientos'), tools: ['run', 'dribble', 'press'] },
@@ -81,6 +83,17 @@ export default function App() {
     window.addEventListener('pointerdown', close)
     return () => window.removeEventListener('pointerdown', close)
   }, [menu])
+  // Menús de la barra de arriba (campo y vista, biblioteca).
+  const [topMenu, setTopMenu] = useState<{ id: 'pitch' | 'library'; rect: DOMRect } | null>(null)
+  const openTopMenu = (id: 'pitch' | 'library', el: HTMLElement) => setTopMenu(topMenu?.id === id ? null : { id, rect: el.getBoundingClientRect() })
+  useEffect(() => {
+    if (!topMenu) return
+    const close = (e: PointerEvent) => { if (!(e.target as Element).closest?.('.tool-menu, .top-group')) setTopMenu(null) }
+    window.addEventListener('pointerdown', close)
+    return () => window.removeEventListener('pointerdown', close)
+  }, [topMenu])
+  // Editor grande de la explicación del paso (en el móvil la casilla de la barra es pequeña).
+  const [noteOpen, setNoteOpen] = useState(false)
   const [penTool, setPenTool] = useState<DrawTool>('pass')
   const [color, setColor] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
@@ -120,7 +133,11 @@ export default function App() {
   const { w: W, h: H } = PITCH[board.pitch]
   // Orientación del campo: horizontal por defecto (el equipo ataca hacia la derecha), también el medio campo.
   // Se puede girar a vertical, sobre todo para el móvil en vertical. Se guarda en el dispositivo.
-  const [vertical, setVertical] = useState(() => { try { return localStorage.getItem('pizarra.orientacion') === 'v' } catch { return false } })
+  // Si nunca se eligió, un móvil sujeto en vertical empieza con el campo en vertical (se ve más grande).
+  const [vertical, setVertical] = useState(() => {
+    const portraitPhone = typeof window !== 'undefined' && window.innerWidth < 600 && window.innerHeight > window.innerWidth
+    try { const v = localStorage.getItem('pizarra.orientacion'); return v ? v === 'v' : portraitPhone } catch { return portraitPhone }
+  })
   const toggleVertical = () => setVertical((v) => { try { localStorage.setItem('pizarra.orientacion', v ? 'h' : 'v') } catch { /* sin almacenamiento */ } return !v })
 
   useEffect(() => { saveLast(board) }, [board])
@@ -135,7 +152,7 @@ export default function App() {
     setVoptsState(loadVopts())
     try {
       setBrandState(localStorage.getItem('pizarra.marca') ?? 'TacticalPro')
-      setBrandModeState((localStorage.getItem('pizarra.marca.tipo') as BrandMode) || 'logo')
+      setBrandModeState((localStorage.getItem('pizarra.marca.tipo') as BrandMode) || 'text')
       setZones(localStorage.getItem('pizarra.zonas') === '1')
     } catch { /* sin almacenamiento */ }
   }
@@ -277,8 +294,8 @@ export default function App() {
   // Marca de agua (por defecto TacticalPro); vacía = sin marca.
   const [brand, setBrandState] = useState(() => { try { return localStorage.getItem('pizarra.marca') ?? 'TacticalPro' } catch { return 'TacticalPro' } })
   const setBrand = (v: string) => { setBrandState(v); try { localStorage.setItem('pizarra.marca', v) } catch { /* sin almacenamiento */ } }
-  // Tipo de marca: el logo del autor (por defecto), un texto o ninguna.
-  const [brandMode, setBrandModeState] = useState<BrandMode>(() => { try { return (localStorage.getItem('pizarra.marca.tipo') as BrandMode) || 'logo' } catch { return 'logo' } })
+  // Tipo de marca: el texto «TacticalPro» por defecto (así nadie exporta con la firma de otra persona), el logo del autor, la identidad propia o ninguna.
+  const [brandMode, setBrandModeState] = useState<BrandMode>(() => { try { return (localStorage.getItem('pizarra.marca.tipo') as BrandMode) || 'text' } catch { return 'text' } })
   const setBrandMode = (m: BrandMode) => { setBrandModeState(m); try { localStorage.setItem('pizarra.marca.tipo', m) } catch { /* sin almacenamiento */ } }
   const mark = brandMode === 'logo' ? 'logo' : brandMode === 'text' ? brand.trim() || undefined : undefined
 
@@ -311,7 +328,7 @@ export default function App() {
     } catch { /* sin almacenamiento */ }
     return next
   })
-  const exportOpts: ExportOpts = useMemo(() => ({ zones, brand: mark, look, pace, ...vopts, ident, end: endView }), [zones, mark, look, pace, vopts, ident, endView])
+  const exportOpts: ExportOpts = useMemo(() => ({ zones, brand: mark, look, pace, ...vopts, ident, end: endView, vertical }), [zones, mark, look, pace, vopts, ident, endView, vertical])
   const runExport = async (items: { name: string; board: Board }[], image = false) => {
     if (video !== null || !items.length) return
     stopAnim()
@@ -717,19 +734,11 @@ export default function App() {
       <header className="top">
         <strong className="brand"><img src={tpSymbol} alt="" />{t('Tactical')}<span>{t('Pro')}</span></strong>
         <button className="primary" onClick={newBoard}>{t('+ Nueva')}</button>
-        <div className="seg" role="group" aria-label={t('Tipo de campo')}>
-          {(Object.keys(PITCH) as PitchKind[]).map((k) => (
-            <button key={k} className={board.pitch === k ? 'on' : ''} onClick={() => setPitch(k)}>
-              {k === 'full' ? t('Campo') : k === 'half' ? t('Medio') : '40×30'}
-            </button>
-          ))}
-        </div>
-        <button onClick={() => setSheet('learn')}>{t('Fundamentos')}</button>
-        <button onClick={() => setSheet('templates')}>{t('Plantillas')}</button>
-        <button onClick={() => setSheet('sessions')}>{t('Sesiones')}</button>
-        <button onClick={() => setSheet('tips')}>{t('Consejos')}</button>
-        <button onClick={() => setSheet('look')}>{t('Fichas')}</button>
-        <button className={zones ? 'toggle on' : 'toggle'} onClick={toggleZones} aria-pressed={zones}>{t('Zonas')}</button>
+        {/* La barra de arriba se agrupa en dos menús para que quepa en el móvil sin desplazarse. */}
+        <button className={`top-group${topMenu?.id === 'pitch' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={topMenu?.id === 'pitch'}
+          onClick={(e) => openTopMenu('pitch', e.currentTarget)}>{pitchName(board.pitch)} ▾</button>
+        <button className={`top-group${topMenu?.id === 'library' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={topMenu?.id === 'library'}
+          onClick={(e) => openTopMenu('library', e.currentTarget)}>{t('Biblioteca')} ▾</button>
         <span className="sep" />
         <button className="chip home" onClick={() => addToken('home')} aria-label={t('Añadir jugador local')}>{t('+ Local')}</button>
         <button className="chip away" onClick={() => addToken('away')} aria-label={t('Añadir jugador rival')}>{t('+ Rival')}</button>
@@ -742,6 +751,27 @@ export default function App() {
         <button onClick={openPresent}>{t('Proyectar')}</button>
         <button onClick={() => setSheet('export')}>{t('Exportar')}</button>
       </header>
+      {topMenu && (
+        <div className="tool-menu" role="menu" aria-label={topMenu.id === 'pitch' ? t('Campo y vista') : t('Biblioteca')}
+          style={{ left: Math.max(8, Math.min(topMenu.rect.left, window.innerWidth - 240)), top: topMenu.rect.bottom + 6 }}>
+          {topMenu.id === 'pitch' ? (<>
+            <div className="tool-menu-title">{t('Tipo de campo')}</div>
+            {(Object.keys(PITCH) as PitchKind[]).map((k) => (
+              <button key={k} role="menuitemradio" aria-checked={board.pitch === k} className={board.pitch === k ? 'on' : ''}
+                onClick={() => { setPitch(k); setTopMenu(null) }}>{PITCH[k].name}</button>
+            ))}
+            <div className="tool-menu-title">{t('Vista')}</div>
+            <button role="menuitemcheckbox" aria-checked={zones} className={zones ? 'on' : ''} onClick={() => { toggleZones(); setTopMenu(null) }}>{zones ? '✓ ' : ''}{t('Zonas')}</button>
+            <button role="menuitem" onClick={() => { setSheet('look'); setTopMenu(null) }}>{t('Fichas')}</button>
+          </>) : (<>
+            <div className="tool-menu-title">{t('Biblioteca')}</div>
+            <button role="menuitem" onClick={() => { setSheet('templates'); setTopMenu(null) }}>{t('Plantillas')}</button>
+            <button role="menuitem" onClick={() => { setSheet('sessions'); setTopMenu(null) }}>{t('Sesiones')}</button>
+            <button role="menuitem" onClick={() => { setSheet('learn'); setTopMenu(null) }}>{t('Fundamentos')}</button>
+            <button role="menuitem" onClick={() => { setSheet('tips'); setTopMenu(null) }}>{t('Consejos')}</button>
+          </>)}
+        </div>
+      )}
 
       <main className="stage" ref={stage}>
         <svg
@@ -761,6 +791,18 @@ export default function App() {
         </svg>
         {frames && frames[shown].note && !showHint && (
           <div className="note" aria-live="polite"><b>{t('Paso')}{' '}{shown + 1}.</b> {tr(frames[shown].note)}</div>
+        )}
+        {noteOpen && frames && (
+          <div className="note-editor" role="dialog" aria-label={t('Explicación del paso {n}', { n: cur + 1 })}>
+            <div className="note-editor-head">
+              <button onClick={prevStep} disabled={cur === 0} aria-label={t('Paso anterior')}>‹</button>
+              <b>{t('Paso')}{' '}{cur + 1}/{nFrames}</b>
+              <button onClick={nextStep} disabled={cur >= nFrames - 1} aria-label={t('Paso siguiente')}>›</button>
+              <span className="muted small">{frames[cur].note.length}</span>
+              <button className="primary" onClick={() => setNoteOpen(false)}>{t('Listo')}</button>
+            </div>
+            <textarea autoFocus rows={4} placeholder={t('Explica este paso')} value={frames[cur].note} onChange={(e) => setNote(e.target.value)} />
+          </div>
         )}
         {video !== null && (
           <div className="toast" role="status">{t('Exportando')}{' '}{progressLabel}{Math.round(video * 100)}%</div>
@@ -862,6 +904,7 @@ export default function App() {
               <button onClick={nextStep} disabled={cur >= nFrames - 1} aria-label={t('Paso siguiente')}>›</button>
               <span className="sep" />
               <input id="step-note" className="noteinput" placeholder={t('Explica este paso')} value={frames[cur].note} onChange={(e) => setNote(e.target.value)} />
+              <button onClick={() => setNoteOpen(true)} aria-label={t('Ampliar la explicación del paso')} title={t('Ampliar la explicación del paso')}>⤢</button>
               <button onClick={addStep}>{t('+ Paso')}</button>
               <button onClick={removeStep}>{t('Quitar paso')}</button>
               <label className="pace">
@@ -1216,18 +1259,20 @@ function PlaysSheet({ board, onOpen, onClose, onSaved, onImported }: { board: Bo
   // Copia de seguridad: llevar las jugadas y «Mi identidad» a otro navegador o dispositivo con un archivo.
   const [backupMsg, setBackupMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [last, setLast] = useState(lastBackup)
   const exportBackup = async () => {
     // En iPhone y iPad la descarga directa no siempre deja el archivo a mano: se abre «Compartir» para guardarlo en Archivos.
     const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1)
     if (ios) {
-      const f = backupFile()
+      const f = backupFile(board)
       if (navigator.canShare?.({ files: [f] })) {
-        try { await navigator.share({ files: [f], title: f.name }); setBackupMsg({ ok: true, text: t('Elige «Guardar en Archivos» para conservar la copia.') }); return }
+        try { await navigator.share({ files: [f], title: f.name }); markBackupDone(); setLast(lastBackup()); setBackupMsg({ ok: true, text: t('Elige «Guardar en Archivos» para conservar la copia.') }); return }
         catch (e) { if (e instanceof DOMException && e.name === 'AbortError') return }
       }
     }
     try {
-      const f = downloadBackup()
+      const f = downloadBackup(board)
+      setLast(lastBackup())
       setBackupMsg({ ok: true, text: t('Copia guardada en tus descargas como «{f}».', { f: f.name }) })
     } catch { setBackupMsg({ ok: false, text: t('No se pudo crear la copia en este navegador.') }) }
   }
@@ -1270,7 +1315,8 @@ function PlaysSheet({ board, onOpen, onClose, onSaved, onImported }: { board: Bo
       </div>
       <section className="backup" aria-labelledby="backup-title">
         <h3 id="backup-title">{t('Copia de seguridad')}</h3>
-        <p className="muted small">{t('Guarda en un archivo tus jugadas (con sus pasos, movimientos y textos) y «Mi identidad» con tu escudo. Ábrelo en otro navegador, móvil u ordenador para recuperarlo todo. No necesitas cuenta: el archivo es tuyo.')}</p>
+        <p className="muted small">{t('Guarda en un archivo tus jugadas (con sus pasos, movimientos y textos), la pizarra que tienes abierta aunque no la hayas guardado y «Mi identidad» con tu escudo. Ábrelo en otro navegador, móvil u ordenador para recuperarlo todo. No necesitas cuenta: el archivo es tuyo.')}</p>
+        <p className={last ? 'muted small' : 'small backup-warn'}>{last ? t('Última copia: {d}.', { d: last.toLocaleDateString(lang === 'en' ? 'en-GB' : 'es') }) : t('Aún no has hecho ninguna copia en este dispositivo. Si se borran los datos del navegador, se pierden tus jugadas.')}</p>
         <div className="backup-actions">
           <button className="primary" onClick={exportBackup}>{t('Exportar copia de seguridad')}</button>
           <button onClick={() => fileRef.current?.click()}>{t('Importar copia de seguridad')}</button>
@@ -1673,7 +1719,7 @@ function Preview({ board, opts, vopts, setVopts, end, setEnd, brandMode, setBran
   const fmt = (x: number) => `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, '0')}`
   return (
     <div className="preview" role="dialog" aria-label={t('Vista previa del vídeo')}>
-      <div className="preview-frame"><canvas ref={canvas} width={1280} height={720} /></div>
+      <div className={`preview-frame${opts.vertical ? ' vertical' : ''}`}><canvas ref={canvas} width={1280} height={720} /></div>
       <div className="preview-bar">
         <button className="primary" onClick={toggle}>{paused ? t('▶ Seguir') : t('❚❚ Pausa')}</button>
         <button onClick={() => seek(0)}>{t('⟲ Inicio')}</button>
@@ -1682,7 +1728,7 @@ function Preview({ board, opts, vopts, setVopts, end, setEnd, brandMode, setBran
       </div>
       <div className="preview-opts">
         <label className="pick"><input type="checkbox" checked={vopts.big} onChange={(e) => setVopts({ big: e.target.checked })} /><span>{t('Letra grande')}</span></label>
-        <label className="pick"><input type="checkbox" checked={!!vopts.full} onChange={(e) => setVopts({ full: e.target.checked })} /><span>{t('Campo a todo el ancho')}</span></label>
+        {!opts.vertical && <label className="pick"><input type="checkbox" checked={!!vopts.full} onChange={(e) => setVopts({ full: e.target.checked })} /><span>{t('Campo a todo el ancho')}</span></label>}
         <label className="pick"><input type="checkbox" checked={end.on} onChange={(e) => setEnd({ on: e.target.checked })} /><span>{t('Mensaje final')}</span></label>
         <label className="pick"><input type="checkbox" checked={vopts.outro} onChange={(e) => setVopts({ outro: e.target.checked })} /><span>{t('Cierre TacticalPro')}</span></label>
         <label className="pace">
