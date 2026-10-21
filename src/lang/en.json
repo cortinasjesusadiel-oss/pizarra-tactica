@@ -1489,5 +1489,21 @@
  "Última copia: {d}.": "Last backup: {d}.",
  "Aún no has hecho ninguna copia en este dispositivo. Si se borran los datos del navegador, se pierden tus jugadas.": "You haven’t made a backup on this device yet. If the browser data is cleared, your plays are lost.",
  "Pizarra abierta": "Open board",
- "la pizarra que tenías abierta": "the board you had open"
+ "la pizarra que tenías abierta": "the board you had open",
+ "Biblioteca": "Library",
+ "Campo y vista": "Pitch and view",
+ "Vista": "View",
+ "Ampliar la explicación del paso": "Expand the step explanation",
+ "Explicación del paso {n}": "Step {n} explanation",
+ "Listo": "Done",
+ "Elige el campo en el botón «Campo ▾»: «Campo completo», «Medio campo» o «Espacio 40×30» (para ejercicios).": "Choose the pitch with the «Pitch ▾» button: «Full pitch», «Half pitch» or «40×30 area» (for drills).",
+ "para escribir con calma, pulsa ⤢ junto a la casilla: se abre un recuadro grande y con ‹ › pasas de un paso a otro.": "to write comfortably, tap ⤢ next to the box: a big box opens and ‹ › moves between steps.",
+ "Campo ▾": "Pitch ▾",
+ "cambia el tipo de campo y tiene «Zonas» y «Fichas».": "changes the type of pitch and holds «Zones» and «Pieces».",
+ "Biblioteca ▾": "Library ▾",
+ "abre Plantillas, Sesiones, Fundamentos y Consejos: el contenido que trae la app.": "opens Templates, Sessions, Fundamentals and Tips: the content that comes with the app.",
+ "(dentro de «Campo ▾») cambia la forma de las fichas, si se ve el número o el nombre y los colores de cada equipo.": "(inside «Pitch ▾») changes the shape of the pieces, whether the number or the name is shown, and each team’s colours.",
+ "(dentro de «Campo ▾») divide el campo en carriles y alturas para explicar dónde pasa cada cosa.": "(inside «Pitch ▾») divides the pitch into lanes and thirds to explain where things happen.",
+ "No hace falta empezar de cero: la app trae mucho contenido listo para usar. Está todo en el botón «Biblioteca ▾» de arriba.": "You don’t have to start from scratch: the app comes with plenty of ready-made content. It’s all in the «Library ▾» button at the top.",
+ "si sujetas el móvil en vertical, el campo ya sale en vertical para verse más grande. Puedes cambiarlo con «▭ Horizontal» / «▯ Vertical» abajo a la derecha. El vídeo sale con la misma orientación.": "if you hold the phone upright, the pitch already starts upright so it looks bigger. You can switch it with «▭ Horizontal» / «▯ Vertical» at the bottom right. The video keeps the same orientation."
 }

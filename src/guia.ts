@@ -12,9 +12,9 @@ export const GUIDE_STEPS: GuideSection[] = [
     img: 'paso-1',
     items: [
       { text: t('Pulsa «+ Nueva» arriba a la izquierda. El campo se queda vacío.') },
-      { text: t('Elige el campo: «Campo» (entero), «Medio» (medio campo) o «40×30» (un espacio para ejercicios).') },
+      { text: t('Elige el campo en el botón «Campo ▾»: «Campo completo», «Medio campo» o «Espacio 40×30» (para ejercicios).') },
       { term: t('Ejemplo'), text: t('para una salida de balón o un contraataque, elige «Campo».') },
-      { term: t('En el móvil'), text: t('si sujetas el móvil en vertical, pulsa «▯ Vertical» abajo a la derecha y el campo se verá más grande.') },
+      { term: t('En el móvil'), text: t('si sujetas el móvil en vertical, el campo ya sale en vertical para verse más grande. Puedes cambiarlo con «▭ Horizontal» / «▯ Vertical» abajo a la derecha. El vídeo sale con la misma orientación.') },
       { text: t('Si vacías el campo sin querer, pulsa ↶ y vuelve lo que tenías.') },
     ],
   },
@@ -55,6 +55,7 @@ export const GUIDE_STEPS: GuideSection[] = [
       { text: t('En el paso nuevo, dibuja lo que pasa después y vuelve a pulsar «+ Paso». Repite hasta terminar la jugada.') },
       { text: t('También puedes arrastrar las fichas a mano en cada paso. La sombra muestra dónde estaban antes.') },
       { text: t('Escribe en «Explica este paso» lo que tus jugadores deben entender. Sale en el proyector y en el vídeo.') },
+      { term: t('En el móvil'), text: t('para escribir con calma, pulsa ⤢ junto a la casilla: se abre un recuadro grande y con ‹ › pasas de un paso a otro.') },
       { term: t('Ejemplo'), text: t('paso 1: «El 4 juega con el 8». Paso 2: «El 8 filtra al 9 en carrera».') },
       { text: t('La «Flecha» es solo un dibujo para explicar: no mueve a nadie al añadir un paso.') },
     ],
@@ -81,10 +82,10 @@ export const GUIDE_MANUAL: GuideSection[] = [
     img: 'guia-pantalla',
     items: [
       { term: t('+ Nueva'), text: t('deja el campo vacío. Se puede deshacer con ↶.') },
-      { term: t('Campo, Medio y 40×30'), text: t('cambian el tipo de campo.') },
-      { term: t('Fundamentos, Plantillas, Sesiones y Consejos'), text: t('abren el contenido que trae la app.') },
-      { term: t('Fichas'), text: t('cambia la forma de las fichas, si se ve el número o el nombre y los colores de cada equipo.') },
-      { term: t('Zonas'), text: t('divide el campo en carriles y alturas para explicar dónde pasa cada cosa.') },
+      { term: t('Campo ▾'), text: t('cambia el tipo de campo y tiene «Zonas» y «Fichas».') },
+      { term: t('Biblioteca ▾'), text: t('abre Plantillas, Sesiones, Fundamentos y Consejos: el contenido que trae la app.') },
+      { term: t('Fichas'), text: t('(dentro de «Campo ▾») cambia la forma de las fichas, si se ve el número o el nombre y los colores de cada equipo.') },
+      { term: t('Zonas'), text: t('(dentro de «Campo ▾») divide el campo en carriles y alturas para explicar dónde pasa cada cosa.') },
       { term: t('+ Local, + Rival, + Balón y + Material'), text: t('añaden jugadores, el balón, conos, picas, vallas, porterías y más. «Girar 45°» orienta el material.') },
       { term: t('↶ y ↷'), text: t('deshacen y rehacen el último cambio. En el ordenador también Ctrl+Z y Ctrl+Y.') },
       { term: t('Jugadas, Proyectar y Exportar'), text: t('guardan tus jugadas, las muestran a pantalla completa y las sacan en imagen o vídeo.') },
@@ -127,7 +128,7 @@ export const GUIDE_MANUAL: GuideSection[] = [
   {
     id: 'contenido',
     title: t('Plantillas y sesiones'),
-    intro: t('No hace falta empezar de cero: la app trae mucho contenido listo para usar.'),
+    intro: t('No hace falta empezar de cero: la app trae mucho contenido listo para usar. Está todo en el botón «Biblioteca ▾» de arriba.'),
     img: 'guia-plantillas',
     items: [
       { term: t('Plantillas'), text: t('alineaciones, ejercicios, situaciones de juego y balón parado. Toca una y se abre en el campo. Las marcadas con ▶ se reproducen solas.') },

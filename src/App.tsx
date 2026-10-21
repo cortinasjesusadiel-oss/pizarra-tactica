@@ -28,6 +28,8 @@ import { lang, setLang, t, tr } from './i18n'
 
 const PAD = 3
 // Barra de herramientas agrupada: cada grupo es un botón que despliega sus herramientas.
+// Nombre corto del campo para el botón de la barra de arriba.
+const pitchName = (k: PitchKind) => (k === 'full' ? t('Campo') : k === 'half' ? t('Medio') : '40×30')
 const TOOL_GROUPS: { id: string; name: string; tools: DrawTool[] }[] = [
   { id: 'pases', name: t('Pases'), tools: ['pass', 'lob', 'shot'] },
   { id: 'mov', name: t('Movimientos'), tools: ['run', 'dribble', 'press'] },
@@ -81,6 +83,17 @@ export default function App() {
     window.addEventListener('pointerdown', close)
     return () => window.removeEventListener('pointerdown', close)
   }, [menu])
+  // Menús de la barra de arriba (campo y vista, biblioteca).
+  const [topMenu, setTopMenu] = useState<{ id: 'pitch' | 'library'; rect: DOMRect } | null>(null)
+  const openTopMenu = (id: 'pitch' | 'library', el: HTMLElement) => setTopMenu(topMenu?.id === id ? null : { id, rect: el.getBoundingClientRect() })
+  useEffect(() => {
+    if (!topMenu) return
+    const close = (e: PointerEvent) => { if (!(e.target as Element).closest?.('.tool-menu, .top-group')) setTopMenu(null) }
+    window.addEventListener('pointerdown', close)
+    return () => window.removeEventListener('pointerdown', close)
+  }, [topMenu])
+  // Editor grande de la explicación del paso (en el móvil la casilla de la barra es pequeña).
+  const [noteOpen, setNoteOpen] = useState(false)
   const [penTool, setPenTool] = useState<DrawTool>('pass')
   const [color, setColor] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
@@ -120,7 +133,11 @@ export default function App() {
   const { w: W, h: H } = PITCH[board.pitch]
   // Orientación del campo: horizontal por defecto (el equipo ataca hacia la derecha), también el medio campo.
   // Se puede girar a vertical, sobre todo para el móvil en vertical. Se guarda en el dispositivo.
-  const [vertical, setVertical] = useState(() => { try { return localStorage.getItem('pizarra.orientacion') === 'v' } catch { return false } })
+  // Si nunca se eligió, un móvil sujeto en vertical empieza con el campo en vertical (se ve más grande).
+  const [vertical, setVertical] = useState(() => {
+    const portraitPhone = typeof window !== 'undefined' && window.innerWidth < 600 && window.innerHeight > window.innerWidth
+    try { const v = localStorage.getItem('pizarra.orientacion'); return v ? v === 'v' : portraitPhone } catch { return portraitPhone }
+  })
   const toggleVertical = () => setVertical((v) => { try { localStorage.setItem('pizarra.orientacion', v ? 'h' : 'v') } catch { /* sin almacenamiento */ } return !v })
 
   useEffect(() => { saveLast(board) }, [board])
@@ -717,19 +734,11 @@ export default function App() {
       <header className="top">
         <strong className="brand"><img src={tpSymbol} alt="" />{t('Tactical')}<span>{t('Pro')}</span></strong>
         <button className="primary" onClick={newBoard}>{t('+ Nueva')}</button>
-        <div className="seg" role="group" aria-label={t('Tipo de campo')}>
-          {(Object.keys(PITCH) as PitchKind[]).map((k) => (
-            <button key={k} className={board.pitch === k ? 'on' : ''} onClick={() => setPitch(k)}>
-              {k === 'full' ? t('Campo') : k === 'half' ? t('Medio') : '40×30'}
-            </button>
-          ))}
-        </div>
-        <button onClick={() => setSheet('learn')}>{t('Fundamentos')}</button>
-        <button onClick={() => setSheet('templates')}>{t('Plantillas')}</button>
-        <button onClick={() => setSheet('sessions')}>{t('Sesiones')}</button>
-        <button onClick={() => setSheet('tips')}>{t('Consejos')}</button>
-        <button onClick={() => setSheet('look')}>{t('Fichas')}</button>
-        <button className={zones ? 'toggle on' : 'toggle'} onClick={toggleZones} aria-pressed={zones}>{t('Zonas')}</button>
+        {/* La barra de arriba se agrupa en dos menús para que quepa en el móvil sin desplazarse. */}
+        <button className={`top-group${topMenu?.id === 'pitch' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={topMenu?.id === 'pitch'}
+          onClick={(e) => openTopMenu('pitch', e.currentTarget)}>{pitchName(board.pitch)} ▾</button>
+        <button className={`top-group${topMenu?.id === 'library' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={topMenu?.id === 'library'}
+          onClick={(e) => openTopMenu('library', e.currentTarget)}>{t('Biblioteca')} ▾</button>
         <span className="sep" />
         <button className="chip home" onClick={() => addToken('home')} aria-label={t('Añadir jugador local')}>{t('+ Local')}</button>
         <button className="chip away" onClick={() => addToken('away')} aria-label={t('Añadir jugador rival')}>{t('+ Rival')}</button>
@@ -742,6 +751,27 @@ export default function App() {
         <button onClick={openPresent}>{t('Proyectar')}</button>
         <button onClick={() => setSheet('export')}>{t('Exportar')}</button>
       </header>
+      {topMenu && (
+        <div className="tool-menu" role="menu" aria-label={topMenu.id === 'pitch' ? t('Campo y vista') : t('Biblioteca')}
+          style={{ left: Math.max(8, Math.min(topMenu.rect.left, window.innerWidth - 240)), top: topMenu.rect.bottom + 6 }}>
+          {topMenu.id === 'pitch' ? (<>
+            <div className="tool-menu-title">{t('Tipo de campo')}</div>
+            {(Object.keys(PITCH) as PitchKind[]).map((k) => (
+              <button key={k} role="menuitemradio" aria-checked={board.pitch === k} className={board.pitch === k ? 'on' : ''}
+                onClick={() => { setPitch(k); setTopMenu(null) }}>{PITCH[k].name}</button>
+            ))}
+            <div className="tool-menu-title">{t('Vista')}</div>
+            <button role="menuitemcheckbox" aria-checked={zones} className={zones ? 'on' : ''} onClick={() => { toggleZones(); setTopMenu(null) }}>{zones ? '✓ ' : ''}{t('Zonas')}</button>
+            <button role="menuitem" onClick={() => { setSheet('look'); setTopMenu(null) }}>{t('Fichas')}</button>
+          </>) : (<>
+            <div className="tool-menu-title">{t('Biblioteca')}</div>
+            <button role="menuitem" onClick={() => { setSheet('templates'); setTopMenu(null) }}>{t('Plantillas')}</button>
+            <button role="menuitem" onClick={() => { setSheet('sessions'); setTopMenu(null) }}>{t('Sesiones')}</button>
+            <button role="menuitem" onClick={() => { setSheet('learn'); setTopMenu(null) }}>{t('Fundamentos')}</button>
+            <button role="menuitem" onClick={() => { setSheet('tips'); setTopMenu(null) }}>{t('Consejos')}</button>
+          </>)}
+        </div>
+      )}
 
       <main className="stage" ref={stage}>
         <svg
@@ -761,6 +791,18 @@ export default function App() {
         </svg>
         {frames && frames[shown].note && !showHint && (
           <div className="note" aria-live="polite"><b>{t('Paso')}{' '}{shown + 1}.</b> {tr(frames[shown].note)}</div>
+        )}
+        {noteOpen && frames && (
+          <div className="note-editor" role="dialog" aria-label={t('Explicación del paso {n}', { n: cur + 1 })}>
+            <div className="note-editor-head">
+              <button onClick={prevStep} disabled={cur === 0} aria-label={t('Paso anterior')}>‹</button>
+              <b>{t('Paso')}{' '}{cur + 1}/{nFrames}</b>
+              <button onClick={nextStep} disabled={cur >= nFrames - 1} aria-label={t('Paso siguiente')}>›</button>
+              <span className="muted small">{frames[cur].note.length}</span>
+              <button className="primary" onClick={() => setNoteOpen(false)}>{t('Listo')}</button>
+            </div>
+            <textarea autoFocus rows={4} placeholder={t('Explica este paso')} value={frames[cur].note} onChange={(e) => setNote(e.target.value)} />
+          </div>
         )}
         {video !== null && (
           <div className="toast" role="status">{t('Exportando')}{' '}{progressLabel}{Math.round(video * 100)}%</div>
@@ -862,6 +904,7 @@ export default function App() {
               <button onClick={nextStep} disabled={cur >= nFrames - 1} aria-label={t('Paso siguiente')}>›</button>
               <span className="sep" />
               <input id="step-note" className="noteinput" placeholder={t('Explica este paso')} value={frames[cur].note} onChange={(e) => setNote(e.target.value)} />
+              <button onClick={() => setNoteOpen(true)} aria-label={t('Ampliar la explicación del paso')} title={t('Ampliar la explicación del paso')}>⤢</button>
               <button onClick={addStep}>{t('+ Paso')}</button>
               <button onClick={removeStep}>{t('Quitar paso')}</button>
               <label className="pace">
