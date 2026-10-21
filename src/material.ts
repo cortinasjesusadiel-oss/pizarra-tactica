@@ -33,21 +33,26 @@ export const SHOW: Partial<Record<Token['kind'], number>> = {
   mannequin: 3.4, wall: 4.8, rebounder: 2.8, minigoal: 3.4, goal: 9.4,
 }
 
-// Imagen que toca para un giro en pantalla (grados en el sentido del reloj) y lo que hay que girarla
-// para llegar al ángulo exacto (en pantalla, en el sentido del reloj).
-export function artKey(kind: Token['kind'], screenRot: number): { key: string; rest: number } | null {
+// Imágenes que tocan para un giro en pantalla (grados en el sentido del reloj): las dos dibujadas más
+// cercanas, cada una girada lo que le falta y mezcladas según la cercanía. Así el giro es continuo, sin saltos.
+export function artPicks(kind: Token['kind'], screenRot: number): { key: string; rest: number; alpha: number }[] {
   const y = YAWS[kind]
-  if (!y) return null
+  if (!y) return []
   const { ys, period } = y
+  if (ys.length === 1) return [{ key: `${kind}_${ys[0]}`, rest: 0, alpha: 1 }]
+  const step = period / ys.length
   const want = (((360 - screenRot) % period) + period) % period
-  let best = ys[0], bd = 999, sd = 0
-  for (const v of ys) {
-    let d = want - v
-    d = ((d % period) + period * 1.5) % period - period / 2
-    if (Math.abs(d) < bd) { bd = Math.abs(d); best = v; sd = d }
-  }
+  const i = Math.floor(want / step + 1e-9) % ys.length
+  const f = want / step - Math.floor(want / step + 1e-9)
+  const lo = ys[i], hi = ys[(i + 1) % ys.length]
   // El giro de la imagen va al revés que el del objeto en 3D (la cámara mira desde abajo).
-  return { key: `${kind}_${best}`, rest: y.turn ? -sd : 0 }
+  const a = { key: `${kind}_${lo}`, rest: -f * step }, b = { key: `${kind}_${hi}`, rest: (1 - f) * step }
+  // La más cercana va encima y entera; la otra debajo, más visible cuanto más cerca está el ángulo de ella.
+  const [near, far] = f < 0.5 ? [a, b] : [b, a]
+  const w = 2 * Math.min(f, 1 - f)
+  const out = w > 0.03 ? [{ ...far, alpha: w }] : []
+  out.push({ ...near, alpha: 1 })
+  return out
 }
 
 // Tamaño aproximado del objeto en la pizarra, para la zona donde se puede tocar y el círculo de selección.

@@ -611,10 +611,10 @@ export default function App() {
       const dx = x - a.c[0], dy = y - a.c[1]
       let ang = (Math.atan2(dx, -dy) * 180) / Math.PI
       ang = ((ang % 360) + 360) % 360
-      // Se queda fijo en los ángulos rectos y a 45° si pasas cerca; si no, va de 5 en 5 grados.
+      // Giro continuo; solo se queda fijo en los ángulos rectos y a 45° si pasas muy cerca.
       const near45 = Math.round(ang / 45) * 45
-      ang = Math.abs(ang - near45) < 4 ? near45 % 360 : Math.round(ang / 5) * 5 % 360
-      const size = +Math.max(0.4, Math.min(3, (a.size0 * Math.hypot(dx, dy)) / a.d0)).toFixed(2)
+      ang = Math.abs(ang - near45) < 2.5 ? near45 % 360 : +ang.toFixed(1)
+      const size = +Math.max(0.4, Math.min(2.5, (a.size0 * Math.hypot(dx, dy)) / a.d0)).toFixed(3)
       setBoard((b) => ({ ...b, tokens: b.tokens.map((t) => (t.id === a.id ? { ...t, rot: ang, size } : t)) }))
     } else if (a.kind === 'moveText') {
       const [x, y] = toBoard(e)
@@ -844,7 +844,7 @@ export default function App() {
           {sel.kind !== 'player' && sel.kind !== 'ball' && (<>
             <button onClick={() => updateSel({ rot: ((sel.rot ?? 0) + 45) % 360 })}>{t('Girar 45°')}</button>
             <button onClick={() => updateSel({ size: Math.max(0.4, +((sel.size ?? 1) - 0.2).toFixed(2)) })} aria-label={t('Más pequeño')} title={t('Más pequeño')}>−</button>
-            <button onClick={() => updateSel({ size: Math.min(3, +((sel.size ?? 1) + 0.2).toFixed(2)) })} aria-label={t('Más grande')} title={t('Más grande')}>+</button>
+            <button onClick={() => updateSel({ size: Math.min(2.5, +((sel.size ?? 1) + 0.2).toFixed(2)) })} aria-label={t('Más grande')} title={t('Más grande')}>+</button>
           </>)}
           <button className="danger" onClick={removeSelected}>{t('Eliminar')}</button>
         </div>

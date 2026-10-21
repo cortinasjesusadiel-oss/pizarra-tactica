@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { artKey, equipmentRadius, SHOW, useArt } from './material'
+import { artPicks, equipmentRadius, SHOW, useArt } from './material'
 import { BALL_HEXAGONS, BALL_PENTAGONS } from './ball'
 import { COLORS, DEFAULT_LOOK, LABEL_DEFAULT_BG, lobAt, lobControl, type Drawing, type Look, type Pt, type Token } from './model'
 
@@ -324,17 +324,21 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK }: { t
 // siguen siendo creíbles. `rot` es el giro de la ficha y `upright` indica que el campo está en vertical.
 export function Equipment({ kind, r, rot = 0, upright = false, size = 1 }: { kind: Token['kind']; r: number; rot?: number; upright?: boolean; size?: number }) {
   const art = useArt()
-  const screen = rot + (upright ? 90 : 0)
-  const pick = artKey(kind, screen)
-  const a = art && pick ? art[pick.key] : null
-  if (!a) return null
-  const base = art![`${kind}_0`] ?? a
+  const base = art?.[`${kind}_0`]
+  if (!art || !base) return null
+  const picks = artPicks(kind, rot + (upright ? 90 : 0))
   const k = Math.max(1, r / 1.1)
   const m = ((SHOW[kind] ?? 2) / Math.max(base.w, base.h)) * (kind === 'goal' ? 1 : k) * size
-  const tr = [upright ? 'rotate(-90)' : '', pick!.rest ? `rotate(${pick!.rest.toFixed(2)})` : ''].join(' ').trim()
   return (
-    <g transform={tr || undefined}>
-      <image href={a.u} x={-a.x * m} y={-a.y * m} width={a.w * m} height={a.h * m} preserveAspectRatio="none" />
+    <g transform={upright ? 'rotate(-90)' : undefined}>
+      {picks.map((p) => {
+        const a = art[p.key]
+        if (!a) return null
+        return (
+          <image key={p.key} href={a.u} x={-a.x * m} y={-a.y * m} width={a.w * m} height={a.h * m} preserveAspectRatio="none"
+            transform={p.rest ? `rotate(${p.rest.toFixed(2)})` : undefined} opacity={p.alpha < 1 ? p.alpha.toFixed(3) : undefined} />
+        )
+      })}
     </g>
   )
 }
