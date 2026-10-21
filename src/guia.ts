@@ -106,6 +106,7 @@ export const GUIDE_MANUAL: GuideSection[] = [
       { term: t('Tiro'), text: t('disparo a portería. Mueve el balón.') },
       { term: t('Flecha'), text: t('una indicación para explicar. Es solo un dibujo: no mueve a nadie.') },
       { term: t('Línea'), text: t('recta para marcar una línea defensiva o una distancia.') },
+      { term: t('Flecha punteada y Línea punteada'), text: t('trazos de puntos para señalar una idea, una referencia o una distancia. Son solo dibujos: no mueven a nadie.') },
       { term: t('Texto'), text: t('toca el campo, escribe un mensaje y elige color y tamaño. Arrástralo para moverlo y tócalo para editarlo.') },
       { term: t('Zona, Foco y Libre'), text: t('Zona marca un espacio, Foco ilumina un jugador o una zona clave y Libre es un trazo a mano.') },
       { term: t('Borrar'), text: t('toca un trazo o una ficha para quitarlo. «Borrar trazos» quita todos los dibujos de la pizarra o del paso.') },
@@ -119,8 +120,8 @@ export const GUIDE_MANUAL: GuideSection[] = [
     items: [
       { term: t('▶ Reproducir'), text: t('mueve la jugada de principio a fin. Las flechas ‹ › y los números van paso a paso.') },
       { term: t('+ Paso y Quitar paso'), text: t('añaden un paso después del que tienes abierto o quitan ese paso.') },
-      { term: t('Cada paso y Velocidad'), text: t('eligen cuánto dura cada paso (5, 8 o 10 segundos) y si el movimiento es lento, normal o rápido. Vale para reproducir y para el vídeo.') },
-      { term: t('Ejemplo'), text: t('para explicar en la charla, 8 segundos y velocidad Lenta; para WhatsApp, 5 segundos y Normal.') },
+      { term: t('Cada paso y Velocidad'), text: t('eligen cuánto dura cada paso (3, 5, 8 o 10 segundos) y si el movimiento es lento, normal o rápido. Vale para reproducir y para el vídeo.') },
+      { term: t('Ejemplo'), text: t('para explicar en la charla, 8 segundos y velocidad Lenta; para WhatsApp, 5 segundos y Normal; para un vídeo corto, 3 segundos y Rápida.') },
     ],
   },
   {

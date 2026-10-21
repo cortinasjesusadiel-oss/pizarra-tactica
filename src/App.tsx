@@ -26,7 +26,7 @@ import type { ExportOpts, Renderer } from './exportVideo'
 import { lang, setLang, t, tr } from './i18n'
 
 const PAD = 3
-const DRAW_TOOLS: DrawTool[] = ['pass', 'lob', 'run', 'arrow', 'dribble', 'press', 'shot', 'line', 'text', 'zone', 'focus', 'free']
+const DRAW_TOOLS: DrawTool[] = ['pass', 'lob', 'run', 'arrow', 'darrow', 'dribble', 'press', 'shot', 'line', 'dline', 'text', 'zone', 'focus', 'free']
 const TOOLS: Tool[] = ['move', ...DRAW_TOOLS, 'erase']
 
 type Action =
@@ -1223,6 +1223,8 @@ function ToolIcon({ t }: { t: Tool }) {
       {t === 'press' && <><path d="M4 18L16 8" {...s} /><path d="M13.5 4.5l6 7" {...s} /></>}
       {t === 'shot' && <><path d="M3 16L15 7M5 19L17 10" {...s} /><path d="M14 4.5l6 3-2.5 6" {...s} /></>}
       {t === 'line' && <path d="M4 18L20 6" {...s} />}
+      {t === 'dline' && <path d="M4 18L20 6" {...s} strokeDasharray="0.1 4" strokeWidth={2.6} />}
+      {t === 'darrow' && <><path d="M4 18c3-8 8-11 14-12" {...s} strokeDasharray="0.1 4" strokeWidth={2.6} /><path d="M13 4l5 2-3 4.5" {...s} /></>}
       {t === 'dribble' && <><path d="M3 14c2-4 4 4 6 0s4 4 6 0 3 2 4 0" {...s} /><path d="M17 9l3 4-4 2" {...s} /></>}
       {t === 'zone' && <rect x="4" y="6" width="16" height="12" rx="1" {...s} strokeDasharray="3 2" />}
       {t === 'focus' && <><circle cx="12" cy="12" r="7" {...s} /><circle cx="12" cy="12" r="2.5" {...s} /></>}
