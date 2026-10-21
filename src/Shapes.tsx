@@ -256,14 +256,17 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK }: { t
         {selected && <circle r={r * 0.85} fill="none" stroke="#fff" strokeWidth={0.2} strokeDasharray="0.6 0.4" />}
       </g>
     )
-  if (t.kind !== 'player')
+  if (t.kind !== 'player') {
+    // En el campo el material se dibuja algo más grande que su tamaño real para que se vea bien (la portería no).
+    const er = t.kind === 'goal' ? r : r * 1.5
     return (
       <g data-token={t.id} transform={`translate(${t.x} ${t.y}) rotate(${t.rot ?? 0})`} className="token">
-        <circle r={r * 1.3} fill="transparent" />
-        <Equipment kind={t.kind} r={r} />
-        {selected && <circle r={r * 1.1} fill="none" stroke="#fff" strokeWidth={0.2} strokeDasharray="0.6 0.4" />}
+        <circle r={er * 1.3} fill="transparent" />
+        <Equipment kind={t.kind} r={er} />
+        {selected && <circle r={er * 1.1} fill="none" stroke="#fff" strokeWidth={0.2} strokeDasharray="0.6 0.4" />}
       </g>
     )
+  }
   const fill = t.team === 'home' ? look.home : t.team === 'away' ? look.away : '#f4f4f4'
   const ink = inkFor(fill)
   const num = look.text !== 'name' ? t.label : ''
@@ -305,33 +308,153 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK }: { t
 }
 
 // Material visto desde arriba. Tamaños aproximados en metros, algo agrandados en campos grandes para que se vean.
+// Material de entrenamiento visto desde arriba, con sombra y colores reales. Medidas en metros
+// (algo exageradas para que se vean bien en el campo).
+const SH = 'rgba(0,0,0,.32)'
+const OUT = 'rgba(0,0,0,.5)'
+// Red de una portería: rejilla fina dentro de un rectángulo.
+function Net({ x, y, w, h, step }: { x: number; y: number; w: number; h: number; step: number }) {
+  const v = [], hz = []
+  for (let i = x + step; i < x + w - 1e-6; i += step) v.push(i)
+  for (let j = y + step; j < y + h - 1e-6; j += step) hz.push(j)
+  return (
+    <g stroke="rgba(255,255,255,.55)" strokeWidth={step * 0.12}>
+      <rect x={x} y={y} width={w} height={h} fill="rgba(255,255,255,.12)" stroke="none" />
+      {v.map((i) => <line key={`v${i}`} x1={i} y1={y} x2={i} y2={y + h} />)}
+      {hz.map((j) => <line key={`h${j}`} x1={x} y1={j} x2={x + w} y2={j} />)}
+    </g>
+  )
+}
+// Maniquí visto desde arriba: hombros y cabeza.
+function Dummy({ x = 0, k, color = '#f2c230' }: { x?: number; k: number; color?: string }) {
+  return (
+    <g transform={`translate(${x} 0)`}>
+      <rect x={-0.42 * k + 0.1} y={-0.2 * k + 0.16} width={0.84 * k} height={0.4 * k} rx={0.2 * k} fill={SH} />
+      <rect x={-0.42 * k} y={-0.2 * k} width={0.84 * k} height={0.4 * k} rx={0.2 * k} fill={color} stroke={OUT} strokeWidth={0.06} />
+      <rect x={-0.34 * k} y={-0.12 * k} width={0.68 * k} height={0.1 * k} rx={0.05 * k} fill="rgba(255,255,255,.35)" />
+      <circle r={0.17 * k} fill="#2b2f33" stroke={color} strokeWidth={0.05 * k} />
+    </g>
+  )
+}
+
 export function Equipment({ kind, r }: { kind: Token['kind']; r: number }) {
   const k = Math.max(1, r / 1.1)
-  const dark = 'rgba(0,0,0,.45)'
   switch (kind) {
     case 'cone':
-      return <path d={`M0 ${-r * 0.6} L${r * 0.5} ${r * 0.4} L${-r * 0.5} ${r * 0.4} z`} fill="#ff9f1c" stroke={dark} strokeWidth={0.08} />
-    case 'pole':
-      return <g><circle r={0.35 * k} fill="#ffd23f" stroke={dark} strokeWidth={0.1} /><path d={`M0 0 L${0.9 * k} ${-0.5 * k} L0 ${-0.9 * k} z`} fill="#ff6b5e" /></g>
-    case 'flag':
-      return <g><circle r={0.2 * k} fill="#fff" /><path d={`M0 0 L0 ${-1.2 * k} L${0.9 * k} ${-0.9 * k} L0 ${-0.6 * k}`} fill="#ff6b5e" stroke="#fff" strokeWidth={0.08} /></g>
-    case 'hurdle':
-      return <g><rect x={-0.6 * k} y={-0.12 * k} width={1.2 * k} height={0.24 * k} rx={0.08} fill="#ff9f1c" stroke={dark} strokeWidth={0.06} /><rect x={-0.7 * k} y={-0.25 * k} width={0.18 * k} height={0.5 * k} fill="#fff" /><rect x={0.52 * k} y={-0.25 * k} width={0.18 * k} height={0.5 * k} fill="#fff" /></g>
-    case 'ring':
-      return <circle r={0.4 * k} fill="none" stroke="#5bb6ff" strokeWidth={0.14 * k} />
-    case 'ladder':
+      // Cono alto: base cuadrada, cuerpo redondo y agujero arriba.
       return (
-        <g fill="none" stroke="#ffd23f" strokeWidth={0.1 * k}>
-          <rect x={-2 * k} y={-0.25 * k} width={4 * k} height={0.5 * k} />
-          {[-1.5, -1, -0.5, 0, 0.5, 1, 1.5].map((x) => <line key={x} x1={x * k} y1={-0.25 * k} x2={x * k} y2={0.25 * k} />)}
+        <g>
+          <rect x={-0.42 * k + 0.12} y={-0.42 * k + 0.18} width={0.84 * k} height={0.84 * k} rx={0.14 * k} fill={SH} />
+          <rect x={-0.42 * k} y={-0.42 * k} width={0.84 * k} height={0.84 * k} rx={0.14 * k} fill="#e86a00" stroke={OUT} strokeWidth={0.05} />
+          <circle r={0.32 * k} fill="#ff8c1a" />
+          <circle r={0.22 * k} fill="#ffa64d" />
+          <circle r={0.13 * k} fill="#ffffff" opacity={0.9} />
+          <circle r={0.07 * k} fill="#3a2a1a" />
+        </g>
+      )
+    case 'disc':
+      // Platillo: disco bajo con agujero en el centro, el material más usado para marcar.
+      return (
+        <g>
+          <circle cx={0.08} cy={0.12} r={0.4 * k} fill="none" stroke={SH} strokeWidth={0.26 * k} />
+          <circle r={0.4 * k} fill="none" stroke="#ffd23f" strokeWidth={0.26 * k} />
+          <circle r={0.53 * k} fill="none" stroke="#c99a00" strokeWidth={0.04} />
+          <circle r={0.27 * k} fill="none" stroke="#fff3b0" strokeWidth={0.04} />
+        </g>
+      )
+    case 'pole':
+      // Pica con base: base redonda y el palo inclinado por la perspectiva, con su sombra.
+      return (
+        <g>
+          <line x1={0} y1={0} x2={0.75 * k} y2={0.35 * k} stroke={SH} strokeWidth={0.14 * k} strokeLinecap="round" />
+          <circle r={0.32 * k} fill="#30343a" stroke={OUT} strokeWidth={0.05} />
+          <line x1={0} y1={0} x2={0.22 * k} y2={-0.95 * k} stroke="#ffd23f" strokeWidth={0.15 * k} strokeLinecap="round" />
+          <line x1={0.07 * k} y1={-0.3 * k} x2={0.14 * k} y2={-0.6 * k} stroke="#ff4d3d" strokeWidth={0.155 * k} />
+          <circle cx={0.22 * k} cy={-0.95 * k} r={0.09 * k} fill="#fff" />
+        </g>
+      )
+    case 'flag':
+      return (
+        <g>
+          <line x1={0} y1={0} x2={0.6 * k} y2={0.3 * k} stroke={SH} strokeWidth={0.1 * k} />
+          <circle r={0.16 * k} fill="#30343a" />
+          <line x1={0} y1={0} x2={0} y2={-1.2 * k} stroke="#f4f4f4" strokeWidth={0.1 * k} strokeLinecap="round" />
+          <path d={`M0 ${-1.2 * k} L${0.85 * k} ${-0.95 * k} L0 ${-0.68 * k} z`} fill="#ff4d3d" stroke={OUT} strokeWidth={0.04} />
+        </g>
+      )
+    case 'hurdle':
+      // Valla baja: barra de plástico sobre dos patas.
+      return (
+        <g>
+          <rect x={-0.62 * k + 0.1} y={-0.08 * k + 0.16} width={1.24 * k} height={0.16 * k} rx={0.06} fill={SH} />
+          <rect x={-0.72 * k} y={-0.28 * k} width={0.2 * k} height={0.56 * k} rx={0.06 * k} fill="#d15a00" stroke={OUT} strokeWidth={0.04} />
+          <rect x={0.52 * k} y={-0.28 * k} width={0.2 * k} height={0.56 * k} rx={0.06 * k} fill="#d15a00" stroke={OUT} strokeWidth={0.04} />
+          <rect x={-0.62 * k} y={-0.08 * k} width={1.24 * k} height={0.16 * k} rx={0.06} fill="#ff8c1a" stroke={OUT} strokeWidth={0.04} />
+          <rect x={-0.55 * k} y={-0.06 * k} width={1.1 * k} height={0.04 * k} fill="rgba(255,255,255,.45)" />
+        </g>
+      )
+    case 'ring':
+      // Aro plano de coordinación.
+      return (
+        <g>
+          <circle cx={0.06} cy={0.1} r={0.42 * k} fill="none" stroke={SH} strokeWidth={0.12 * k} />
+          <circle r={0.42 * k} fill="none" stroke="#2f8bff" strokeWidth={0.12 * k} />
+          <circle r={0.42 * k} fill="none" stroke="rgba(255,255,255,.45)" strokeWidth={0.03 * k} />
+        </g>
+      )
+    case 'ladder':
+      // Escalera de coordinación: cintas negras y peldaños planos amarillos.
+      return (
+        <g>
+          <rect x={-2 * k} y={-0.3 * k} width={4 * k} height={0.6 * k} fill="transparent" />
+          {[-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2].map((x) => <rect key={x} x={x * k - 0.06 * k} y={-0.3 * k} width={0.12 * k} height={0.6 * k} rx={0.03} fill="#ffd23f" stroke={OUT} strokeWidth={0.03} />)}
+          <line x1={-2.05 * k} y1={-0.3 * k} x2={2.05 * k} y2={-0.3 * k} stroke="#16181a" strokeWidth={0.07 * k} />
+          <line x1={-2.05 * k} y1={0.3 * k} x2={2.05 * k} y2={0.3 * k} stroke="#16181a" strokeWidth={0.07 * k} />
         </g>
       )
     case 'mannequin':
-      return <g><ellipse rx={0.55 * k} ry={0.32 * k} fill="#7c8a99" stroke={dark} strokeWidth={0.08} /><circle r={0.22 * k} fill="#c7d0da" /></g>
+      return <Dummy k={k} />
+    case 'wall':
+      // Barrera de falta: cuatro maniquíes unidos sobre una base, para tirar por encima o alrededor.
+      return (
+        <g>
+          <rect x={-1.45 * k} y={-0.35 * k} width={2.9 * k} height={0.7 * k} fill="transparent" />
+          <rect x={-1.25 * k} y={0.12 * k} width={2.5 * k} height={0.12 * k} rx={0.04} fill="#5d6670" stroke={OUT} strokeWidth={0.04} />
+          {[-0.96, -0.32, 0.32, 0.96].map((x) => <Dummy key={x} x={x * k} k={k * 0.82} />)}
+        </g>
+      )
+    case 'rebounder':
+      // Rebotador: marco con red tensa que devuelve el balón.
+      return (
+        <g>
+          <rect x={-0.75 * k + 0.12} y={-0.22 * k + 0.18} width={1.5 * k} height={0.44 * k} fill={SH} />
+          <Net x={-0.7 * k} y={-0.18 * k} w={1.4 * k} h={0.36 * k} step={0.12 * k} />
+          <rect x={-0.75 * k} y={-0.22 * k} width={1.5 * k} height={0.44 * k} fill="none" stroke="#1f2328" strokeWidth={0.09 * k} rx={0.04} />
+          <rect x={-0.75 * k} y={0.14 * k} width={1.5 * k} height={0.08 * k} fill="#ff4d3d" />
+        </g>
+      )
     case 'minigoal':
-      return <path d={`M${-1 * k} ${0.5 * k} L${-1 * k} ${-0.5 * k} L${1 * k} ${-0.5 * k} L${1 * k} ${0.5 * k}`} fill="rgba(255,255,255,.25)" stroke="#fff" strokeWidth={0.18 * k} strokeLinejoin="round" />
+      // Miniportería con su red (la boca mira hacia abajo).
+      return (
+        <g>
+          <rect x={-1 * k} y={-0.6 * k} width={2 * k} height={1.1 * k} fill="transparent" />
+          <rect x={-1 * k + 0.12} y={-0.55 * k + 0.18} width={2 * k} height={0.95 * k} fill={SH} />
+          <Net x={-0.95 * k} y={-0.55 * k} w={1.9 * k} h={0.95 * k} step={0.16 * k} />
+          <path d={`M${-1 * k} ${0.45 * k} L${-1 * k} ${-0.55 * k} L${1 * k} ${-0.55 * k} L${1 * k} ${0.45 * k}`} fill="none" stroke="#fff" strokeWidth={0.12 * k} strokeLinejoin="round" />
+          <line x1={-1 * k} y1={0.45 * k} x2={1 * k} y2={0.45 * k} stroke="#fff" strokeWidth={0.14 * k} strokeLinecap="round" />
+        </g>
+      )
     case 'goal':
-      return <path d="M-3.66 1 L-3.66 -1 L3.66 -1 L3.66 1" fill="rgba(255,255,255,.25)" stroke="#fff" strokeWidth={0.3} strokeLinejoin="round" />
+      // Portería reglamentaria (7,32 m) con 2 m de red.
+      return (
+        <g>
+          <rect x={-3.66} y={-1} width={7.32} height={2.1} fill="transparent" />
+          <rect x={-3.6 + 0.15} y={-1 + 0.2} width={7.2} height={1.9} fill={SH} />
+          <Net x={-3.6} y={-1} w={7.2} h={1.9} step={0.3} />
+          <path d="M-3.66 0.95 L-3.66 -1 L3.66 -1 L3.66 0.95" fill="none" stroke="#fff" strokeWidth={0.18} strokeLinejoin="round" />
+          <line x1={-3.66} y1={1} x2={3.66} y2={1} stroke="#fff" strokeWidth={0.24} strokeLinecap="round" />
+        </g>
+      )
     default:
       return null
   }
