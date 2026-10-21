@@ -1,7 +1,7 @@
 // Reproducir: el movimiento pasa por cada paso, es continuo (sin saltos) y respeta el ritmo elegido.
 import { describe, expect, it } from 'vitest'
 import { posAt } from '../src/model'
-import { DEFAULT_PACE, paceAt, paceTotal, sampleAt } from '../src/motion'
+import { DEFAULT_PACE, STEP_SECONDS, paceAt, paceTotal, sampleAt } from '../src/motion'
 import { TEMPLATES } from '../src/templates'
 
 const animated = TEMPLATES.map((t) => ({ t, b: t.build() })).filter(({ b }) => (b.frames?.length ?? 0) > 1)
@@ -48,5 +48,13 @@ describe('Reproducir', () => {
     expect(mid).toBeLessThan(1)
     expect(paceAt(n, DEFAULT_PACE, paceTotal(n, DEFAULT_PACE))).toBe(n - 1)
     expect(paceTotal(n, DEFAULT_PACE)).toBe(n * DEFAULT_PACE.step)
+  })
+
+  it('Rápida mueve en menos de un segundo y los pasos pueden durar 3 s', () => {
+    const p = { step: 3, speed: 'rapida' as const }
+    expect(STEP_SECONDS[0]).toBe(3)
+    expect(paceAt(3, p, 2.0)).toBe(0)
+    expect(paceAt(3, p, 2.95)).toBeGreaterThan(0.95)
+    expect(paceTotal(3, p)).toBe(9)
   })
 })

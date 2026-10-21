@@ -45,6 +45,11 @@ describe('+ Paso', () => {
     expect(movesFromArrows(b, 0, [line('arrow', [[30, 55], [50, 55]])])).toEqual({})
   })
 
+  it('la línea y la flecha punteadas son solo dibujos y no mueven a nadie', () => {
+    const { b } = board()
+    expect(movesFromArrows(b, 0, [line('darrow', [[30, 55], [50, 55]]), line('dline', [[31, 34.3], [30, 55]])])).toEqual({})
+  })
+
   it('cada flecha mueve como mucho a un jugador', () => {
     const { b, p10, p7 } = board()
     const m = movesFromArrows(b, 0, [line('run', [[30, 34], [40, 20]]), line('run', [[30, 34], [40, 45]])])

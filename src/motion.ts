@@ -63,11 +63,11 @@ export const positionsAt = (b: Board, s: number): Record<string, Pt> =>
 // las fichas. El resto del paso las fichas están quietas, para leer la explicación y ver las flechas.
 export type Pace = { step: number; speed: Speed }
 export type Speed = 'lenta' | 'normal' | 'rapida'
-export const STEP_SECONDS = [5, 8, 10]
+export const STEP_SECONDS = [3, 5, 8, 10]
 export const SPEEDS: { id: Speed; name: string; move: number }[] = [
-  { id: 'lenta', name: t('Lenta'), move: 3.6 },
-  { id: 'normal', name: t('Normal'), move: 2.6 },
-  { id: 'rapida', name: t('Rápida'), move: 1.7 },
+  { id: 'lenta', name: t('Lenta'), move: 2.6 },
+  { id: 'normal', name: t('Normal'), move: 1.6 },
+  { id: 'rapida', name: t('Rápida'), move: 0.9 },
 ]
 export const DEFAULT_PACE: Pace = { step: 5, speed: 'normal' }
 
@@ -78,7 +78,7 @@ export const paceTotal = (n: number, p: Pace) => Math.max(1, n) * p.step
 // movimiento hacia el siguiente, que arranca y frena con suavidad.
 export function paceAt(n: number, p: Pace, t: number): number {
   if (n < 2) return 0
-  const move = Math.min(SPEEDS.find((x) => x.id === p.speed)?.move ?? 2.6, p.step - 1)
+  const move = Math.min(SPEEDS.find((x) => x.id === p.speed)?.move ?? 1.6, p.step - 1)
   const hold = p.step - move
   const i = Math.floor(t / p.step)
   if (i >= n - 1) return n - 1

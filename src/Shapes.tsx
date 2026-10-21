@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { BALL_HEXAGONS, BALL_PENTAGONS } from './ball'
 import { COLORS, DEFAULT_LOOK, LABEL_DEFAULT_BG, lobAt, lobControl, type Drawing, type Look, type Pt, type Token } from './model'
 
 export function Markers() {
@@ -9,6 +10,14 @@ export function Markers() {
         <stop offset="45%" stopColor="#fff" stopOpacity={0.08} />
         <stop offset="100%" stopColor="#000" stopOpacity={0.18} />
       </radialGradient>
+      {/* Volumen del balón: luz arriba a la izquierda y sombra hacia el borde. */}
+      <radialGradient id="ball-shade" cx="36%" cy="32%" r="72%">
+        <stop offset="0%" stopColor="#fff" stopOpacity={0.5} />
+        <stop offset="35%" stopColor="#fff" stopOpacity={0} />
+        <stop offset="80%" stopColor="#000" stopOpacity={0.22} />
+        <stop offset="100%" stopColor="#000" stopOpacity={0.5} />
+      </radialGradient>
+      <clipPath id="ball-clip"><circle r={1} /></clipPath>
       {COLORS.map((c) => (
         <marker key={c} id={`ah-${c.slice(1)}`} viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill={c} />
@@ -65,7 +74,7 @@ export function DrawingShape({ d, faded, part, upright }: { d: Drawing; faded?: 
   const marker = `url(#ah-${d.color.slice(1)})`
   const sw = d.width
   const a = p[0], b = p[p.length - 1]
-  const path = d.type === 'lob' ? lobPath(a, b, d.bend) : d.type === 'pass' || d.type === 'shot' || d.type === 'line' ? `M${a[0]} ${a[1]} L${b[0]} ${b[1]}` : d.type === 'dribble' ? wavy(p) : smooth(p)
+  const path = d.type === 'lob' ? lobPath(a, b, d.bend) : d.type === 'pass' || d.type === 'shot' || d.type === 'line' || d.type === 'dline' ? `M${a[0]} ${a[1]} L${b[0]} ${b[1]}` : d.type === 'dribble' ? wavy(p) : smooth(p)
   // Máscara que deja ver solo el tramo pedido (pathLength=1 hace que las medidas vayan de 0 a 1).
   const mask = trimmed && !area ? `m${mid}` : undefined
   const defs = mask && (
@@ -103,6 +112,12 @@ export function DrawingShape({ d, faded, part, upright }: { d: Drawing; faded?: 
       return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" markerEnd={marker} /></>
     case 'line':
       return <>{defs}<line {...common} {...m} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={d.color} strokeWidth={sw} strokeLinecap="round" /></>
+    case 'dline':
+      // Línea punteada (puntos redondos): una referencia, por ejemplo la altura de la línea o una distancia.
+      return <>{defs}<line {...common} {...m} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={d.color} strokeWidth={sw} strokeLinecap="round" strokeDasharray={`0.01 ${sw * 2.2}`} /></>
+    case 'darrow':
+      // Flecha punteada que sigue el trazo: una indicación sin movimiento, distinta de la carrera (rayas).
+      return <>{defs}<path {...common} {...m} d={path} fill="none" stroke={d.color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`0.01 ${sw * 2.2}`} markerEnd={marker} /></>
     case 'press': {
       // Presión: trazo continuo que acaba en una barra, el jugador sale a tapar o a encimar.
       const q = p[p.length - 2], L = Math.hypot(b[0] - q[0], b[1] - q[1]) || 1
@@ -212,6 +227,22 @@ function inkFor(hex: string): string {
   return l > 0.6 ? '#17201a' : '#ffffff'
 }
 
+// Balón clásico con paneles de verdad (ver ball.ts). R es su radio.
+export function BallArt({ R }: { R: number }) {
+  const w = 0.045
+  return (
+    <g transform={`scale(${R})`}>
+      <circle r={1} fill="#fff" />
+      <g clipPath="url(#ball-clip)">
+        {BALL_HEXAGONS.map((d, i) => <path key={i} d={d} fill="none" stroke="#8a9096" strokeWidth={w} strokeLinejoin="round" />)}
+        {BALL_PENTAGONS.map((d, i) => <path key={i} d={d} fill="#121417" stroke="#121417" strokeWidth={w} strokeLinejoin="round" />)}
+      </g>
+      <circle r={1} fill="url(#ball-shade)" />
+      <circle r={1} fill="none" stroke="#0b0d0f" strokeWidth={0.1} />
+    </g>
+  )
+}
+
 // Camiseta vista de frente, centrada en (0,0), de unas 2,1 unidades de ancho.
 const SHIRT = 'M-0.42,-0.95 L-1,-0.66 L-1.08,-0.12 L-0.7,-0.02 L-0.7,0.98 L0.7,0.98 L0.7,-0.02 L1.08,-0.12 L1,-0.66 L0.42,-0.95 Q0,-0.62 -0.42,-0.95 Z'
 
@@ -221,7 +252,7 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK }: { t
     return (
       <g data-token={t.id} transform={`translate(${t.x} ${t.y})`} className="token">
         <circle r={r * 0.7} fill="transparent" />
-        <circle r={r * 0.45} fill="#fff" stroke="#111" strokeWidth={r * 0.1} />
+        <BallArt R={r * 0.55} />
         {selected && <circle r={r * 0.85} fill="none" stroke="#fff" strokeWidth={0.2} strokeDasharray="0.6 0.4" />}
       </g>
     )

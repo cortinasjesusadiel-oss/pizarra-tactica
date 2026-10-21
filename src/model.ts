@@ -18,14 +18,14 @@ export const EQUIPMENT: { kind: TokenKind; name: string }[] = [
   { kind: 'flag', name: t('Banderín') },
 ]
 export const KIND_NAME = (k: TokenKind) => (k === 'player' ? t('Jugador') : k === 'ball' ? t('Balón') : EQUIPMENT.find((e) => e.kind === k)?.name ?? '')
-export type DrawTool = 'pass' | 'lob' | 'run' | 'arrow' | 'dribble' | 'press' | 'shot' | 'line' | 'text' | 'zone' | 'focus' | 'free'
+export type DrawTool = 'pass' | 'lob' | 'run' | 'arrow' | 'dribble' | 'press' | 'shot' | 'line' | 'dline' | 'darrow' | 'text' | 'zone' | 'focus' | 'free'
 // Flechas que mueven a un jugador al crear un paso (con o sin balón).
-// «Flecha» no mueve a nadie: es solo un dibujo para explicar.
+// «Flecha», «Flecha punteada» y «Línea punteada» no mueven a nadie: son solo dibujos para explicar.
 export const MOVES_PLAYER: DrawTool[] = ['run', 'dribble', 'press']
 // Flechas que mueven el balón.
 export const MOVES_BALL: DrawTool[] = ['pass', 'lob', 'shot']
 // Trazos rectos: solo cuentan el inicio y el final.
-export const STRAIGHT: DrawTool[] = ['pass', 'lob', 'shot', 'line']
+export const STRAIGHT: DrawTool[] = ['pass', 'lob', 'shot', 'line', 'dline']
 export type Tool = 'move' | DrawTool | 'erase'
 export type Pt = [number, number]
 
@@ -107,6 +107,8 @@ export const DEFAULT_COLOR: Record<DrawTool, string> = {
   press: '#ff6b5e',
   shot: '#ffd23f',
   line: '#ffffff',
+  dline: '#ffffff',
+  darrow: '#ffffff',
   text: '#ffffff',
   zone: '#ffd23f',
   focus: '#ffffff',
@@ -123,6 +125,8 @@ export const TOOL_NAME: Record<Tool, string> = {
   press: t('Presión'),
   shot: t('Tiro'),
   line: t('Línea'),
+  dline: t('Línea punteada'),
+  darrow: t('Flecha punteada'),
   text: t('Texto'),
   zone: t('Zona'),
   focus: t('Foco'),
