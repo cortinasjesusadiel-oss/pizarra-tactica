@@ -17,7 +17,7 @@ import tpSymbol from './tpSymbol.png'
 import { GLOSSARY, LESSONS } from './fundamentos'
 import { GUIDE_MANUAL, GUIDE_STEPS, type GuideSection } from './guia'
 import { deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay } from './storage'
-import { backupFile, describeImport, downloadBackup, importBackup, parseBackup } from './backup'
+import { backupFile, describeImport, downloadBackup, importBackup, lastBackup, markBackupDone, parseBackup } from './backup'
 import {
   BRAND_MODES, ROLES, endFor, isIdentityMode, loadEnd, loadIdentity, markFor, newProfile, profileLabel, readCrest, saveEnd, saveIdentity,
   type BrandMode, type EndCard, type IdentityStore, type Profile,
@@ -135,7 +135,7 @@ export default function App() {
     setVoptsState(loadVopts())
     try {
       setBrandState(localStorage.getItem('pizarra.marca') ?? 'TacticalPro')
-      setBrandModeState((localStorage.getItem('pizarra.marca.tipo') as BrandMode) || 'logo')
+      setBrandModeState((localStorage.getItem('pizarra.marca.tipo') as BrandMode) || 'text')
       setZones(localStorage.getItem('pizarra.zonas') === '1')
     } catch { /* sin almacenamiento */ }
   }
@@ -277,8 +277,8 @@ export default function App() {
   // Marca de agua (por defecto TacticalPro); vacía = sin marca.
   const [brand, setBrandState] = useState(() => { try { return localStorage.getItem('pizarra.marca') ?? 'TacticalPro' } catch { return 'TacticalPro' } })
   const setBrand = (v: string) => { setBrandState(v); try { localStorage.setItem('pizarra.marca', v) } catch { /* sin almacenamiento */ } }
-  // Tipo de marca: el logo del autor (por defecto), un texto o ninguna.
-  const [brandMode, setBrandModeState] = useState<BrandMode>(() => { try { return (localStorage.getItem('pizarra.marca.tipo') as BrandMode) || 'logo' } catch { return 'logo' } })
+  // Tipo de marca: el texto «TacticalPro» por defecto (así nadie exporta con la firma de otra persona), el logo del autor, la identidad propia o ninguna.
+  const [brandMode, setBrandModeState] = useState<BrandMode>(() => { try { return (localStorage.getItem('pizarra.marca.tipo') as BrandMode) || 'text' } catch { return 'text' } })
   const setBrandMode = (m: BrandMode) => { setBrandModeState(m); try { localStorage.setItem('pizarra.marca.tipo', m) } catch { /* sin almacenamiento */ } }
   const mark = brandMode === 'logo' ? 'logo' : brandMode === 'text' ? brand.trim() || undefined : undefined
 
@@ -1216,18 +1216,20 @@ function PlaysSheet({ board, onOpen, onClose, onSaved, onImported }: { board: Bo
   // Copia de seguridad: llevar las jugadas y «Mi identidad» a otro navegador o dispositivo con un archivo.
   const [backupMsg, setBackupMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [last, setLast] = useState(lastBackup)
   const exportBackup = async () => {
     // En iPhone y iPad la descarga directa no siempre deja el archivo a mano: se abre «Compartir» para guardarlo en Archivos.
     const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1)
     if (ios) {
-      const f = backupFile()
+      const f = backupFile(board)
       if (navigator.canShare?.({ files: [f] })) {
-        try { await navigator.share({ files: [f], title: f.name }); setBackupMsg({ ok: true, text: t('Elige «Guardar en Archivos» para conservar la copia.') }); return }
+        try { await navigator.share({ files: [f], title: f.name }); markBackupDone(); setLast(lastBackup()); setBackupMsg({ ok: true, text: t('Elige «Guardar en Archivos» para conservar la copia.') }); return }
         catch (e) { if (e instanceof DOMException && e.name === 'AbortError') return }
       }
     }
     try {
-      const f = downloadBackup()
+      const f = downloadBackup(board)
+      setLast(lastBackup())
       setBackupMsg({ ok: true, text: t('Copia guardada en tus descargas como «{f}».', { f: f.name }) })
     } catch { setBackupMsg({ ok: false, text: t('No se pudo crear la copia en este navegador.') }) }
   }
@@ -1270,7 +1272,8 @@ function PlaysSheet({ board, onOpen, onClose, onSaved, onImported }: { board: Bo
       </div>
       <section className="backup" aria-labelledby="backup-title">
         <h3 id="backup-title">{t('Copia de seguridad')}</h3>
-        <p className="muted small">{t('Guarda en un archivo tus jugadas (con sus pasos, movimientos y textos) y «Mi identidad» con tu escudo. Ábrelo en otro navegador, móvil u ordenador para recuperarlo todo. No necesitas cuenta: el archivo es tuyo.')}</p>
+        <p className="muted small">{t('Guarda en un archivo tus jugadas (con sus pasos, movimientos y textos), la pizarra que tienes abierta aunque no la hayas guardado y «Mi identidad» con tu escudo. Ábrelo en otro navegador, móvil u ordenador para recuperarlo todo. No necesitas cuenta: el archivo es tuyo.')}</p>
+        <p className={last ? 'muted small' : 'small backup-warn'}>{last ? t('Última copia: {d}.', { d: last.toLocaleDateString(lang === 'en' ? 'en-GB' : 'es') }) : t('Aún no has hecho ninguna copia en este dispositivo. Si se borran los datos del navegador, se pierden tus jugadas.')}</p>
         <div className="backup-actions">
           <button className="primary" onClick={exportBackup}>{t('Exportar copia de seguridad')}</button>
           <button onClick={() => fileRef.current?.click()}>{t('Importar copia de seguridad')}</button>

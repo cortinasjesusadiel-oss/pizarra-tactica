@@ -1,8 +1,10 @@
 // Copia de seguridad: un archivo con todo lo que el usuario ha creado en este dispositivo,
 // para llevarlo a otro navegador, móvil u ordenador sin cuentas ni servidores.
-// Incluye las jugadas guardadas (con sus pasos, movimientos y textos), «Mi identidad» con el escudo,
+// Incluye las jugadas guardadas (con sus pasos, movimientos y textos), la pizarra que está abierta aunque no se haya
+// guardado, «Mi identidad» con el escudo,
 // el mensaje final de los vídeos y las preferencias de marca, fichas, ritmo y vídeo.
 
+import type { Board } from './model'
 import type { SavedPlay } from './storage'
 import { DEFAULT_END, type EndCard, type IdentityStore, type Profile } from './identity'
 import { t } from './i18n'
@@ -10,6 +12,9 @@ import { t } from './i18n'
 const PLAYS = 'pizarra.jugadas.v1'
 const IDENTITY = 'pizarra.identidad.v1'
 const END = 'pizarra.mensaje.v1'
+const LAST = 'pizarra.ultima.v1'
+// Cuándo se hizo la última copia en este dispositivo, para recordárselo al usuario.
+export const LAST_BACKUP = 'pizarra.copia.ultima'
 // Preferencias que se copian tal cual. Al importar solo se rellenan si en este dispositivo no hay ninguna.
 const SETTINGS = ['pizarra.marca', 'pizarra.marca.tipo', 'pizarra.fichas', 'pizarra.ritmo', 'pizarra.video', 'pizarra.zonas', 'pizarra.letrero', 'pizarra.cierre']
 
@@ -19,12 +24,14 @@ export interface Backup {
   version: 1
   created: string
   plays: SavedPlay[]
+  // La pizarra abierta en el momento de la copia (si tiene algo y no está ya entre las guardadas).
+  current?: Board | null
   identity: IdentityStore
   end: EndCard | null
   settings: Record<string, string>
 }
 
-export interface ImportResult { plays: number; playsSkipped: number; profiles: number; profilesSkipped: number; end: boolean }
+export interface ImportResult { plays: number; playsSkipped: number; profiles: number; profilesSkipped: number; end: boolean; current: boolean }
 
 function get<T>(key: string, fallback: T): T {
   try { const raw = localStorage.getItem(key); return raw ? (JSON.parse(raw) as T) : fallback } catch { return fallback }
@@ -36,7 +43,13 @@ function put(key: string, v: unknown) {
   }
 }
 
-export function makeBackup(): Backup {
+const hasContent = (b: Board | null | undefined): b is Board => !!b && (b.tokens.length > 0 || b.drawings.length > 0)
+const sameContent = (a: Board, b: Board) => JSON.stringify(a) === JSON.stringify(b)
+
+export function makeBackup(open?: Board | null): Backup {
+  const plays = get<SavedPlay[]>(PLAYS, [])
+  const cur = open ?? get<Board | null>(LAST, null)
+  const current = hasContent(cur) && !plays.some((p) => sameContent(p.board, cur)) ? cur : null
   const settings: Record<string, string> = {}
   for (const k of SETTINGS) { try { const v = localStorage.getItem(k); if (v !== null) settings[k] = v } catch { /* sin almacenamiento */ } }
   return {
@@ -44,7 +57,8 @@ export function makeBackup(): Backup {
     kind: 'copia-de-seguridad',
     version: 1,
     created: new Date().toISOString(),
-    plays: get<SavedPlay[]>(PLAYS, []),
+    plays,
+    current,
     identity: get<IdentityStore>(IDENTITY, { profiles: [], active: null }),
     end: get<EndCard | null>(END, null),
     settings,
@@ -53,13 +67,18 @@ export function makeBackup(): Backup {
 
 export const backupName = () => `TacticalPro-copia-${new Date().toISOString().slice(0, 10)}.json`
 
-export function backupFile(): File {
-  return new File([JSON.stringify(makeBackup())], backupName(), { type: 'application/json' })
+export function backupFile(open?: Board | null): File {
+  return new File([JSON.stringify(makeBackup(open))], backupName(), { type: 'application/json' })
+}
+
+export function markBackupDone() { try { localStorage.setItem(LAST_BACKUP, new Date().toISOString()) } catch { /* sin almacenamiento */ } }
+export function lastBackup(): Date | null {
+  try { const v = localStorage.getItem(LAST_BACKUP); const d = v ? new Date(v) : null; return d && !isNaN(+d) ? d : null } catch { return null }
 }
 
 // Descarga el archivo. En el móvil queda en «Descargas»; en el ordenador, en la carpeta de descargas del navegador.
-export function downloadBackup() {
-  const f = backupFile()
+export function downloadBackup(open?: Board | null) {
+  const f = backupFile(open)
   const url = URL.createObjectURL(f)
   const a = document.createElement('a')
   a.href = url
@@ -68,6 +87,7 @@ export function downloadBackup() {
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 10_000)
+  markBackupDone()
   return f
 }
 
@@ -83,16 +103,20 @@ export function parseBackup(text: string): Backup {
   return {
     app: 'TacticalPro', kind: 'copia-de-seguridad', version: 1, created: String(b.created ?? ''),
     plays,
+    current: isBoard(b.current) ? b.current : null,
     identity: { profiles, active: typeof b.identity?.active === 'string' ? b.identity.active : null },
     end: b.end && typeof b.end === 'object' ? { ...DEFAULT_END, ...b.end } : null,
     settings: b.settings && typeof b.settings === 'object' ? b.settings : {},
   }
 }
 
+function isBoard(b: unknown): b is Board {
+  const x = b as Board
+  return !!x && typeof x === 'object' && Array.isArray(x.tokens) && Array.isArray(x.drawings) && typeof x.pitch === 'string'
+}
 function isPlay(p: unknown): p is SavedPlay {
   const x = p as SavedPlay
-  return !!x && typeof x.id === 'string' && typeof x.name === 'string' && !!x.board &&
-    Array.isArray(x.board.tokens) && Array.isArray(x.board.drawings) && typeof x.board.pitch === 'string'
+  return !!x && typeof x.id === 'string' && typeof x.name === 'string' && isBoard(x.board)
 }
 function isProfile(p: unknown): p is Profile {
   const x = p as Profile
@@ -106,13 +130,23 @@ const endIsBlank = (e: EndCard | null) => !e || (!e.on && !e.phrase.trim())
 
 // Añade lo de la copia a lo que ya hay: nunca borra ni cambia nada existente y no repite lo que ya está.
 export function importBackup(b: Backup): ImportResult {
-  const r: ImportResult = { plays: 0, playsSkipped: 0, profiles: 0, profilesSkipped: 0, end: false }
+  const r: ImportResult = { plays: 0, playsSkipped: 0, profiles: 0, profilesSkipped: 0, end: false, current: false }
 
   const plays = get<SavedPlay[]>(PLAYS, [])
   for (const p of b.plays) {
     if (plays.some((q) => q.id === p.id || sameBoard(q, p))) { r.playsSkipped++; continue }
     plays.push(p)
     r.plays++
+  }
+  // La pizarra que estaba abierta se guarda como una jugada más, para no pisar la que está abierta aquí.
+  if (hasContent(b.current)) {
+    const cur = b.current
+    if (!plays.some((q) => sameContent(q.board, cur))) {
+      const day = b.created ? new Date(b.created) : new Date()
+      const when = isNaN(+day) ? '' : ` (${day.toLocaleDateString('es')})`
+      plays.push({ id: `copia-${Date.now().toString(36)}`, name: t('Pizarra abierta') + when, updated: Date.now(), board: cur })
+      r.current = true
+    }
   }
 
   const id = get<IdentityStore>(IDENTITY, { profiles: [], active: null })
@@ -162,9 +196,10 @@ export function importBackup(b: Backup): ImportResult {
 export function describeImport(r: ImportResult) {
   const skipped = r.playsSkipped + r.profilesSkipped
   const same = skipped === 1 ? t('Había 1 elemento que ya tenías y no se ha duplicado.') : t('Había {n} elementos que ya tenías y no se han duplicado.', { n: skipped })
-  if (!r.plays && !r.profiles && !r.end) return skipped ? t('No había nada nuevo en la copia.') + ' ' + same : t('La copia está vacía.')
+  if (!r.plays && !r.profiles && !r.end && !r.current) return skipped ? t('No había nada nuevo en la copia.') + ' ' + same : t('La copia está vacía.')
   const parts: string[] = []
   if (r.plays) parts.push(r.plays === 1 ? t('1 jugada nueva') : t('{n} jugadas nuevas', { n: r.plays }))
+  if (r.current) parts.push(t('la pizarra que tenías abierta'))
   if (r.profiles) parts.push(r.profiles === 1 ? t('1 perfil de Mi identidad') : t('{n} perfiles de Mi identidad', { n: r.profiles }))
   if (r.end && !parts.length) parts.push(t('el mensaje final de los vídeos'))
   return t('Copia importada: {x}.', { x: parts.join(t(' y ')) }) + (skipped ? ' ' + same : '')
