@@ -258,12 +258,24 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK }: { t
       </g>
     )
   if (t.kind !== 'player') {
-    const er = equipmentRadius(t.kind, r)
+    const size = t.size ?? 1
+    const er = equipmentRadius(t.kind, r, size)
+    // Tirador para girar y cambiar el tamaño: va "delante" del objeto, en la dirección de su giro.
+    const rot = t.rot ?? 0
+    const hd = er + Math.max(1.4, r * 0.9)
+    const hx = Math.sin((rot * Math.PI) / 180) * hd, hy = -Math.cos((rot * Math.PI) / 180) * hd
     return (
       <g data-token={t.id} transform={`translate(${t.x} ${t.y})`} className="token">
         <circle r={er} fill="transparent" />
-        <Equipment kind={t.kind} r={r} rot={t.rot ?? 0} upright={upright} />
+        <Equipment kind={t.kind} r={r} rot={rot} upright={upright} size={size} />
         {selected && <circle r={er} fill="none" stroke="#fff" strokeWidth={0.2} strokeDasharray="0.6 0.4" />}
+        {selected && (
+          <g data-rotate={t.id} className="rot-handle">
+            <line x1={0} y1={0} x2={hx} y2={hy} stroke="#fff" strokeWidth={0.12} strokeDasharray="0.4 0.3" opacity={0.8} />
+            <circle cx={hx} cy={hy} r={Math.max(2.2, r * 1.2)} fill="transparent" />
+            <circle cx={hx} cy={hy} r={Math.max(0.75, r * 0.45)} fill="#4FD18B" stroke="#fff" strokeWidth={0.18} />
+          </g>
+        )}
       </g>
     )
   }
@@ -310,17 +322,18 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK }: { t
 // Material de entrenamiento: imágenes 3D realistas vistas desde arriba en perspectiva (ver material.ts).
 // El objeto no se gira como un dibujo plano: se elige la imagen hecha para ese giro, así la luz y la sombra
 // siguen siendo creíbles. `rot` es el giro de la ficha y `upright` indica que el campo está en vertical.
-export function Equipment({ kind, r, rot = 0, upright = false }: { kind: Token['kind']; r: number; rot?: number; upright?: boolean }) {
+export function Equipment({ kind, r, rot = 0, upright = false, size = 1 }: { kind: Token['kind']; r: number; rot?: number; upright?: boolean; size?: number }) {
   const art = useArt()
   const screen = rot + (upright ? 90 : 0)
-  const key = artKey(kind, screen)
-  const a = art && key ? art[key] : null
+  const pick = artKey(kind, screen)
+  const a = art && pick ? art[pick.key] : null
   if (!a) return null
   const base = art![`${kind}_0`] ?? a
   const k = Math.max(1, r / 1.1)
-  const m = ((SHOW[kind] ?? 2) / Math.max(base.w, base.h)) * (kind === 'goal' ? 1 : k)
+  const m = ((SHOW[kind] ?? 2) / Math.max(base.w, base.h)) * (kind === 'goal' ? 1 : k) * size
+  const tr = [upright ? 'rotate(-90)' : '', pick!.rest ? `rotate(${pick!.rest.toFixed(2)})` : ''].join(' ').trim()
   return (
-    <g transform={upright ? 'rotate(-90)' : undefined}>
+    <g transform={tr || undefined}>
       <image href={a.u} x={-a.x * m} y={-a.y * m} width={a.w * m} height={a.h * m} preserveAspectRatio="none" />
     </g>
   )

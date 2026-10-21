@@ -40,6 +40,7 @@ type Action =
   | { kind: 'draw'; drawing: Drawing; raw?: Pt[] }
   | { kind: 'erase' }
   | { kind: 'moveText'; id: string; dx: number; dy: number; edit?: Drawing }
+  | { kind: 'rotate'; id: string; c: Pt; d0: number; size0: number }
   | { kind: 'none' }
 
 // Letrero que se está escribiendo o editando, con su estilo.
@@ -491,6 +492,19 @@ export default function App() {
     if (isPen && !penSeen) setPenSeen(true)
     if (playing || anim !== null) stopAnim()
     const p = toBoard(e)
+    // Tirador del material seleccionado: girarlo y cambiar su tamaño.
+    const rotId = (e.target as Element).closest('[data-rotate]')?.getAttribute('data-rotate')
+    const rt = rotId ? board.tokens.find((x) => x.id === rotId) : undefined
+    if (rt) {
+      const c = posAt(board, rt, cur)
+      pointer.current = e.pointerId
+      try { svg.current?.setPointerCapture(e.pointerId) } catch { /* puntero ya liberado */ }
+      past.current.push(board)
+      future.current = []
+      startSnap.current = JSON.stringify(board)
+      action.current = { kind: 'rotate', id: rt.id, c, d0: Math.max(0.5, Math.hypot(p[0] - c[0], p[1] - c[1])), size0: rt.size ?? 1 }
+      return
+    }
     let tokenId = (e.target as Element).closest('[data-token]')?.getAttribute('data-token') ?? null
     // Con el dedo, en el móvil las fichas se ven pequeñas: se coge la ficha más cercana a unos 18 px del toque.
     if (!tokenId && e.pointerType === 'touch') {
@@ -592,6 +606,16 @@ export default function App() {
       setLive(a.drawing)
     } else if (a.kind === 'erase') {
       eraseAt(e.clientX, e.clientY, e.pointerType === 'touch')
+    } else if (a.kind === 'rotate') {
+      const [x, y] = toBoard(e)
+      const dx = x - a.c[0], dy = y - a.c[1]
+      let ang = (Math.atan2(dx, -dy) * 180) / Math.PI
+      ang = ((ang % 360) + 360) % 360
+      // Se queda fijo en los ángulos rectos y a 45° si pasas cerca; si no, va de 5 en 5 grados.
+      const near45 = Math.round(ang / 45) * 45
+      ang = Math.abs(ang - near45) < 4 ? near45 % 360 : Math.round(ang / 5) * 5 % 360
+      const size = +Math.max(0.4, Math.min(3, (a.size0 * Math.hypot(dx, dy)) / a.d0)).toFixed(2)
+      setBoard((b) => ({ ...b, tokens: b.tokens.map((t) => (t.id === a.id ? { ...t, rot: ang, size } : t)) }))
     } else if (a.kind === 'moveText') {
       const [x, y] = toBoard(e)
       const pt: Pt = [x + a.dx, y + a.dy]
@@ -817,9 +841,11 @@ export default function App() {
               </div>
             </>
           )}
-          {sel.kind !== 'player' && sel.kind !== 'ball' && (
+          {sel.kind !== 'player' && sel.kind !== 'ball' && (<>
             <button onClick={() => updateSel({ rot: ((sel.rot ?? 0) + 45) % 360 })}>{t('Girar 45°')}</button>
-          )}
+            <button onClick={() => updateSel({ size: Math.max(0.4, +((sel.size ?? 1) - 0.2).toFixed(2)) })} aria-label={t('Más pequeño')} title={t('Más pequeño')}>−</button>
+            <button onClick={() => updateSel({ size: Math.min(3, +((sel.size ?? 1) + 0.2).toFixed(2)) })} aria-label={t('Más grande')} title={t('Más grande')}>+</button>
+          </>)}
           <button className="danger" onClick={removeSelected}>{t('Eliminar')}</button>
         </div>
       )}
@@ -977,7 +1003,7 @@ export default function App() {
               </button>
             ))}
           </div>
-          <p className="muted small">{t('Toca un elemento para ponerlo en el centro del campo. Luego arrástralo y usa “Girar 45°” para orientarlo.')}</p>
+          <p className="muted small">{t('Toca un elemento para ponerlo en el centro del campo. Luego arrástralo; con el tirador verde lo giras en cualquier dirección y lo agrandas o achicas.')}</p>
         </Sheet>
       )}
       {sheet === 'sessions' && (

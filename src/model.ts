@@ -42,6 +42,8 @@ export interface Token {
   x: number
   y: number
   rot?: number
+  // Solo el material: tamaño respecto al normal (1 = normal).
+  size?: number
 }
 
 // Aspecto de las fichas, elegido por el usuario y común a todas las pizarras.
