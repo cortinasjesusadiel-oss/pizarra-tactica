@@ -1194,9 +1194,12 @@ export default function App() {
               {cap.fade < 0.5 && <span aria-hidden="true" style={{ opacity: 1 - cap.fade * 2 }}><b>{t('Paso')}{' '}{cap.prev + 1}/{nFrames}</b> {tr(frames[cap.prev].note)}</span>}
             </div>
           )}
-          <svg viewBox={`${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`} className="present-board">
+          {/* Se proyecta con la misma orientación que se ve en la pizarra. */}
+          <svg viewBox={vertical ? `${-PAD} ${-PAD} ${H + 2 * PAD} ${W + 2 * PAD}` : `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`} className="present-board">
             <Markers />
-            <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} ident={ident} look={look} />
+            <g transform={vertical ? `translate(${H} 0) rotate(90)` : undefined}>
+              <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} ident={ident} look={look} upright={vertical} />
+            </g>
           </svg>
           {frames && <button className="present-zone left" onClick={prevStep} aria-label={t('Paso anterior')} />}
           {frames && <button className="present-zone right" onClick={nextStep} aria-label={t('Paso siguiente')} />}

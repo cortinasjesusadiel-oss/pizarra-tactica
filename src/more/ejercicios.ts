@@ -276,7 +276,32 @@ const penaltiRechace: Template = {
   },
 }
 
+// Idea de Jesús Cortinas: conducción en zigzag entre picas, pase al 10, salto de valla sin balón y remate de primera.
+const zigzagValla: Template = {
+  id: 'ej2-zigzag-valla-remate', group: 'Ejercicios', animated: true, name: t('Conducción en zigzag, pase, valla y remate'),
+  build: () => {
+    const W: Pt[] = [[12, 17.6], [16, 22.4], [20, 17.6], [24, 22.4], [27.5, 20]]
+    const ahead = ([x, y]: Pt, dy = 0): Pt => [x + 0.9, y + dy]
+    const c = {
+      a: player('home', '8', 8, 20), m: player('home', '10', 30, 29.5), gk: player('away', '1', 51.8, 34),
+      b: ballAt(8.9, 20.3),
+    }
+    return animate('half', c, [
+      { note: t('El 8 sale conduciendo en zigzag entre las picas: balón pegado al pie, tocando con el interior y el exterior.'), draw: [line('dribble', [[8, 20], ...W])] },
+      { note: t('Primera pica por la izquierda. Toques cortos y el cuerpo bajo para cambiar de dirección.'), move: { a: W[0], b: ahead(W[0], 0.4) }, draw: [line('dribble', W)] },
+      { note: t('Segunda pica por la derecha. La mirada alterna entre el balón y lo que hay delante.'), move: { a: W[1], b: ahead(W[1], -0.4) }, draw: [line('dribble', W.slice(1))] },
+      { note: t('Tercera pica. Cuanto más rápido, más cortos los toques.'), move: { a: W[2], b: ahead(W[2], 0.4) }, draw: [line('dribble', W.slice(2))] },
+      { note: t('Última pica: sale de la conducción orientado hacia la valla.'), move: { a: W[3], b: ahead(W[3], -0.4) }, draw: [line('dribble', W.slice(3))] },
+      { note: t('Antes de llegar a la valla levanta la cabeza y pasa al 10.'), move: { a: W[4], b: ahead(W[4]) }, draw: [line('pass', [[28.4, 20], [30.8, 28.8]])] },
+      { note: t('Ya sin balón, el 8 salta la valla y acelera hacia el área.'), move: { b: [30.8, 28.8] }, draw: [line('run', [[27.5, 20], [31, 20], [35, 20.5]])] },
+      { note: t('El 10 mete el pase al espacio, por delante del 8, para que llegue lanzado.'), move: { a: [35, 20.5] }, draw: [line('pass', [[30.8, 28.8], [41.6, 26.6]]), line('run', [[35, 20.5], [40.7, 26]])] },
+      { note: t('El 8 remata de primera, sin controlar, buscando el palo largo.'), move: { a: [40.7, 26], b: [41.6, 26.6], gk: [51.6, 32.6] }, draw: [line('shot', [[41.6, 26.6], [52.3, 37.2]])] },
+      { note: t('Gol. Vuelve trotando y sale el siguiente. Cambia de pierna en cada serie.'), move: { b: [52.3, 37.2] } },
+    ], [coneAt(8, 17), item('pole', 12, 20), item('pole', 16, 20), item('pole', 20, 20), item('pole', 24, 20), item('hurdle', 31, 20, 90)])
+  },
+}
+
 export const EJERCICIOS: Template[] = [
   rondoTransicion, posicionOrientacion, dosContraUno, paredRuptura, centrosOleadas, circuitoY, contra4c3, carriles7c7, presion5c5,
-  cornerCorto, cornerPeinada, faltaLateralZona, bandaEnsayada, penaltiRechace,
+  cornerCorto, cornerPeinada, faltaLateralZona, bandaEnsayada, penaltiRechace, zigzagValla,
 ]
