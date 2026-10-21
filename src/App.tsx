@@ -311,7 +311,7 @@ export default function App() {
     } catch { /* sin almacenamiento */ }
     return next
   })
-  const exportOpts: ExportOpts = useMemo(() => ({ zones, brand: mark, look, pace, ...vopts, ident, end: endView }), [zones, mark, look, pace, vopts, ident, endView])
+  const exportOpts: ExportOpts = useMemo(() => ({ zones, brand: mark, look, pace, ...vopts, ident, end: endView, vertical }), [zones, mark, look, pace, vopts, ident, endView, vertical])
   const runExport = async (items: { name: string; board: Board }[], image = false) => {
     if (video !== null || !items.length) return
     stopAnim()
@@ -1673,7 +1673,7 @@ function Preview({ board, opts, vopts, setVopts, end, setEnd, brandMode, setBran
   const fmt = (x: number) => `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, '0')}`
   return (
     <div className="preview" role="dialog" aria-label={t('Vista previa del vídeo')}>
-      <div className="preview-frame"><canvas ref={canvas} width={1280} height={720} /></div>
+      <div className={`preview-frame${opts.vertical ? ' vertical' : ''}`}><canvas ref={canvas} width={1280} height={720} /></div>
       <div className="preview-bar">
         <button className="primary" onClick={toggle}>{paused ? t('▶ Seguir') : t('❚❚ Pausa')}</button>
         <button onClick={() => seek(0)}>{t('⟲ Inicio')}</button>
@@ -1682,7 +1682,7 @@ function Preview({ board, opts, vopts, setVopts, end, setEnd, brandMode, setBran
       </div>
       <div className="preview-opts">
         <label className="pick"><input type="checkbox" checked={vopts.big} onChange={(e) => setVopts({ big: e.target.checked })} /><span>{t('Letra grande')}</span></label>
-        <label className="pick"><input type="checkbox" checked={!!vopts.full} onChange={(e) => setVopts({ full: e.target.checked })} /><span>{t('Campo a todo el ancho')}</span></label>
+        {!opts.vertical && <label className="pick"><input type="checkbox" checked={!!vopts.full} onChange={(e) => setVopts({ full: e.target.checked })} /><span>{t('Campo a todo el ancho')}</span></label>}
         <label className="pick"><input type="checkbox" checked={end.on} onChange={(e) => setEnd({ on: e.target.checked })} /><span>{t('Mensaje final')}</span></label>
         <label className="pick"><input type="checkbox" checked={vopts.outro} onChange={(e) => setVopts({ outro: e.target.checked })} /><span>{t('Cierre TacticalPro')}</span></label>
         <label className="pace">
