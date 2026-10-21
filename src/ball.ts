@@ -1,4 +1,4 @@
-// Dibujo del balón: una esfera de verdad vista desde arriba, con sus paneles curvados por la perspectiva.
+// Dibujo del balón clásico (pentágonos negros y hexágonos blancos): una esfera de verdad vista desde arriba, con sus paneles curvados por la perspectiva.
 // Los trazados se calculan una vez para una esfera de radio 1 y se escalan al tamaño del balón.
 
 type V = [number, number, number]
@@ -64,30 +64,7 @@ function hexagons(): V[][] {
   return out
 }
 
-// Cubo inflado: seis paneles grandes con costuras curvas, como los balones modernos.
-function cubePanels(): V[][] {
-  const f: V[][] = []
-  for (const ax of [0, 1, 2]) for (const s of [-1, 1]) {
-    const u = (ax + 1) % 3, w = (ax + 2) % 3
-    const corner = (a: number, b: number): V => { const v: V = [0, 0, 0]; v[ax] = s; v[u] = a; v[w] = b; return v }
-    f.push([corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, 1)])
-  }
-  return f
-}
-
-// Parche interior de cada panel del cubo (más pequeño), para los adornos de color del balón moderno.
-function cubeInner(k: number): V[][] {
-  return cubePanels().map((q) => {
-    const c = q.reduce((m, v) => [m[0] + v[0] / 4, m[1] + v[1] / 4, m[2] + v[2] / 4] as V, [0, 0, 0] as V)
-    return q.map((v) => mix(c, v, k))
-  })
-}
-
 const paths = (polys: V[][], seg?: number) => polys.map((p) => spherePath(p, seg)).filter((x): x is string => !!x)
 
 export const BALL_PENTAGONS = paths(pentagons())
 export const BALL_HEXAGONS = paths(hexagons())
-export const BALL_PANELS = paths(cubePanels(), 14)
-export const BALL_PATCHES = paths(cubeInner(0.5), 10)
-
-export type BallStyle = 'clasico' | 'verde' | 'blanco'

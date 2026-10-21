@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { BALL_HEXAGONS, BALL_PENTAGONS, type BallStyle } from './ball'
+import { BALL_HEXAGONS, BALL_PENTAGONS } from './ball'
 import { COLORS, DEFAULT_LOOK, LABEL_DEFAULT_BG, lobAt, lobControl, type Drawing, type Look, type Pt, type Token } from './model'
 
 export function Markers() {
@@ -227,22 +227,15 @@ function inkFor(hex: string): string {
   return l > 0.6 ? '#17201a' : '#ffffff'
 }
 
-// Estilo de balón (provisional, para comparar propuestas).
-let ballStyle: BallStyle = 'clasico'
-try { ballStyle = (localStorage.getItem('pizarra.balon') as BallStyle) || 'clasico' } catch { /* sin almacenamiento */ }
-
-// Balón con paneles de verdad (ver ball.ts). R es su radio.
+// Balón clásico con paneles de verdad (ver ball.ts). R es su radio.
 export function BallArt({ R }: { R: number }) {
   const w = 0.045
   return (
     <g transform={`scale(${R})`}>
       <circle r={1} fill="#fff" />
       <g clipPath="url(#ball-clip)">
-        {BALL_HEXAGONS.map((d, i) => <path key={i} d={d} fill="none" stroke={ballStyle === 'blanco' ? '#3a4046' : '#8a9096'} strokeWidth={w} strokeLinejoin="round" />)}
-        {BALL_PENTAGONS.map((d, i) => {
-          const c = ballStyle === 'verde' ? '#00995E' : ballStyle === 'blanco' ? '#c4cad0' : '#121417'
-          return <path key={i} d={d} fill={c} stroke={ballStyle === 'blanco' ? '#3a4046' : c} strokeWidth={w} strokeLinejoin="round" />
-        })}
+        {BALL_HEXAGONS.map((d, i) => <path key={i} d={d} fill="none" stroke="#8a9096" strokeWidth={w} strokeLinejoin="round" />)}
+        {BALL_PENTAGONS.map((d, i) => <path key={i} d={d} fill="#121417" stroke="#121417" strokeWidth={w} strokeLinejoin="round" />)}
       </g>
       <circle r={1} fill="url(#ball-shade)" />
       <circle r={1} fill="none" stroke="#0b0d0f" strokeWidth={0.1} />
