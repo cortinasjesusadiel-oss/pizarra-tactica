@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { MOVES_BALL, MOVES_PLAYER, STRAIGHT,
   COLORS, DEFAULT_COLOR, DEFAULT_LOOK, TEAM_COLORS, type Look, type TokenShapeKind, type TokenText, EQUIPMENT, KIND_NAME, PITCH, TOOL_NAME, ballAt, item, player, posAt, uid,
   type Board, type TokenKind, type DrawTool, type Drawing, type PitchKind, type Pt, type Team, type Token, type Tool,
   LABEL_BG_COLORS, LABEL_DEFAULT_BG, lobBend, LABEL_SIZES, LABEL_TEXT_COLORS,
 } from './model'
-import { Equipment, Markers, TokenShape } from './Shapes'
+import { Markers, TokenShape } from './Shapes'
+import { useArt } from './material'
 import { Scene } from './Scene'
 import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, paceAt, shownStep, type Pace, type Speed } from './motion'
 import { carrier, movesFromArrows } from './steps'
@@ -26,8 +27,13 @@ import type { ExportOpts, Renderer } from './exportVideo'
 import { lang, setLang, t, tr } from './i18n'
 
 const PAD = 3
-const DRAW_TOOLS: DrawTool[] = ['pass', 'lob', 'run', 'arrow', 'darrow', 'dribble', 'press', 'shot', 'line', 'dline', 'text', 'zone', 'focus', 'free']
-const TOOLS: Tool[] = ['move', ...DRAW_TOOLS, 'erase']
+// Barra de herramientas agrupada: cada grupo es un botón que despliega sus herramientas.
+const TOOL_GROUPS: { id: string; name: string; tools: DrawTool[] }[] = [
+  { id: 'pases', name: t('Pases'), tools: ['pass', 'lob', 'shot'] },
+  { id: 'mov', name: t('Movimientos'), tools: ['run', 'dribble', 'press'] },
+  { id: 'lineas', name: t('Flechas y líneas'), tools: ['arrow', 'darrow', 'line', 'dline', 'free'] },
+  { id: 'marcar', name: t('Marcar'), tools: ['text', 'zone', 'focus'] },
+]
 
 type Action =
   | { kind: 'move'; id: string; dx: number; dy: number; ball?: { id: string; ox: number; oy: number } }
@@ -63,7 +69,17 @@ export default function App() {
   const future = useRef<Board[]>([])
   const [, force] = useState(0)
 
+  const art = useArt()
   const [tool, setTool] = useState<Tool>('move')
+  // Última herramienta usada de cada grupo (es la que muestra su botón) y el menú abierto.
+  const [groupPick, setGroupPick] = useState<Record<string, DrawTool>>(() => Object.fromEntries(TOOL_GROUPS.map((g) => [g.id, g.tools[0]])))
+  const [menu, setMenu] = useState<{ id: string; rect: DOMRect } | null>(null)
+  useEffect(() => {
+    if (!menu) return
+    const close = (e: PointerEvent) => { if (!(e.target as Element).closest?.('.tool-menu, .tool-group')) setMenu(null) }
+    window.addEventListener('pointerdown', close)
+    return () => window.removeEventListener('pointerdown', close)
+  }, [menu])
   const [penTool, setPenTool] = useState<DrawTool>('pass')
   const [color, setColor] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
@@ -846,13 +862,47 @@ export default function App() {
 
       <footer className="tools">
         <div className="seg big" role="group" aria-label={t('Herramienta')}>
-          {TOOLS.map((t) => (
-            <button key={t} className={tool === t ? 'on' : ''} onClick={() => pickTool(t)} aria-pressed={tool === t}>
-              <ToolIcon t={t} />
-              <span>{TOOL_NAME[t]}</span>
-            </button>
-          ))}
+          <button className={tool === 'move' ? 'on' : ''} onClick={() => { pickTool('move'); setMenu(null) }} aria-pressed={tool === 'move'}>
+            <ToolIcon t="move" />
+            <span>{TOOL_NAME.move}</span>
+          </button>
+          {TOOL_GROUPS.map((g) => {
+            const on = g.tools.includes(tool as DrawTool)
+            const shownTool = on ? (tool as DrawTool) : groupPick[g.id]
+            return (
+              <button key={g.id} className={`tool-group${on ? ' on' : ''}${menu?.id === g.id ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={menu?.id === g.id}
+                aria-label={`${g.name}: ${TOOL_NAME[shownTool]}`}
+                onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setMenu(menu?.id === g.id ? null : { id: g.id, rect }) }}>
+                <ToolIcon t={shownTool} />
+                <span>{on ? TOOL_NAME[shownTool] : g.name} ▾</span>
+              </button>
+            )
+          })}
+          <button className={tool === 'erase' ? 'on' : ''} onClick={() => { pickTool('erase'); setMenu(null) }} aria-pressed={tool === 'erase'}>
+            <ToolIcon t="erase" />
+            <span>{TOOL_NAME.erase}</span>
+          </button>
         </div>
+        {menu && (() => {
+          const g = TOOL_GROUPS.find((x) => x.id === menu.id)!
+          // En móvil horizontal la barra va a la derecha: el menú se abre hacia la izquierda.
+          const side = menu.rect.left > window.innerWidth * 0.6 && window.innerHeight < 520
+          const style: CSSProperties = side
+            ? { right: window.innerWidth - menu.rect.left + 6, top: Math.max(8, Math.min(menu.rect.top, window.innerHeight - 52 * g.tools.length - 40)) }
+            : { left: Math.max(8, Math.min(menu.rect.left, window.innerWidth - 230)), bottom: window.innerHeight - menu.rect.top + 6 }
+          return (
+            <div className="tool-menu" role="menu" aria-label={g.name} style={style}>
+              <div className="tool-menu-title">{g.name}</div>
+              {g.tools.map((x) => (
+                <button key={x} role="menuitemradio" aria-checked={tool === x} className={tool === x ? 'on' : ''}
+                  onClick={() => { pickTool(x); setGroupPick((p) => ({ ...p, [g.id]: x })); setMenu(null) }}>
+                  <ToolIcon t={x} />
+                  <span>{TOOL_NAME[x]}</span>
+                </button>
+              ))}
+            </div>
+          )
+        })()}
         <div className="colors" role="group" aria-label={t('Color del trazo')}>
           {COLORS.map((c) => (
             <button key={c} aria-label={`Color ${c}`} className={(color ?? DEFAULT_COLOR[activeDraw]) === c ? 'on' : ''} style={{ background: c }} onClick={() => setColor(c)} />
@@ -922,10 +972,7 @@ export default function App() {
           <div className="material">
             {EQUIPMENT.map((e) => (
               <button key={e.kind} onClick={() => { addToken(e.kind); setSheet(null) }}>
-                <svg viewBox={e.kind === 'goal' ? '-4.5 -4.5 9 9' : e.kind === 'ladder' ? '-2.4 -2.4 4.8 4.8' : '-1.4 -1.4 2.8 2.8'} width="44" height="44" aria-hidden="true">
-                  <rect x="-10" y="-10" width="20" height="20" fill="var(--pitch)" />
-                  <Equipment kind={e.kind} r={1.1} />
-                </svg>
+                {art?.[`${e.kind}_0`] ? <img src={art[`${e.kind}_0`].u} width="56" height="44" alt="" style={{ objectFit: 'contain' }} /> : <span style={{ height: 44 }} />}
                 <span>{e.name}</span>
               </button>
             ))}

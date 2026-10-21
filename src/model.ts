@@ -3,16 +3,19 @@ import { t } from './i18n'
 
 export type PitchKind = 'full' | 'half' | 'grid'
 export type Team = 'home' | 'away' | 'neutral'
-export type TokenKind = 'player' | 'ball' | 'cone' | 'pole' | 'hurdle' | 'ring' | 'ladder' | 'minigoal' | 'goal' | 'mannequin' | 'flag'
+export type TokenKind = 'player' | 'ball' | 'cone' | 'disc' | 'pole' | 'hurdle' | 'ring' | 'ladder' | 'minigoal' | 'goal' | 'mannequin' | 'wall' | 'rebounder' | 'flag'
 
 // Material de entrenamiento que se puede poner en la pizarra.
 export const EQUIPMENT: { kind: TokenKind; name: string }[] = [
+  { kind: 'disc', name: t('Platillo') },
   { kind: 'cone', name: t('Cono') },
   { kind: 'pole', name: t('Pica') },
   { kind: 'hurdle', name: t('Valla') },
   { kind: 'ring', name: t('Aro') },
   { kind: 'ladder', name: t('Escalera') },
   { kind: 'mannequin', name: t('Maniquí') },
+  { kind: 'wall', name: t('Barrera') },
+  { kind: 'rebounder', name: t('Rebotador') },
   { kind: 'minigoal', name: t('Miniportería') },
   { kind: 'goal', name: t('Portería') },
   { kind: 'flag', name: t('Banderín') },

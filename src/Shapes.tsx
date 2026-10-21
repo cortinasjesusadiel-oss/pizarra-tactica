@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { artKey, equipmentRadius, SHOW, useArt } from './material'
 import { BALL_HEXAGONS, BALL_PENTAGONS } from './ball'
 import { COLORS, DEFAULT_LOOK, LABEL_DEFAULT_BG, lobAt, lobControl, type Drawing, type Look, type Pt, type Token } from './model'
 
@@ -256,14 +257,16 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK }: { t
         {selected && <circle r={r * 0.85} fill="none" stroke="#fff" strokeWidth={0.2} strokeDasharray="0.6 0.4" />}
       </g>
     )
-  if (t.kind !== 'player')
+  if (t.kind !== 'player') {
+    const er = equipmentRadius(t.kind, r)
     return (
-      <g data-token={t.id} transform={`translate(${t.x} ${t.y}) rotate(${t.rot ?? 0})`} className="token">
-        <circle r={r * 1.3} fill="transparent" />
-        <Equipment kind={t.kind} r={r} />
-        {selected && <circle r={r * 1.1} fill="none" stroke="#fff" strokeWidth={0.2} strokeDasharray="0.6 0.4" />}
+      <g data-token={t.id} transform={`translate(${t.x} ${t.y})`} className="token">
+        <circle r={er} fill="transparent" />
+        <Equipment kind={t.kind} r={r} rot={t.rot ?? 0} upright={upright} />
+        {selected && <circle r={er} fill="none" stroke="#fff" strokeWidth={0.2} strokeDasharray="0.6 0.4" />}
       </g>
     )
+  }
   const fill = t.team === 'home' ? look.home : t.team === 'away' ? look.away : '#f4f4f4'
   const ink = inkFor(fill)
   const num = look.text !== 'name' ? t.label : ''
@@ -304,35 +307,22 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK }: { t
   )
 }
 
-// Material visto desde arriba. Tamaños aproximados en metros, algo agrandados en campos grandes para que se vean.
-export function Equipment({ kind, r }: { kind: Token['kind']; r: number }) {
+// Material de entrenamiento: imágenes 3D realistas vistas desde arriba en perspectiva (ver material.ts).
+// El objeto no se gira como un dibujo plano: se elige la imagen hecha para ese giro, así la luz y la sombra
+// siguen siendo creíbles. `rot` es el giro de la ficha y `upright` indica que el campo está en vertical.
+export function Equipment({ kind, r, rot = 0, upright = false }: { kind: Token['kind']; r: number; rot?: number; upright?: boolean }) {
+  const art = useArt()
+  const screen = rot + (upright ? 90 : 0)
+  const key = artKey(kind, screen)
+  const a = art && key ? art[key] : null
+  if (!a) return null
+  const base = art![`${kind}_0`] ?? a
   const k = Math.max(1, r / 1.1)
-  const dark = 'rgba(0,0,0,.45)'
-  switch (kind) {
-    case 'cone':
-      return <path d={`M0 ${-r * 0.6} L${r * 0.5} ${r * 0.4} L${-r * 0.5} ${r * 0.4} z`} fill="#ff9f1c" stroke={dark} strokeWidth={0.08} />
-    case 'pole':
-      return <g><circle r={0.35 * k} fill="#ffd23f" stroke={dark} strokeWidth={0.1} /><path d={`M0 0 L${0.9 * k} ${-0.5 * k} L0 ${-0.9 * k} z`} fill="#ff6b5e" /></g>
-    case 'flag':
-      return <g><circle r={0.2 * k} fill="#fff" /><path d={`M0 0 L0 ${-1.2 * k} L${0.9 * k} ${-0.9 * k} L0 ${-0.6 * k}`} fill="#ff6b5e" stroke="#fff" strokeWidth={0.08} /></g>
-    case 'hurdle':
-      return <g><rect x={-0.6 * k} y={-0.12 * k} width={1.2 * k} height={0.24 * k} rx={0.08} fill="#ff9f1c" stroke={dark} strokeWidth={0.06} /><rect x={-0.7 * k} y={-0.25 * k} width={0.18 * k} height={0.5 * k} fill="#fff" /><rect x={0.52 * k} y={-0.25 * k} width={0.18 * k} height={0.5 * k} fill="#fff" /></g>
-    case 'ring':
-      return <circle r={0.4 * k} fill="none" stroke="#5bb6ff" strokeWidth={0.14 * k} />
-    case 'ladder':
-      return (
-        <g fill="none" stroke="#ffd23f" strokeWidth={0.1 * k}>
-          <rect x={-2 * k} y={-0.25 * k} width={4 * k} height={0.5 * k} />
-          {[-1.5, -1, -0.5, 0, 0.5, 1, 1.5].map((x) => <line key={x} x1={x * k} y1={-0.25 * k} x2={x * k} y2={0.25 * k} />)}
-        </g>
-      )
-    case 'mannequin':
-      return <g><ellipse rx={0.55 * k} ry={0.32 * k} fill="#7c8a99" stroke={dark} strokeWidth={0.08} /><circle r={0.22 * k} fill="#c7d0da" /></g>
-    case 'minigoal':
-      return <path d={`M${-1 * k} ${0.5 * k} L${-1 * k} ${-0.5 * k} L${1 * k} ${-0.5 * k} L${1 * k} ${0.5 * k}`} fill="rgba(255,255,255,.25)" stroke="#fff" strokeWidth={0.18 * k} strokeLinejoin="round" />
-    case 'goal':
-      return <path d="M-3.66 1 L-3.66 -1 L3.66 -1 L3.66 1" fill="rgba(255,255,255,.25)" stroke="#fff" strokeWidth={0.3} strokeLinejoin="round" />
-    default:
-      return null
-  }
+  const m = ((SHOW[kind] ?? 2) / Math.max(base.w, base.h)) * (kind === 'goal' ? 1 : k)
+  return (
+    <g transform={upright ? 'rotate(-90)' : undefined}>
+      <image href={a.u} x={-a.x * m} y={-a.y * m} width={a.w * m} height={a.h * m} preserveAspectRatio="none" />
+    </g>
+  )
 }
+
