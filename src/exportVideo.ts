@@ -1,4 +1,5 @@
 import { createElement } from 'react'
+import { artReady } from './material'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer'
 import { PITCH, type Board, type Look } from './model'
@@ -122,6 +123,7 @@ export interface Renderer { canvas: HTMLCanvasElement; seconds: number; animSeco
 
 // Prepara el dibujo de cada instante del vídeo. Lo usan el exportador y la vista previa, así se ve exactamente igual.
 export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas = document.createElement('canvas')): Promise<Renderer> {
+  await artReady
   const n = board.frames?.length ?? 0
   // Texto del paso en una franja fina arriba y el campo lo más grande posible debajo.
   // Sin explicaciones en los pasos basta con una franja más fina para «PASO 2/5».
@@ -279,6 +281,7 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
 
 // Imagen PNG de una pizarra (siempre en horizontal), en el paso `s`.
 export async function exportImage(board: Board, opts: ExportOpts & { s?: number } = {}): Promise<File> {
+  await artReady
   const { w: W, h: H } = PITCH[board.pitch]
   const vbW = W + 2 * PAD, vbH = H + 2 * PAD
   const scale = 2000 / vbW

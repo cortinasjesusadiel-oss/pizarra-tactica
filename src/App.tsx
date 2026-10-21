@@ -4,7 +4,8 @@ import { MOVES_BALL, MOVES_PLAYER, STRAIGHT,
   type Board, type TokenKind, type DrawTool, type Drawing, type PitchKind, type Pt, type Team, type Token, type Tool,
   LABEL_BG_COLORS, LABEL_DEFAULT_BG, lobBend, LABEL_SIZES, LABEL_TEXT_COLORS,
 } from './model'
-import { Equipment, Markers, TokenShape } from './Shapes'
+import { Markers, TokenShape } from './Shapes'
+import { useArt } from './material'
 import { Scene } from './Scene'
 import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, paceAt, shownStep, type Pace, type Speed } from './motion'
 import { carrier, movesFromArrows } from './steps'
@@ -68,6 +69,7 @@ export default function App() {
   const future = useRef<Board[]>([])
   const [, force] = useState(0)
 
+  const art = useArt()
   const [tool, setTool] = useState<Tool>('move')
   // Última herramienta usada de cada grupo (es la que muestra su botón) y el menú abierto.
   const [groupPick, setGroupPick] = useState<Record<string, DrawTool>>(() => Object.fromEntries(TOOL_GROUPS.map((g) => [g.id, g.tools[0]])))
@@ -970,10 +972,7 @@ export default function App() {
           <div className="material">
             {EQUIPMENT.map((e) => (
               <button key={e.kind} onClick={() => { addToken(e.kind); setSheet(null) }}>
-                <svg viewBox={e.kind === 'goal' ? '-4.5 -4.5 9 9' : e.kind === 'ladder' ? '-2.4 -2.4 4.8 4.8' : e.kind === 'wall' ? '-1.7 -1.7 3.4 3.4' : '-1.4 -1.4 2.8 2.8'} width="44" height="44" aria-hidden="true">
-                  <rect x="-10" y="-10" width="20" height="20" fill="var(--pitch)" />
-                  <Equipment kind={e.kind} r={1.1} />
-                </svg>
+                {art?.[`${e.kind}_0`] ? <img src={art[`${e.kind}_0`].u} width="56" height="44" alt="" style={{ objectFit: 'contain' }} /> : <span style={{ height: 44 }} />}
                 <span>{e.name}</span>
               </button>
             ))}
