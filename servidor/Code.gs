@@ -7,6 +7,7 @@ const AVISO = 'tacticalproapp@gmail.com'
 const PAUSA_LIKE = 6 * 60 * 60     // segundos entre «Me gusta» desde el mismo navegador
 const MAX_LIKES_MINUTO = 40         // freno global contra ráfagas automáticas
 const MAX_OPINIONES_HORA = 5        // por correo
+const MAX_ANONIMAS_HORA = 30        // entre todas las opiniones sin correo
 
 function doGet(e) {
   const accion = (e && e.parameter && e.parameter.accion) || 'likes'
@@ -56,29 +57,30 @@ function guardarOpinion(d) {
   if (d.web) return { ok: true } // campo trampa para robots
   const correo = limpio(d.correo, 120).toLowerCase()
   const opinion = limpio(d.opinion, 3000)
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) return { ok: false, error: 'correo' }
+  // El correo es opcional; si se escribe, tiene que ser válido.
+  if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) return { ok: false, error: 'correo' }
   if (opinion.length < 3) return { ok: false, error: 'opinion' }
-  const probado = d.probado === 'si' ? 'Sí' : 'Todavía no'
-  const funcion = FUNCIONES.indexOf(d.funcion) >= 0 ? d.funcion : 'otra'
+  const probado = d.probado === 'si' ? 'Sí' : d.probado === 'no' ? 'Todavía no' : 'Sin indicar'
+  const funcion = FUNCIONES.indexOf(d.funcion) >= 0 ? d.funcion : 'sin indicar'
   const probador = d.probador === true
   const android = probador && d.android === true
   const correoPlay = probador ? limpio(d.correoPlay, 120).toLowerCase() : ''
   if (probador && (!android || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoPlay))) return { ok: false, error: 'probador' }
-  const novedades = d.novedades === true
+  const novedades = d.novedades === true && !!correo
   const idioma = d.idioma === 'en' ? 'en' : 'es'
 
-  const cache = CacheService.getScriptCache(), clave = 'op_' + Utilities.base64EncodeWebSafe(correo).slice(0, 200)
+  const cache = CacheService.getScriptCache(), clave = correo ? 'op_' + Utilities.base64EncodeWebSafe(correo).slice(0, 200) : 'op_anonimas'
   const veces = Number(cache.get(clave) || 0)
-  if (veces >= MAX_OPINIONES_HORA) return { ok: false, error: 'espera' }
+  if (veces >= (correo ? MAX_OPINIONES_HORA : MAX_ANONIMAS_HORA)) return { ok: false, error: 'espera' }
   cache.put(clave, String(veces + 1), 3600)
 
   const fecha = new Date()
   hoja('Opiniones', ['Fecha', 'Correo', '¿Ha probado TacticalPro?', 'Función', 'Opinión', 'Quiere ser probador Android', 'Tiene Android', 'Correo de Google Play', 'Quiere novedades', 'Idioma'])
-    .appendRow([fecha, correo, probado, funcion, opinion, probador ? 'Sí' : 'No', probador ? (android ? 'Sí' : 'No') : '', correoPlay, novedades ? 'Sí' : 'No', idioma])
+    .appendRow([fecha, correo || 'Sin correo', probado, funcion, opinion, probador ? 'Sí' : 'No', probador ? (android ? 'Sí' : 'No') : '', correoPlay, novedades ? 'Sí' : 'No', idioma])
 
   const asunto = 'TacticalPro · Nueva opinión' + (probador ? ' · voluntario Android' : '')
   const cuerpo = [
-    'Correo: ' + correo,
+    'Correo: ' + (correo || 'no lo ha dejado'),
     '¿Ha probado TacticalPro?: ' + probado,
     'Función: ' + funcion,
     '',
@@ -92,7 +94,9 @@ function guardarOpinion(d) {
     '',
     'Todas las respuestas: ' + libro().getUrl()
   ].filter(function (l, i, a) { return l !== '' || a[i - 1] !== '' }).join('\n')
-  MailApp.sendEmail({ to: AVISO, subject: asunto, body: cuerpo, replyTo: correo, name: 'TacticalPro' })
+  const aviso = { to: AVISO, subject: asunto, body: cuerpo, name: 'TacticalPro' }
+  if (correo) aviso.replyTo = correo
+  MailApp.sendEmail(aviso)
   return { ok: true }
 }
 

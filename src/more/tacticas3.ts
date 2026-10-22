@@ -30,7 +30,7 @@ const bloque541 = T('t3-bloque-bajo-541', 'Bloques', t('Bloque bajo 5-4-1: el ca
     { n: t('Pase al extremo. El carrilero (2) sale a por él: puede salir porque detrás quedan 4 defensas. El 7 baja a ayudarle y la línea se desliza hacia el balón.'), b: 'rw', m: { rw: [29, 62], h2: [24, 60], h7: [29, 56], h6: [17, 50], h4: [15, 40], h5: [15, 29], h3: [18, 16] }, pr: ['h2', 'h7'], run: ['h6', 'h4', 'h5', 'h3'] },
     { n: t('El extremo se va por fuera hacia la línea de fondo. El 2 le acompaña sin tirarse al suelo. Dentro, el 4 sigue al delantero que entra al área.'), m: { rw: [16, 63], h2: [17, 59.5], n9: [11, 40], h4: [10, 37], a10: [17, 46], h10: [21, 44], h7: [24, 57] }, run: ['h2', 'h4', 'h10', 'h7'] },
     { n: t('Centro al área. Dentro hay 4 defensas contra 2 atacantes: el 4 gana el balón de cabeza.'), b: 'h4', m: { h4: [9.5, 37] } },
-    { n: t('Despeje hacia el 9, que aguanta el balón para que el equipo salga. Con 5 atrás el carrilero puede salir sin miedo, y en el área siempre sobra un defensa.'), b: 'h9', m: { h9: [40, 40] } },
+    { n: t('Despeje hacia el 9, que aguanta el balón para que el equipo salga. Con 5 atrás el carrilero puede salir sin miedo, y en el área suele quedar un defensa de más.'), b: 'h9', m: { h9: [40, 40] } },
   ])
 
 // ---------- Presión alta ----------
@@ -153,7 +153,7 @@ const defensaUnoContraUno = T('t3-ej-defensa-1c1', 'Ejercicios', t('Defender un 
   { a: [20, 40] },
   'a', [
     { n: t('Vista defensiva. El atacante conduce hacia nuestra portería y el defensa (2) sale a su encuentro.'), d: 1 },
-    { n: t('El defensa se acerca rápido y frena al llegar, a unos 3 metros: pasos cortos y cuerpo bajo. Nunca llegar corriendo de frente, porque te regatean fácil.'), d: 1, m: { a: [25, 40], h2: [28.5, 40.5] }, pr: ['h2'] },
+    { n: t('El defensa se acerca rápido y frena al llegar, a unos 3 metros: pasos cortos y cuerpo bajo. Si llegas corriendo de frente, es más fácil que te regateen.'), d: 1, m: { a: [25, 40], h2: [28.5, 40.5] }, pr: ['h2'] },
     { n: t('Se coloca de lado (perfilado), tapando el camino hacia el centro. Así el atacante solo puede irse hacia la banda.'), d: 1, m: { a: [28, 45], h2: [30.5, 42] }, dv: [[27, 42.5]] },
     { n: t('El defensa le acompaña hacia fuera sin tirarse al suelo. Cuanto más cerca de la banda, menos ángulo de tiro tiene el atacante.'), d: 1, m: { a: [36, 56], h2: [37, 52] }, run: ['h2'] },
     { n: t('El atacante, encerrado, deja el balón un poco largo y el defensa mete el pie y roba. Se cambian los papeles. Robar vale 1 punto.'), b: 'h2', s: true, d: -1, m: { h2: [39, 57], a: [37, 60] } },

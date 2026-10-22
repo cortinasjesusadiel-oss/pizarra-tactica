@@ -45,7 +45,7 @@ const posicionOrientacion: Template = {
       { note: t('Pase al 3. Los rivales corren hacia ese lado para encerrarle contra la línea.'), move: { b: [7.6, 22.1], r1: [10, 15.5], r2: [11, 24.5], r3: [15, 11], r4: [19, 21.5] }, draw: [line('pass', [[7.6, 22.1], [17.6, 16.2]])] },
       { note: t('El 3 no se complica: pase al comodín del centro, que recibe de cara. Todos los rivales están en un lado y el otro está vacío.'), move: { b: [17.6, 16.2], cM: [18.4, 15.8], r3: [16.5, 12.6] }, draw: [line('pass', [[17.6, 16.2], [31.2, 21.7]])] },
       { note: t('Cambio de orientación: el 4 recibe solo en el lado contrario, con tiempo y espacio. Eso vale un punto.'), move: { b: [31.2, 21.7], h4: [32, 22.2], r4: [23, 21], r3: [20, 12], r2: [13, 22], r1: [13, 14] }, draw: [line('dribble', [[32, 22.2], [34.5, 18], [36, 14]])] },
-      { note: t('Los rivales tienen que cruzar todo el espacio para llegar. Si el balón cambia de lado rápido, siempre llegan tarde.'), move: { h4: [36, 14], b: [36.6, 13.3], r4: [29, 19], r3: [25, 13] } },
+      { note: t('Los rivales tienen que cruzar todo el espacio para llegar. Si el balón cambia de lado rápido, es fácil que lleguen tarde.'), move: { h4: [36, 14], b: [36.6, 13.3], r4: [29, 19], r3: [25, 13] } },
     ], GRID())
   },
 }
@@ -156,7 +156,7 @@ const carriles7c7: Template = {
       { note: t('7 contra 7 con el campo dividido en 5 carriles (marcados con conos). Regla: nunca más de 2 jugadores del mismo equipo en un carril.'), draw: [line('pass', [[12.3, 20.85], [14.5, 33.2]])] },
       { note: t('Pase al 6, en el carril central. Los rivales se juntan hacia el balón.'), move: { b: [14.5, 33.2], r4: [18.5, 32], r2: [15.5, 25], r6: [23, 40], r5: [26, 31], r7: [32, 46], r1: [14, 14], r3: [22, 19] }, draw: [line('pass', [[14.5, 33.2], [19.6, 46.2]])] },
       { note: t('Pase al 3. Casi todos los rivales están cerca del balón y el carril de la otra banda queda vacío.'), move: { b: [19.6, 46.2], r6: [22.5, 43.5], r7: [30, 50], r4: [18, 36], r5: [24, 36] }, draw: [line('pass', [[19.6, 46.2], [27.4, 60.4]])] },
-      { note: t('El 7 recibe solo en el carril de la banda. Como no hay más de 2 por carril, el equipo siempre está abierto y es fácil cambiar el juego.'), move: { b: [27.4, 60.4], r7: [33, 55], r6: [24, 49] }, draw: [line('dribble', [[28, 61], [34, 60.5], [40, 60]]), line('run', [[30, 36], [40, 44]])] },
+      { note: t('El 7 recibe solo en el carril de la banda. Como no hay más de 2 por carril, el equipo queda abierto y es más fácil cambiar el juego.'), move: { b: [27.4, 60.4], r7: [33, 55], r6: [24, 49] }, draw: [line('dribble', [[28, 61], [34, 60.5], [40, 60]]), line('run', [[30, 36], [40, 44]])] },
       { note: t('El 7 avanza conduciendo y el 10 entra en el carril de al lado para ayudarle. Allí solo hay 2 de los nuestros, así que se cumple la regla.'), move: { h7: [40, 60], b: [40.9, 60.3], h10: [40, 44], r7: [37.5, 55] } },
     ], lanes)
   },
@@ -251,7 +251,7 @@ const bandaEnsayada: Template = {
     return animate('full', c, [
       { note: t('Saque de banda en nuestro campo y el rival presiona. Jugada ensayada: el 7 se acerca y el 2, después de sacar, entra en el campo para recibir.'), draw: [line('run', [[38, 60], [34, 63.5]]), line('pass', [[30, 67.6], [33.3, 63]])] },
       { note: t('Saque al 7. Su marcador le sigue y se pega a él.'), move: { p7: [34, 63.5], b: [33.3, 63], r1: [36, 61.5] }, draw: [line('run', [[30, 68.8], [30, 65.2]]), line('pass', [[33.3, 63], [30.8, 64.7]])] },
-      { note: t('El 7 la devuelve de primeras al 2, que está libre: casi nunca se marca al que saca.'), move: { th: [30, 65.2], b: [30.8, 64.7], r1: [33.5, 61], r3: [34, 57] }, draw: [line('pass', [[30.8, 64.7], [19.2, 50.6]]), line('run', [[18, 48], [18.4, 50]])] },
+      { note: t('El 7 la devuelve de primeras al 2, que está libre: a menudo nadie marca al que saca.'), move: { th: [30, 65.2], b: [30.8, 64.7], r1: [33.5, 61], r3: [34, 57] }, draw: [line('pass', [[30.8, 64.7], [19.2, 50.6]]), line('run', [[18, 48], [18.4, 50]])] },
       { note: t('Pase hacia dentro al 4, que recibe de cara y con espacio. La presión rival se ha quedado junto a la banda.'), move: { p4: [18.4, 50], b: [19.2, 50.6] }, draw: [line('dribble', [[18.4, 50], [24, 45], [29, 41]])] },
       { note: t('Salida limpia: en 3 pases hemos pasado de estar encerrados en la banda a jugar por dentro.'), move: { p4: [29, 41], b: [29.9, 40.6], r5: [27.5, 46] } },
     ])

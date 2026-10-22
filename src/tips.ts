@@ -48,7 +48,7 @@ export const TIPS: TipGroup[] = [
       },
       {
         title: t('Un dibujo con balón y otro sin balón'),
-        text: t('Casi ningún equipo ataca y defiende con la misma forma: un 4-3-3 puede atacar en 3-2-5 y defender en 4-4-2. Define las dos estructuras y quién se mueve para pasar de una a otra.'),
+        text: t('Muchos equipos no atacan y defienden con la misma forma: un 4-3-3 puede atacar en 3-2-5 y defender en 4-4-2. Define las dos estructuras y quién se mueve para pasar de una a otra.'),
       },
       {
         title: t('Decide cómo sales desde atrás'),
@@ -89,7 +89,7 @@ export const TIPS: TipGroup[] = [
       },
       {
         title: t('Fija antes de pasar'),
-        text: t('Conduce hacia un rival hasta que te salga, y entonces suelta el pase. Si pasas antes de fijar, el defensor no se compromete y no se libera ningún compañero.'),
+        text: t('Conduce hacia un rival hasta que te salga, y entonces suelta el pase. Si pasas antes de fijar, es más difícil que el defensor se comprometa y que se libere un compañero.'),
       },
       {
         title: t('Defensa de vigilancia'),
@@ -281,7 +281,7 @@ export const TIPS: TipGroup[] = [
       },
       {
         title: t('Charlas cortas y con una idea'),
-        text: t('En el vestuario, dos o tres mensajes como mucho. Si das diez instrucciones, no se recuerda ninguna.'),
+        text: t('En el vestuario, mejor pocos mensajes, por ejemplo dos o tres. Con muchas instrucciones a la vez, es fácil que los jugadores se queden con pocas o con ninguna.'),
       },
       {
         title: t('Corrige la acción, no a la persona'),
@@ -357,7 +357,7 @@ export const TIPS: TipGroup[] = [
         text: t('Al jugador dale poco y concreto: qué hace su par, cómo ganarle y dos o tres imágenes. Los detalles largos son para el cuerpo técnico.'),
       },
       {
-        title: t('Usa siempre la misma plantilla'),
+        title: t('Usa una misma estructura en tus informes'),
         text: t('Organiza cada informe igual: ataque, defensa, transiciones, balón parado y jugadores clave. Ahorras tiempo y el cuerpo técnico sabe dónde buscar cada cosa.'),
       },
       {
@@ -427,7 +427,7 @@ export const TIPS: TipGroup[] = [
     tips: [
       {
         title: t('Un plan según el rival'),
-        text: t('Elige una o dos ideas para el partido: dónde está su punto débil y cómo frenar su arma principal. Más de tres ideas no las recuerda nadie a los diez minutos.'),
+        text: t('Elige una o dos ideas para el partido: dónde está su punto débil y cómo frenar su arma principal. Cuantas más ideas añades, más cuesta que el equipo las recuerde cuando avanza el partido.'),
       },
       {
         title: t('Revisa el plan a los 20 minutos'),
@@ -497,7 +497,7 @@ export const TIPS: TipGroup[] = [
       },
       {
         title: t('Calentamiento preventivo'),
-        text: t('Un calentamiento de unos 20 minutos con carrera, fuerza, equilibrio y saltos, como el FIFA 11+, reduce las lesiones si se hace al menos dos veces por semana. Lo importante es hacerlo siempre, no solo en pretemporada.'),
+        text: t('Un calentamiento de unos 20 minutos con carrera, fuerza, equilibrio y saltos, como el FIFA 11+, reduce las lesiones si se hace al menos dos veces por semana. Conviene mantenerlo durante toda la temporada, no solo en pretemporada.'),
         source: t('Programa FIFA 11+'),
       },
       {
@@ -521,7 +521,7 @@ export const TIPS: TipGroup[] = [
     tips: [
       {
         title: t('Rutinas antes del partido'),
-        text: t('Repetir siempre la misma secuencia (horario, calentamiento, charla) baja los nervios porque el jugador sabe qué va a pasar. Cambia la rutina lo menos posible, también en los partidos importantes.'),
+        text: t('Mantener una secuencia parecida (horario, calentamiento, charla) suele bajar los nervios porque el jugador sabe qué va a pasar. En los partidos importantes, evita cambios de rutina que no sean necesarios.'),
       },
       {
         title: t('Primera acción sencilla'),
@@ -533,7 +533,7 @@ export const TIPS: TipGroup[] = [
       },
       {
         title: t('Céntrate en lo que depende de ti'),
-        text: t('Bajo presión, pon objetivos de tarea y no de resultado: ganar duelos, presionar al perder, ofrecerse siempre. El resultado llega como consecuencia.'),
+        text: t('Bajo presión, pon objetivos de tarea y no de resultado: ganar duelos, presionar al perder, ofrecerse para recibir. Son cosas que el jugador controla, a diferencia del resultado.'),
       },
       {
         title: t('Momentos de máxima concentración'),
