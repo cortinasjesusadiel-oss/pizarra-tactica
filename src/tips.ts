@@ -71,7 +71,7 @@ export const TIPS: TipGroup[] = [
       },
       {
         title: t('Ocupa bien los espacios'),
-        text: t('No más de dos jugadores en la misma línea vertical ni más de tres en la misma horizontal. Escalonados en alturas y carriles, la movilidad y los apoyos pueden abrir una línea de pase, según la presión y la posición de compañeros y rivales.'),
+        text: t('Busca distintas alturas y carriles para ofrecer opciones de pase. Evita alinearte con compañeros cuando eso permita al rival cerrar varias opciones a la vez. La movilidad y los apoyos pueden abrir líneas de pase, según la presión y la posición de compañeros y rivales.'),
         source: t('Pep Guardiola (juego de posición)'),
       },
       {
@@ -443,7 +443,7 @@ export const TIPS: TipGroup[] = [
       },
       {
         title: t('Remontar sin descontrolarse'),
-        text: t('Si vas perdiendo, arriesga por pasos: primero más gente en el área, luego un cambio de sistema y al final todo arriba. Mientras el marcador y el tiempo lo permitan, deja dos o tres jugadores atrás para reducir el riesgo de que te cierren el partido a la contra.'),
+        text: t('Si vas perdiendo, ajusta el riesgo según el tiempo restante, la diferencia en el marcador y cómo está defendiendo el rival. Puedes adelantar posiciones, aumentar la presencia en zona de remate o modificar la organización del equipo. Coordina esos cambios y decide cómo proteger una posible pérdida según la amenaza de contraataque.'),
       },
       {
         title: t('Cambios planificados'),
