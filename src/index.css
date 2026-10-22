@@ -83,7 +83,7 @@ button.danger { color: var(--danger); }
 .anim-badge { color: var(--accent); margin-right: 8px; }
 .brand { display: inline-flex; align-items: center; gap: 6px; font-family: Montserrat, system-ui, sans-serif; font-weight: 800; font-size: 17px; letter-spacing: 0; margin-right: 4px; color: #fff; white-space: nowrap; }
 .brand span { color: var(--accent); margin-left: -6px; }
-.brand img { width: 34px; height: 25px; object-fit: contain; }
+.brand img { width: 36px; height: 29px; object-fit: contain; }
 .sep { width: 1px; align-self: stretch; background: var(--line); flex: none; }
 .chip.home { box-shadow: inset 4px 0 0 var(--home); }
 .chip.away { box-shadow: inset 4px 0 0 var(--away); }
