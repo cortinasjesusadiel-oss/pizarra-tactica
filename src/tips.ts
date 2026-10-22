@@ -71,7 +71,7 @@ export const TIPS: TipGroup[] = [
       },
       {
         title: t('Ocupa bien los espacios'),
-        text: t('No más de dos jugadores en la misma línea vertical ni más de tres en la misma horizontal. Si todos están en distintas alturas y carriles, siempre hay una línea de pase.'),
+        text: t('No más de dos jugadores en la misma línea vertical ni más de tres en la misma horizontal. Si están en distintas alturas y carriles, es mucho más fácil encontrar una línea de pase.'),
         source: t('Pep Guardiola (juego de posición)'),
       },
       {
@@ -93,7 +93,7 @@ export const TIPS: TipGroup[] = [
       },
       {
         title: t('Defensa de vigilancia'),
-        text: t('Mientras atacas, deja siempre dos o tres jugadores colocados para frenar la contra (por ejemplo, dos centrales y un pivote). Atacar bien también es estar preparado para perder el balón.'),
+        text: t('Mientras atacas, conviene dejar dos o tres jugadores colocados para frenar la contra (por ejemplo, dos centrales y un pivote). Atacar bien también es estar preparado para perder el balón.'),
       },
       {
         title: t('Pasa rápido en los últimos metros'),
@@ -396,7 +396,7 @@ export const TIPS: TipGroup[] = [
       },
       {
         title: t('Pivote (mediocentro)'),
-        text: t('Con balón, se ofrece siempre por delante de los centrales, gira y cambia la orientación del juego. Sin balón, protege la zona delante de la defensa, corta pases interiores y equilibra al equipo.'),
+        text: t('Con balón, suele ofrecerse por delante de los centrales, gira y cambia la orientación del juego. Sin balón, protege la zona delante de la defensa, corta pases interiores y equilibra al equipo.'),
       },
       {
         title: t('Interior'),
@@ -443,7 +443,7 @@ export const TIPS: TipGroup[] = [
       },
       {
         title: t('Remontar sin descontrolarse'),
-        text: t('Si vas perdiendo, arriesga por pasos: primero más gente en el área, luego un cambio de sistema y al final todo arriba. Mantén siempre dos o tres jugadores atrás para que no te cierren el partido a la contra.'),
+        text: t('Si vas perdiendo, arriesga por pasos: primero más gente en el área, luego un cambio de sistema y al final todo arriba. Mientras puedas, deja dos o tres jugadores atrás para que no te cierren el partido a la contra.'),
       },
       {
         title: t('Cambios planificados'),

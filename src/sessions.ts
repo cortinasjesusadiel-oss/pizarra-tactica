@@ -26,7 +26,7 @@ export const SESSIONS: Session[] = [
     blocks: [
       { title: t('Activación con material'), minutes: 12, template: 'anim-circuito', tips: t('Ritmo suave al principio, más rápido en la segunda vuelta.') },
       { title: t('Rondo 4 contra 2'), minutes: 12, template: 'anim-rondo', tips: t('Quien pierde el balón presiona 5 segundos antes de cambiar.') },
-      { title: t('6 contra 6 con presión de 5 segundos'), minutes: 20, template: 'anim-presion', tips: t('4 series de 4 minutos. Punto por recuperar en 5 segundos.') },
+      { title: t('6 contra 6 con presión de 5 segundos'), minutes: 20, template: 'anim-presion', tips: t('4 series de 4 minutos con 1 minuto de pausa. Punto por recuperar en 5 segundos.') },
       { title: t('Presión alta al saque de portería'), minutes: 15, template: 'anim-pressing', tips: t('Ensayar a quién salta el 9 y quién tapa cada pase.') },
       { title: t('Partido 8 contra 8'), minutes: 12, tips: t('Un gol tras robo en campo rival vale doble.') },
     ],
