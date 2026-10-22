@@ -79,11 +79,6 @@ function drawOutro(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, firma:
   ctx.globalAlpha = e(0, 0.6)
   ctx.fillStyle = '#0f1712'
   ctx.fillRect(0, 0, WIDTH, HEIGHT)
-  const glow = ctx.createRadialGradient(WIDTH / 2, HEIGHT * 0.42, 0, WIDTH / 2, HEIGHT * 0.42, 420)
-  glow.addColorStop(0, 'rgba(79,209,139,0.18)')
-  glow.addColorStop(1, 'rgba(79,209,139,0)')
-  ctx.fillStyle = glow
-  ctx.fillRect(0, 0, WIDTH, HEIGHT)
   const a = e(0.3, 1.0)
   const lw = 320 * z, lh = (lw * logo.naturalHeight) / logo.naturalWidth
   const sc = 0.92 + 0.08 * a

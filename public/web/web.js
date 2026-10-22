@@ -114,18 +114,18 @@
     var mal = function (campo, texto) { if (!fallo) { fallo = campo; msg(texto, 'bad') } if (campo.setAttribute) campo.setAttribute('aria-invalid', 'true') }
     ;[].forEach.call(f.querySelectorAll('[aria-invalid]'), function (x) { x.removeAttribute('aria-invalid') })
     var probado = (f.querySelector('input[name=probado]:checked') || {}).value
-    if (!mail.test(el('correo').value.trim())) mal(el('correo'), D.badEmail)
-    if (!probado) mal(f.querySelector('input[name=probado]'), D.badTried)
-    if (!el('funcion').value) mal(el('funcion'), D.badRole)
+    var correo = el('correo').value.trim()
+    if (correo && !mail.test(correo)) mal(el('correo'), D.badEmail)
     if (el('opinion').value.trim().length < 3) mal(el('opinion'), D.badOp)
     if (el('probador').checked) {
       if (!el('android').checked) mal(el('android'), D.badAndroid)
       if (!mail.test(el('correoPlay').value.trim())) mal(el('correoPlay'), D.badPlay)
     }
+    if (el('novedades').checked && !correo) mal(el('correo'), D.badNews)
     if (fallo) { fallo.focus(); return }
     btn.disabled = true; msg(D.sending)
     post({
-      accion: 'opinion', correo: el('correo').value.trim(), probado: probado, funcion: el('funcion').value, opinion: el('opinion').value.trim(),
+      accion: 'opinion', correo: correo, probado: probado || '', funcion: el('funcion').value, opinion: el('opinion').value.trim(),
       probador: el('probador').checked, android: el('android').checked, correoPlay: el('correoPlay').value.trim(),
       novedades: el('novedades').checked, idioma: D.lang, web: el('web').value
     }).then(function (d) {

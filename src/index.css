@@ -313,3 +313,13 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 
 /* En el móvil la barra de arriba muestra solo el símbolo del logo, así caben más botones a la vista. */
 @media (max-width: 600px) { .top .brand { font-size: 0; margin-right: 0; } }
+
+/* En ordenador y tablet las barras pasan a una segunda línea cuando no caben,
+   así ningún botón queda cortado (en el móvil se siguen deslizando de lado). */
+@media (min-width: 760px) and (min-height: 501px) {
+  .top, .tools, .animbar { flex-wrap: wrap; overflow-x: visible; }
+  .noteinput { flex: 1 0 110px; min-width: 110px; }
+}
+@media (min-width: 760px) and (max-width: 1440px) and (min-height: 501px) {
+  .animbar .pace > .muted { display: none; }
+}

@@ -81,12 +81,12 @@ const salida3 = T('t2-salida-3', 'Generar espacios', t('Salida de balón con 3: 
   { a1: [27, 27], a2: [27, 41], m1: [42, 13], m2: [38, 28], m3: [38, 40], m4: [42, 55], d1: [64, 12], d2: [66, 27], d3: [66, 41], d4: [64, 56], g: [100, 34] },
   'h1', [
     { n: t('Salida de balón desde el portero. Los dos delanteros rivales presionan a nuestros dos centrales: 2 contra 2, así es difícil salir.') },
-    { n: t('El pivote (6) baja y se mete entre los centrales, que se abren hacia las bandas. Los laterales suben. Ahora somos 3 contra 2: siempre habrá uno libre.'), m: { h6: [15, 34], h5: [11, 15], h4: [11, 53], h3: [36, 5], h2: [36, 63], a1: [20, 24], a2: [20, 44] }, run: ['h6', 'h5', 'h4', 'h3', 'h2'] },
+    { n: t('El pivote (6) baja y se mete entre los centrales, que se abren hacia las bandas. Los laterales suben. Ahora somos 3 contra 2: si nos colocamos bien, uno debería quedar libre.'), m: { h6: [15, 34], h5: [11, 15], h4: [11, 53], h3: [36, 5], h2: [36, 63], a1: [20, 24], a2: [20, 44] }, run: ['h6', 'h5', 'h4', 'h3', 'h2'] },
     { n: t('Pase al central izquierdo (5). Un delantero sale a por él y el otro se queda vigilando al central derecho. El 6 está libre en el centro.'), b: 'h5', m: { a1: [15, 19.5], a2: [18, 42] }, pr: ['a1'] },
     { n: t('El 6 recibe libre. El segundo delantero tiene que salir a por él… y deja solo al central derecho (4).'), b: 'h6', m: { a2: [18.5, 37] }, pr: ['a2'] },
     { n: t('Pase al 4, que tiene campo por delante. Nadie le presiona: puede avanzar conduciendo.'), b: 'h4' },
     { n: t('El 4 conduce y atrae a un centrocampista rival, que sale de su sitio para pararle. Al salir, deja libre a nuestro lateral.'), m: { h4: [25, 52], m4: [31, 53], m3: [36, 44] }, pr: ['m4'] },
-    { n: t('Pase al lateral (2), solo en banda. Con 3 atrás contra 2 delanteros el balón sale limpio: la clave es que el que queda libre lo vea y avance.'), b: 'h2' },
+    { n: t('Pase al lateral (2), solo en banda. Con 3 atrás contra 2 delanteros es más fácil que el balón salga limpio: la clave es que el que queda libre lo vea y avance.'), b: 'h2' },
   ])
 
 const lateralDentro = T('t2-lateral-dentro', 'Generar espacios', t('Lateral por dentro (lateral invertido)'), 'full',
@@ -115,7 +115,7 @@ const triangulo = T('t2-triangulo-banda', 'Generar espacios', t('Superioridad en
   { h6: [14, 34], h3: [18, 8], h8: [25, 19], h11: [33, 4], h10: [32, 30], h9: [40, 32], h7: [38, 60] },
   { e: [26, 10], m1: [32, 23], m2: [26, 32], d1: [38, 10], d2: [42, 25], d3: [43, 38], d4: [41, 51], g: [51, 34] },
   'h3', [
-    { n: t('En la banda tenemos 3 (lateral 3, interior 8 y extremo 11) contra 2 rivales. Colocados en triángulo, siempre hay un pase libre.') },
+    { n: t('En la banda tenemos 3 (lateral 3, interior 8 y extremo 11) contra 2 rivales. Colocados en triángulo, es más fácil que haya un pase libre.') },
     { n: t('El lateral da el pase al interior. El extremo rival sigue el balón.'), b: 'h8', m: { h8: [25, 17], e: [23, 12] } },
     { n: t('Pase al extremo, que se acerca. El lateral rival sale a por él. A la vez, el 3 corre por fuera (doblaje).'), b: 'h11', m: { h11: [32, 8], d1: [35, 11.5], h3: [28, 3] }, pr: ['d1'], run: ['h3'] },
     { n: t('Pared: el extremo devuelve el balón al espacio, a la espalda del lateral rival. El 3 llega lanzado y recibe solo cerca del área.'), b: 'h3', m: { h3: [42, 5] }, run: ['h3'] },
@@ -181,7 +181,7 @@ const centros = T('t2-defensa-centros', 'Bloques', t('Defender un centro lateral
     { n: t('El extremo rival conduce hacia la línea de fondo para centrar. Todo el equipo se mete en el área y mira al balón.') },
     { n: t('Cada uno en su sitio: el central de cerca (4) cuida el primer palo, el otro central (5) el centro de la portería, el lateral contrario (3) cierra el segundo palo y el pivote (6) se queda en el punto de penalti para el rechace o el pase atrás. El lateral (2) sale a tapar el centro.'), m: { rw: [12, 61], h2: [14, 58], h4: [6, 39], h5: [8, 32], h3: [7, 24], h6: [15, 33], h8: [19, 26], h10: [20, 45], h1: [2, 37], n9: [10, 38], ri: [18, 40], lw: [11, 17], rm: [28, 32] }, pr: ['h2'], run: ['h4', 'h5', 'h3', 'h6', 'h10'] },
     { n: t('Centro al primer palo. El central llega antes que el delantero porque miraba al balón y al rival a la vez.'), b: 'h4', m: { h4: [7, 37] } },
-    { n: t('Despeje de cabeza hacia fuera, lejos de la portería, a un compañero en banda. Nunca despejar hacia el centro del área.'), b: 'h10', m: { h10: [24, 50] } },
+    { n: t('Despeje de cabeza hacia fuera, lejos de la portería, a un compañero en banda. Evita despejar hacia el centro del área, donde el rival suele llegar a rematar.'), b: 'h10', m: { h10: [24, 50] } },
   ])
 
 const cobertura = T('t2-cobertura-permuta', 'Bloques', t('Cobertura y permuta: si un defensa sale, otro cubre'), 'full',

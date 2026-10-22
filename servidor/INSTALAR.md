@@ -16,3 +16,12 @@ Todo queda en tu cuenta de Google **tacticalproapp@gmail.com**: la hoja de cálc
 6. Pega esa URL en el chat con Claude.
 
 En la hoja verás dos pestañas: **Opiniones** (una fila por respuesta) y **Contador** (el total de «Me gusta» en la celda A2).
+
+## Actualizar el código (sin cambiar la URL)
+
+1. Abre la hoja «TacticalPro · Opiniones» → **Extensiones → Apps Script**.
+2. Borra todo el código y pega el `Code.gs` nuevo. Guarda (icono del disquete).
+3. **Implementar → Gestionar implementaciones** → en la implementación activa pulsa el **lápiz**.
+4. En **Versión** elige **Nueva versión** y pulsa **Implementar**.
+
+La URL `/exec` sigue siendo la misma, así que la web no necesita cambios.

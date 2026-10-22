@@ -132,7 +132,7 @@ export const LESSONS: Lesson[] = [
     points: [
       t('Amplitud: jugadores pegados a las bandas para estirar al rival a lo ancho.'),
       t('Profundidad: alguien que amenaza la espalda de la defensa para que no pueda adelantarse.'),
-      t('Apoyo: el que tiene el balón siempre necesita compañeros cerca para pasarla.'),
+      t('Apoyo: el que tiene el balón necesita compañeros cerca para tener opciones de pase.'),
       t('Movilidad: desmarques de apoyo (vengo a recibir) y de ruptura (me voy a la espalda) para crear espacios.'),
       t('Superioridad: buscar zonas donde hay más compañeros que rivales (2 contra 1, 3 contra 2).'),
     ],
