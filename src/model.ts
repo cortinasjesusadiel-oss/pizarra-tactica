@@ -48,7 +48,7 @@ export interface Token {
 }
 
 // Aspecto de las fichas, elegido por el usuario y común a todas las pizarras.
-export type TokenShapeKind = 'disc' | 'pro' | 'shirt' | 'player'
+export type TokenShapeKind = 'disc' | 'pro' | 'shirt'
 export type TokenText = 'number' | 'name' | 'both'
 export interface Look { shape: TokenShapeKind; text: TokenText; home: string; away: string }
 export const DEFAULT_LOOK: Look = { shape: 'pro', text: 'both', home: '#ffd23f', away: '#5bb6ff' }

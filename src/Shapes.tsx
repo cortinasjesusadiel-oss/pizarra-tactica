@@ -19,17 +19,6 @@ export function Markers() {
         <stop offset="100%" stopColor="#000" stopOpacity={0.5} />
       </radialGradient>
       <clipPath id="ball-clip"><circle r={1} /></clipPath>
-      {/* Jugador visto desde arriba: luz sobre los hombros y sombra hacia la espalda. */}
-      <radialGradient id="pl-torso" cx="62%" cy="38%" r="75%">
-        <stop offset="0%" stopColor="#fff" stopOpacity={0.4} />
-        <stop offset="50%" stopColor="#fff" stopOpacity={0} />
-        <stop offset="100%" stopColor="#000" stopOpacity={0.35} />
-      </radialGradient>
-      <radialGradient id="pl-head" cx="60%" cy="35%" r="70%">
-        <stop offset="0%" stopColor="#fff" stopOpacity={0.35} />
-        <stop offset="60%" stopColor="#fff" stopOpacity={0} />
-        <stop offset="100%" stopColor="#000" stopOpacity={0.3} />
-      </radialGradient>
       {COLORS.map((c) => (
         <marker key={c} id={`ah-${c.slice(1)}`} viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill={c} />
@@ -265,99 +254,13 @@ export function BallArt({ R }: { R: number }) {
 const SHIRT = 'M-0.42,-0.95 L-1,-0.66 L-1.08,-0.12 L-0.7,-0.02 L-0.7,0.98 L0.7,0.98 L0.7,-0.02 L1.08,-0.12 L1,-0.66 L0.42,-0.95 Q0,-0.62 -0.42,-0.95 Z'
 
 // `face`: hacia dónde mira el jugador (ángulo en radianes sobre el campo). Se marca con una pequeña punta en el borde.
-// Paso de carrera: `phase` avanza con el tiempo y `amp` (0 a 1) crece con la velocidad; quieto = 0.
-export interface Gait { phase: number; amp: number }
-
-const SKINS = ['#e9b48f', '#c98d62', '#9a6440', '#6b4428', '#f1c7a5']
-const HAIRS = ['#2a1d15', '#140f0c', '#5a3a22', '#2a1d15', '#8a6a3a']
-const hash = (s: string) => { let h = 7; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h }
-
-// Jugador de pie, de cuerpo entero, como en los gráficos de análisis de la tele: camiseta con su número,
-// pantalón, medias y botas. Corre con zancada y braceo, se inclina al acelerar y mira hacia donde va
-// (`face`, en radianes sobre el campo). El arquero lleva guantes. Los pies marcan el sitio exacto del jugador.
-function Athlete({ t, r, fill, face, gait, keeper, upright, num }: { t: Token; r: number; fill: string; face: number; gait?: Gait; keeper: boolean; upright: boolean; num: string }) {
-  const h = hash(t.id)
-  const skin = SKINS[h % SKINS.length], hair = HAIRS[(h >> 3) % HAIRS.length]
-  const amp = gait?.amp ?? 0, ph = gait?.phase ?? 0
-  const u = r * 0.9
-  const light = inkFor(fill) !== '#ffffff'
-  const shorts = light ? '#1f2a33' : '#f1f1f1'
-  const sock = fill
-  const ink = inkFor(fill)
-  // Hacia qué lado de la pantalla mira (en vertical el campo está girado).
-  const dirX = upright ? -Math.sin(face) : Math.cos(face)
-  const flip = dirX < -0.05 ? -1 : 1
-  const sw = Math.sin(ph)
-  const hip: Pt = [0, -1.12 * u], sh: Pt = [0.04 * u, -1.98 * u]
-  const leg = (k: number) => {
-    // k = 1 pierna de delante, -1 la de atrás. Rodilla algo flexionada al correr.
-    const a = k * (amp * 0.62 * sw + 0.1 * (1 - amp))
-    const knee: Pt = [hip[0] + Math.sin(a) * 0.56 * u, hip[1] + Math.cos(a) * 0.56 * u]
-    const b = a - amp * 0.35 * Math.max(0, -k * sw)
-    const foot: Pt = [knee[0] + Math.sin(b) * 0.56 * u, knee[1] + Math.cos(b) * 0.56 * u]
-    return { knee, foot }
-  }
-  const arm = (k: number) => {
-    const a = -k * (amp * 0.85 * sw + 0.22 * (1 - amp)) - 0.08
-    const elbow: Pt = [sh[0] + Math.sin(a) * 0.46 * u, sh[1] + Math.cos(a) * 0.46 * u]
-    const c = a + amp * 0.9 + 0.15
-    const hand: Pt = [elbow[0] + Math.sin(c) * 0.42 * u, elbow[1] + Math.cos(c) * 0.42 * u]
-    return { elbow, hand }
-  }
-  const drawLeg = (k: number) => {
-    const { knee, foot } = leg(k)
-    const shade = k < 0 ? 0.78 : 1
-    return (
-      <g key={`l${k}`} opacity={shade}>
-        <line x1={hip[0]} y1={hip[1]} x2={knee[0]} y2={knee[1]} stroke={skin} strokeWidth={0.27 * u} strokeLinecap="round" />
-        <line x1={knee[0]} y1={knee[1]} x2={foot[0]} y2={foot[1] - 0.06 * u} stroke={sock} strokeWidth={0.25 * u} strokeLinecap="round" />
-        <ellipse cx={foot[0] + 0.1 * u} cy={foot[1] - 0.03 * u} rx={0.2 * u} ry={0.09 * u} fill="#111" />
-      </g>
-    )
-  }
-  const drawArm = (k: number) => {
-    const { elbow, hand } = arm(k)
-    return (
-      <g key={`a${k}`} opacity={k < 0 ? 0.8 : 1}>
-        <line x1={sh[0]} y1={sh[1]} x2={elbow[0]} y2={elbow[1]} stroke={fill} strokeWidth={0.26 * u} strokeLinecap="round" />
-        <line x1={elbow[0]} y1={elbow[1]} x2={hand[0]} y2={hand[1]} stroke={keeper ? fill : skin} strokeWidth={0.19 * u} strokeLinecap="round" />
-        {keeper && <circle cx={hand[0]} cy={hand[1]} r={0.15 * u} fill="#f4f4f4" stroke="#222" strokeWidth={0.03 * u} />}
-      </g>
-    )
-  }
-  const lean = amp * 9
-  return (
-    <g transform={upright ? 'rotate(-90)' : undefined}>
-      <g>
-        <ellipse rx={0.72 * u} ry={0.2 * u} fill="#000" fillOpacity={0.32} />
-        <g transform={`scale(${flip} 1) rotate(${lean})`}>
-          {drawArm(-1)}
-          {drawLeg(-1)}
-          {drawLeg(1)}
-          <path d={`M${-0.36 * u} ${-1.3 * u} L${0.36 * u} ${-1.3 * u} L${0.4 * u} ${-0.92 * u} L${0.04 * u} ${-0.92 * u} L0 ${-1.05 * u} L${-0.04 * u} ${-0.92 * u} L${-0.4 * u} ${-0.92 * u} Z`} fill={shorts} stroke="rgba(0,0,0,.45)" strokeWidth={0.04 * u} strokeLinejoin="round" />
-          <path d={`M${-0.42 * u} ${-2.06 * u} Q0 ${-2.16 * u} ${0.46 * u} ${-2.04 * u} L${0.4 * u} ${-1.24 * u} L${-0.38 * u} ${-1.24 * u} Z`} fill={fill} stroke="rgba(0,0,0,.5)" strokeWidth={0.05 * u} strokeLinejoin="round" />
-          <path d={`M${-0.42 * u} ${-2.06 * u} Q0 ${-2.16 * u} ${0.46 * u} ${-2.04 * u} L${0.4 * u} ${-1.24 * u} L${-0.38 * u} ${-1.24 * u} Z`} fill="url(#pl-torso)" />
-          <rect x={-0.13 * u} y={-2.22 * u} width={0.26 * u} height={0.2 * u} fill={skin} />
-          <circle cx={0.06 * u} cy={-2.42 * u} r={0.29 * u} fill={skin} />
-          <path d={`M${-0.24 * u} ${-2.38 * u} A${0.3 * u} ${0.3 * u} 0 0 1 ${0.34 * u} ${-2.52 * u} Q${0.12 * u} ${-2.62 * u} ${-0.02 * u} ${-2.5 * u} Q${-0.1 * u} ${-2.4 * u} ${-0.24 * u} ${-2.3 * u} Z`} fill={hair} />
-          <circle cx={0.06 * u} cy={-2.42 * u} r={0.29 * u} fill="url(#pl-head)" />
-          {drawArm(1)}
-        </g>
-        {num && (
-          <text x={0} y={-1.62 * u} textAnchor="middle" dominantBaseline="central" fontSize={(num.length > 2 ? 0.42 : 0.56) * u} fontWeight={900} fill={ink} fontFamily="system-ui, sans-serif">{num}</text>
-        )}
-      </g>
-    </g>
-  )
-}
-
-export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK, face, gait }: { t: Token; r: number; selected: boolean; upright: boolean; look?: Look; face?: number; gait?: Gait }) {
+export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK, face }: { t: Token; r: number; selected: boolean; upright: boolean; look?: Look; face?: number }) {
   const rot = upright ? 'rotate(-90)' : undefined
   if (t.kind === 'ball')
     return (
       <g data-token={t.id} transform={`translate(${t.x} ${t.y})`} className="token">
         <circle r={r * 0.7} fill="transparent" />
-        <BallArt R={r * (look.shape === 'player' ? 0.36 : 0.55)} />
+        <BallArt R={r * 0.55} />
         {selected && <circle r={r * 0.85} fill="none" stroke="#fff" strokeWidth={0.2} strokeDasharray="0.6 0.4" />}
       </g>
     )
@@ -392,11 +295,14 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK, face,
     <g data-token={t.id} transform={`translate(${t.x} ${t.y})`} className="token">
       <circle r={r * 1.5} fill="transparent" />
       {selected && <circle r={r * 1.45} fill="none" stroke="#fff" strokeWidth={0.25} />}
-      {face !== undefined && look.shape !== 'player' && (
-        <path d={`M${r * 0.96} ${-r * 0.42} L${r * 1.42} 0 L${r * 0.96} ${r * 0.42} Z`} transform={`rotate(${(face * 180) / Math.PI})`}
-          fill={fill} stroke="rgba(0,0,0,.6)" strokeWidth={r * 0.09} strokeLinejoin="round" />
+      {/* Hacia dónde mira: un arco fino sobre un halo, como en los datos de seguimiento de la tele. */}
+      {face !== undefined && (
+        <g transform={`rotate(${(face * 180) / Math.PI})`} pointerEvents="none">
+          <circle r={r * 1.34} fill="none" stroke={fill} strokeOpacity={0.35} strokeWidth={r * 0.07} />
+          <path d={`M${Math.cos(-0.62) * r * 1.34} ${Math.sin(-0.62) * r * 1.34} A${r * 1.34} ${r * 1.34} 0 0 1 ${Math.cos(0.62) * r * 1.34} ${Math.sin(0.62) * r * 1.34}`}
+            fill="none" stroke="#fff" strokeWidth={r * 0.17} strokeLinecap="round" />
+        </g>
       )}
-      {look.shape === 'player' && <Athlete t={t} r={r} fill={fill} face={face ?? (t.team === 'away' ? Math.PI : 0)} gait={gait} keeper={t.label === '1'} upright={upright} num={num} />}
       <g transform={rot}>
         {look.shape === 'disc' && <circle r={r} fill={fill} stroke="rgba(0,0,0,.5)" strokeWidth={r * 0.12} />}
         {look.shape === 'pro' && (
@@ -413,13 +319,13 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK, face,
             <path d="M-0.42,-0.95 Q0,-0.62 0.42,-0.95" transform={`scale(${r * 1.05})`} fill="none" stroke={ink} strokeOpacity={0.5} strokeWidth={0.08} />
           </>
         )}
-        {num && look.shape !== 'player' && (
+        {num && (
           <text y={look.shape === 'shirt' ? r * 0.18 : 0} textAnchor="middle" dominantBaseline="central" fontSize={look.shape === 'shirt' ? fs * 0.95 : fs} fontWeight={800} fill={ink} fontFamily="system-ui, sans-serif">
             {num}
           </text>
         )}
         {name && (
-          <text y={r * (look.shape === 'shirt' ? 1.95 : look.shape === 'player' ? 0.85 : 1.85)} textAnchor="middle" dominantBaseline="central" fontSize={r * 0.62} fontWeight={700} fill="#fff" stroke="rgba(0,0,0,.75)" strokeWidth={r * 0.16} paintOrder="stroke" strokeLinejoin="round" fontFamily="system-ui, sans-serif">
+          <text y={r * (look.shape === 'shirt' ? 1.95 : 1.85)} textAnchor="middle" dominantBaseline="central" fontSize={r * 0.62} fontWeight={700} fill="#fff" stroke="rgba(0,0,0,.75)" strokeWidth={r * 0.16} paintOrder="stroke" strokeLinejoin="round" fontFamily="system-ui, sans-serif">
             {name}
           </text>
         )}

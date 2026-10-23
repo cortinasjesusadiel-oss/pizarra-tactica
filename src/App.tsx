@@ -9,7 +9,7 @@ import { useArt } from './material'
 import { Scene } from './Scene'
 import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, clipRate, paceAt, paceStart, sampleAt, shownStep, type Pace, type Speed } from './motion'
 import { Sim, HOLD, clipStep, holdAt, holdTotal, holdWall, keyPasses, clipToSteps, stepsToClip, withMarks, newClip, smoothTrack, trimPauses, type Clip, type ClipView, type Focus } from './clip'
-import { PERSONAL, PRO, numberPlayers } from './pro'
+import { PRO, numberPlayers } from './pro'
 import { carrier, movesFromArrows } from './steps'
 import { SESSIONS } from './sessions'
 import { TEMPLATES, emptyBoard } from './templates'
@@ -308,8 +308,8 @@ export default function App() {
   const [look, setLookState] = useState<Look>(() => {
     try {
       const l: Look = { ...DEFAULT_LOOK, ...JSON.parse(localStorage.getItem('pizarra.fichas') ?? '{}') }
-      // En tu pizarra personal, las fichas pasan a ser jugadores una sola vez (luego puedes cambiarlas en Fichas).
-      if (PERSONAL && !localStorage.getItem('pizarra.fichas.jugador')) { localStorage.setItem('pizarra.fichas.jugador', '1'); l.shape = 'player'; localStorage.setItem('pizarra.fichas', JSON.stringify(l)) }
+      // Las fichas con forma de muñeco se quitaron: quien las tuviera vuelve a la ficha pro.
+      if (!['pro', 'disc', 'shirt'].includes(l.shape)) { l.shape = 'pro'; localStorage.setItem('pizarra.fichas', JSON.stringify(l)) }
       return l
     } catch { return DEFAULT_LOOK }
   })
@@ -2100,10 +2100,10 @@ function LookSheet({ look, setLook, onClose }: { look: Look; setLook: (p: Partia
       <section>
         <h3>{t('Forma')}</h3>
         <div className="shapes">
-          {((PRO ? ['player', 'pro', 'disc', 'shirt'] : ['pro', 'disc', 'shirt']) as TokenShapeKind[]).map((sh) => (
+          {(['pro', 'disc', 'shirt'] as TokenShapeKind[]).map((sh) => (
             <button key={sh} className={look.shape === sh ? 'on' : ''} onClick={() => setLook({ shape: sh })}>
               {preview(sh)}
-              <span>{sh === 'player' ? t('Jugador') : sh === 'pro' ? t('Ficha pro') : sh === 'disc' ? t('Clásica') : t('Camiseta')}</span>
+              <span>{sh === 'pro' ? t('Ficha pro') : sh === 'disc' ? t('Clásica') : t('Camiseta')}</span>
             </button>
           ))}
         </div>
