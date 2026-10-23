@@ -8,7 +8,7 @@ import { Markers, TokenShape } from './Shapes'
 import { useArt } from './material'
 import { Scene } from './Scene'
 import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, clipRate, paceAt, paceStart, sampleAt, shownStep, type Pace, type Speed } from './motion'
-import { Sim, HOLD, clipStep, holdAt, holdTotal, holdWall, keyPasses, clipToSteps, stepsToClip, withMarks, newClip, smoothTrack, trimPauses, type Clip, type ClipView, type Focus } from './clip'
+import { Sim, HOLD, clipStep, holdAt, holdTotal, holdWall, keyPasses, readHolds, clipToSteps, stepsToClip, withMarks, newClip, smoothTrack, trimPauses, type Clip, type ClipView, type Focus } from './clip'
 import { PERSONAL, PRO, numberPlayers } from './pro'
 import { carrier, movesFromArrows } from './steps'
 import { SESSIONS } from './sessions'
@@ -287,10 +287,11 @@ export default function App() {
     setPlaying(true)
     setAnim(start)
     // Se cuenta el tiempo de reproducción (con las pausas de los momentos clave) y se pasa al de la jugada.
-    const t0 = performance.now(), rate = clipRate(pace), w0 = holdWall(clip, start), total = holdTotal(clip)
+    const t0 = performance.now(), rate = clipRate(pace), reads = readHolds(clip, (board.frames ?? []).map((f) => f.note && tr(f.note)))
+    const w0 = holdWall(clip, start, reads), total = holdTotal(clip, reads)
     const tick = (now: number) => {
       const w = w0 + ((now - t0) / 1000) * rate
-      if (w < total) { const h = holdAt(clip, w); setFocus(h.focus); setAnim(h.s); raf.current = requestAnimationFrame(tick) }
+      if (w < total) { const h = holdAt(clip, w, reads); setFocus(h.focus); setAnim(h.s); raf.current = requestAnimationFrame(tick) }
       else { animRef.current = null; setAnimState(null); setFocus(null); setClipT(clip.dur); setPlaying(false) }
     }
     raf.current = requestAnimationFrame(tick)

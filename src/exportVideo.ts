@@ -3,7 +3,7 @@ import { artReady, grassReady, kitReady } from './material'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer'
 import { PITCH, type Board, type Look } from './model'
-import { clipStep, holdAt, holdTotal } from './clip'
+import { clipStep, holdAt, holdTotal, readHolds } from './clip'
 import { DEFAULT_PACE, caption, clipRate, paceAt, paceTotal, type Pace } from './motion'
 import { Pitch } from './Pitch'
 import { Scene } from './Scene'
@@ -182,13 +182,14 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
   // Jugada grabada: dura lo grabado y se queda un momento quieta al final.
   const clip = board.clip
   const rate = clipRate(pace)
-  const animSec = clip ? holdTotal(clip) / rate + 1.2 : paceTotal(n, pace)
+  const reads = clip ? readHolds(clip, (board.frames ?? []).map((f) => f.note && tr(f.note))) : []
+  const animSec = clip ? holdTotal(clip, reads) / rate + 1.2 : paceTotal(n, pace)
   const endSec = opts.end ? endDuration(opts.end) : 0
   const seconds = animSec + endSec + (logo ? OUTRO : 0)
   let lastScene: { s: number; img: HTMLImageElement } | null = null
 
   const draw = async (sec: number) => {
-    const h = clip ? holdAt(clip, sec * rate) : null
+    const h = clip ? holdAt(clip, sec * rate, reads) : null
     const s = h ? h.s : paceAt(n, pace, Math.min(sec, animSec))
     const focus = h?.focus ?? null
     // En las pantallas finales la jugada ya no se mueve: se reutiliza la última imagen.

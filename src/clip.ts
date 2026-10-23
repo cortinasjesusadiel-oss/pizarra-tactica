@@ -27,20 +27,38 @@ export interface Clip {
 
 // Cuánto dura la pausa en cada momento clave (en segundos de jugada).
 export const HOLD = 1.8
-export const holdTotal = (c: Clip) => c.dur + (c.keys?.length ?? 0) * HOLD
+// Pausas de la reproducción en tiempo real: en cada momento clave (con foco) y al empezar cada paso,
+// lo justo para leer su nota (`reads[i]` segundos al llegar al paso i; ver readHolds).
+type Pause = { at: number; len: number; focus: boolean }
+const pauses = (c: Clip, reads: number[] = []): Pause[] => [
+  ...(c.marks ?? []).map((m, i) => ({ at: m, len: reads[i] ?? 0, focus: false })),
+  ...(c.keys ?? []).map((k) => ({ at: k, len: HOLD, focus: true })),
+].filter((p) => p.len > 0).sort((x, y) => x.at - y.at || +x.focus - +y.focus)
+export const holdTotal = (c: Clip, reads?: number[]) => c.dur + pauses(c, reads).reduce((a, p) => a + p.len, 0)
 // Instante de la jugada a los `w` segundos de reproducirla con sus pausas; `focus` dice si está en una pausa
-// (k = momento clave, a = cuánto lleva de la pausa, de 0 a 1).
-export function holdAt(c: Clip, w: number): { s: number; focus: Focus | null } {
+// de momento clave (k = momento clave, a = cuánto lleva de la pausa, de 0 a 1).
+export function holdAt(c: Clip, w: number, reads?: number[]): { s: number; focus: Focus | null } {
   let off = 0
-  for (const k of [...(c.keys ?? [])].sort((a, b) => a - b)) {
-    if (w < k + off) break
-    if (w < k + off + HOLD) return { s: k, focus: { k, a: (w - k - off) / HOLD } }
-    off += HOLD
+  for (const p of pauses(c, reads)) {
+    if (w < p.at + off) break
+    if (w < p.at + off + p.len) return { s: p.at, focus: p.focus ? { k: p.at, a: (w - p.at - off) / p.len } : null }
+    off += p.len
   }
   return { s: Math.min(c.dur, w - off), focus: null }
 }
 // Al revés: desde qué punto de la reproducción se llega al segundo `s` de la jugada (antes de su pausa).
-export const holdWall = (c: Clip, s: number) => s + (c.keys ?? []).filter((k) => k < s - 1e-3).length * HOLD
+export const holdWall = (c: Clip, s: number, reads?: number[]) => s + pauses(c, reads).filter((p) => p.at < s - 1e-3).reduce((a, p) => a + p.len, 0)
+// Cuánto se para la jugada al empezar cada paso para que dé tiempo a leer su nota: unas 3 palabras por segundo,
+// descontando lo que ya dura el paso. Siempre un respiro corto para que se note el cambio de paso.
+export function readHolds(c: Clip, notes: (string | undefined)[]): number[] {
+  const m = c.marks ?? []
+  return m.map((at, i) => {
+    const words = (notes[i] ?? '').trim().split(/\s+/).filter(Boolean).length
+    const read = words ? 1 + words / 3 : 0
+    const dur = (m[i + 1] ?? c.dur) - at
+    return Math.min(7, Math.max(0.8, read - dur))
+  })
+}
 export interface Focus { k: number; a: number }
 
 // Los pases que más hacen avanzar al equipo (y los tiros): como mucho cuatro, en orden.
