@@ -7,7 +7,9 @@ import { MOVES_BALL, MOVES_PLAYER, STRAIGHT,
 import { Markers, TokenShape } from './Shapes'
 import { useArt } from './material'
 import { Scene } from './Scene'
-import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, paceAt, shownStep, type Pace, type Speed } from './motion'
+import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, paceAt, paceStart, sampleAt, shownStep, type Pace, type Speed } from './motion'
+import { Sim, newClip, smoothTrack, type Clip, type ClipView } from './clip'
+import { PRO } from './pro'
 import { carrier, movesFromArrows } from './steps'
 import { SESSIONS } from './sessions'
 import { TEMPLATES, emptyBoard } from './templates'
@@ -116,6 +118,8 @@ export default function App() {
   const animRef = useRef<number | null>(null)
   const setAnim = (s: number | null) => { animRef.current = s; setAnimState(s) }
   const raf = useRef(0)
+  // Jugada grabada: segundo en el que está parada.
+  const [clipT, setClipT] = useState(0)
   const [video, setVideo] = useState<number | null>(null)
 
   const stage = useRef<HTMLDivElement>(null)
@@ -165,7 +169,7 @@ export default function App() {
 
   const stopAnim = useCallback(() => {
     cancelAnimationFrame(raf.current)
-    if (animRef.current !== null) setStep(Math.round(animRef.current))
+    if (animRef.current !== null) { setStep(Math.round(animRef.current)); setClipT(animRef.current) }
     animRef.current = null
     setAnimState(null)
     setPlaying(false)
@@ -240,6 +244,7 @@ export default function App() {
 
   // Reproducción de principio a fin: en cada paso las fichas se paran para leer y luego van al siguiente.
   const startPlay = (fromStart = false) => {
+    if (board.clip) { if (fromStart) setClipT(0); playClipFrom(fromStart ? 0 : null); return }
     if (nFrames < 2) return
     cancelAnimationFrame(raf.current)
     setSelected(null)
@@ -249,7 +254,7 @@ export default function App() {
     setStep(Math.floor(start))
     setAnim(start)
     // Si se reanuda a mitad, se sigue desde el inicio del paso en el que estaba.
-    const t0 = performance.now() - Math.floor(start) * pace.step * 1000
+    const t0 = performance.now() - paceStart(Math.floor(start), pace) * 1000
     const tick = (now: number) => {
       const s = Math.max(start, paceAt(nFrames, pace, (now - t0) / 1000))
       if (s < nFrames - 1) { setAnim(s); raf.current = requestAnimationFrame(tick) }
@@ -269,7 +274,26 @@ export default function App() {
 
   useEffect(() => () => cancelAnimationFrame(raf.current), [])
 
+  // Jugada grabada: se reproduce en tiempo real, de seguido.
+  const playClip = () => { if (playing) stopAnim(); else playClipFrom(null) }
+  function playClipFrom(from: number | null) {
+    const clip = board.clip
+    if (!clip) return
+    cancelAnimationFrame(raf.current)
+    setSelected(null)
+    const start = from ?? (clipT >= clip.dur - 0.05 ? 0 : clipT)
+    setPlaying(true)
+    setAnim(start)
+    const t0 = performance.now() - start * 1000
+    const tick = (now: number) => {
+      const s = (now - t0) / 1000
+      if (s < clip.dur) { setAnim(s); raf.current = requestAnimationFrame(tick) }
+      else { animRef.current = null; setAnimState(null); setClipT(clip.dur); setPlaying(false) }
+    }
+    raf.current = requestAnimationFrame(tick)
+  }
   const play = () => {
+    if (board.clip) { playClip(); return }
     // Pausa: termina de llegar al paso que estaba en camino.
     if (playing) { glide(Math.ceil((animRef.current ?? cur) - 1e-6)); return }
     startPlay()
@@ -339,7 +363,7 @@ export default function App() {
       const opts = exportOpts
       let files: File[]
       if (image) files = [await ex.exportImage(items[0].board, { ...opts, s: cur })]
-      else if (items.length === 1 && items[0].board.frames) {
+      else if (items.length === 1 && (items[0].board.frames || items[0].board.clip)) {
         const res = await ex.exportVideo(items[0].board, { ...opts, onProgress: setVideo })
         if (res === 'unsupported') { setToast(t('Este navegador no puede crear vídeo. Prueba con Chrome actualizado.')); return }
         files = [res.file]
@@ -456,6 +480,159 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [undo, redo, removeSelected])
 
+  // ── Grabar en vivo (Pro) ──
+  // Pulsas Grabar, cuenta 3-2-1 y arrastras jugadores en tiempo real (con varios dedos a la vez si quieres) mientras
+  // lo grabado antes se reproduce. Tocar a un compañero le pasa el balón; arrastrar el balón y soltarlo es un pase
+  // hacia donde lo sueltas. Cada vez que grabas se añade una capa: así se monta un rondo o una jugada completa.
+  type Drag = { id: string; dx: number; dy: number; x0: number; y0: number; at: number; moved: boolean; ball: boolean }
+  const recRef = useRef<{ sim: Sim; clip: Clip; live: Record<string, Pt>; drags: Map<number, Drag>; from: Record<string, number>; t0: number; board: Board } | null>(null)
+  const [rec, setRec] = useState<{ phase: 'count' | 'rec'; t: number } | null>(null)
+  const [recView, setRecView] = useState<ClipView | null>(null)
+  const recRaf = useRef(0)
+  const REC_MAX = 90
+  const startRec = () => {
+    stopAnim()
+    setSelected(null)
+    setLive(null)
+    let b = board
+    if (b.frames) {
+      // Se parte de cómo están las fichas en el paso que ves; los pasos se sustituyen por la grabación (se puede deshacer).
+      b = { ...b, tokens: b.tokens.map((tk) => { const p = sampleAt(b, tk, cur); return { ...tk, x: p[0], y: p[1] } }), frames: undefined }
+      commit(b)
+      setStep(0)
+      setToast(t('La grabación sustituye a los pasos. Si te equivocas, pulsa Deshacer.'))
+    }
+    const clip: Clip = b.clip ? { ...b.clip, tracks: Object.fromEntries(Object.entries(b.clip.tracks).map(([k, v]) => [k, [...v]])), passes: [...b.clip.passes] } : newClip(true)
+    const live: Record<string, Pt> = {}
+    const sim = new Sim({ ...b, clip }, clip, { live: () => live })
+    recRef.current = { sim, clip, live, drags: new Map(), from: {}, t0: 0, board: b }
+    setRecView(sim.view())
+    setRec({ phase: 'count', t: 3 })
+    const c0 = performance.now()
+    const count = (now: number) => {
+      const left = 3 - (now - c0) / 1000
+      if (left > 0) { setRec({ phase: 'count', t: left }); recRaf.current = requestAnimationFrame(count); return }
+      const r = recRef.current
+      if (!r) return
+      r.t0 = now
+      setRec({ phase: 'rec', t: 0 })
+      recRaf.current = requestAnimationFrame(tick)
+    }
+    const tick = (now: number) => {
+      const r = recRef.current
+      if (!r) return
+      const target = (now - r.t0) / 1000
+      // Una muestra por cada 1/60 s para cada ficha que se está arrastrando.
+      while (r.sim.t + 1 / 60 <= target + 1e-9) {
+        r.sim.step()
+        for (const [id, p] of Object.entries(r.live)) (r.clip.tracks[id] ??= []).push([+r.sim.t.toFixed(3), +p[0].toFixed(3), +p[1].toFixed(3)])
+      }
+      setRecView(r.sim.view())
+      setRec({ phase: 'rec', t: r.sim.t })
+      if (r.sim.t >= REC_MAX) { stopRec(); return }
+      recRaf.current = requestAnimationFrame(tick)
+    }
+    recRaf.current = requestAnimationFrame(count)
+  }
+  const stopRec = () => {
+    cancelAnimationFrame(recRaf.current)
+    const r = recRef.current
+    recRef.current = null
+    setRec(null)
+    setRecView(null)
+    setLive(null)
+    if (!r || r.t0 === 0) return
+    for (const id of Object.keys(r.from)) if (r.clip.tracks[id]) r.clip.tracks[id] = smoothTrack(r.clip.tracks[id], r.from[id])
+    const dur = Math.max(r.clip.dur, r.sim.t)
+    if (!Object.keys(r.from).length && r.clip.passes.length === (r.board.clip?.passes.length ?? 0) && !r.board.clip) return
+    commit({ ...r.board, frames: undefined, clip: { ...r.clip, dur: +dur.toFixed(3) } })
+    setClipT(0)
+    setToast(t('Grabación guardada. Pulsa ▶ Reproducir para verla o graba otra capa.'))
+  }
+  useEffect(() => () => cancelAnimationFrame(recRaf.current), [])
+  const recNearest = (p: Pt, e: React.PointerEvent, view: ClipView) => {
+    const ctm = layer.current!.getScreenCTM()!
+    const r0 = PITCH[board.pitch].r
+    const reach = Math.max(r0 * 1.5, (e.pointerType === 'touch' ? 22 : 10) / Math.hypot(ctm.a, ctm.b))
+    let best = reach, id: string | null = null
+    for (const tk of board.tokens) {
+      if (tk.kind !== 'player' && tk.kind !== 'ball') continue
+      const q = view.pos[tk.id] ?? [tk.x, tk.y]
+      // El balón tiene un poco de preferencia: está pegado a un jugador y si no costaría cogerlo.
+      const d = Math.hypot(q[0] - p[0], q[1] - p[1]) * (tk.kind === 'ball' ? 0.7 : 1)
+      if (d < best) { best = d; id = tk.id }
+    }
+    return id
+  }
+  const recDown = (e: React.PointerEvent) => {
+    const r = recRef.current
+    if (!r || !rec || rec.phase !== 'rec') return
+    const p = toBoard(e)
+    const view = r.sim.view()
+    const id = recNearest(p, e, view)
+    if (!id) return
+    try { svg.current?.setPointerCapture(e.pointerId) } catch { /* puntero ya liberado */ }
+    const q = view.pos[id]
+    const ball = board.tokens.find((tk) => tk.id === id)?.kind === 'ball'
+    r.drags.set(e.pointerId, { id, dx: q[0] - p[0], dy: q[1] - p[1], x0: p[0], y0: p[1], at: performance.now(), moved: false, ball })
+  }
+  const recMove = (e: React.PointerEvent) => {
+    const r = recRef.current
+    const d = r?.drags.get(e.pointerId)
+    if (!r || !d) return
+    const p = toBoard(e)
+    if (d.ball) {
+      setLive({ id: 'rec-pass', type: 'pass', color: '#ffffff', width: 0.3, points: [r.sim.ball, p] })
+      return
+    }
+    if (!d.moved && Math.hypot(p[0] - d.x0, p[1] - d.y0) < 0.5) return
+    const pos: Pt = [Math.max(-2, Math.min(W + 2, p[0] + d.dx)), Math.max(-2, Math.min(H + 2, p[1] + d.dy))]
+    if (!d.moved) {
+      d.moved = true
+      // Esta ficha se vuelve a grabar desde ahora: lo que tenía grabado después se quita.
+      const tr = (r.clip.tracks[d.id] ?? []).filter((x) => x[0] < r.sim.t)
+      r.clip.tracks[d.id] = tr
+      if (!(d.id in r.from)) r.from[d.id] = tr.length
+      const cur0 = r.sim.pos[d.id]
+      tr.push([+r.sim.t.toFixed(3), +cur0[0].toFixed(3), +cur0[1].toFixed(3)])
+      d.dx = cur0[0] - p[0]; d.dy = cur0[1] - p[1]
+      r.live[d.id] = cur0
+      return
+    }
+    r.live[d.id] = pos
+  }
+  const recUp = (e: React.PointerEvent) => {
+    const r = recRef.current
+    const d = r?.drags.get(e.pointerId)
+    if (!r || !d) return
+    r.drags.delete(e.pointerId)
+    const p = toBoard(e)
+    if (d.ball) {
+      setLive(null)
+      // Pase hacia donde sueltas el balón: a un compañero si lo sueltas cerca de él; si no, a ese punto.
+      let to: string | null = null, best = 4
+      for (const tk of board.tokens) {
+        if (tk.kind !== 'player' || tk.id === r.sim.holder) continue
+        const q = r.sim.pos[tk.id]
+        const dd = Math.hypot(q[0] - p[0], q[1] - p[1])
+        if (dd < best) { best = dd; to = tk.id }
+      }
+      if (to) r.sim.pass(to)
+      else if (Math.hypot(p[0] - r.sim.ball[0], p[1] - r.sim.ball[1]) > 1.5) r.sim.pass(null, p)
+      return
+    }
+    if (!d.moved) {
+      // Toque rápido sobre un jugador: pase a él.
+      if (performance.now() - d.at < 450 && d.id !== r.sim.holder) r.sim.pass(d.id)
+      return
+    }
+    const q = r.live[d.id]
+    delete r.live[d.id]
+    if (q) r.clip.tracks[d.id].push([+(r.sim.t + 0.001).toFixed(3), +q[0].toFixed(3), +q[1].toFixed(3)])
+  }
+  const clearClip = () => { stopAnim(); commit((b) => ({ ...b, clip: undefined })); setClipT(0) }
+  const toggleAuto = () => commit((b) => (b.clip ? { ...b, clip: { ...b.clip, auto: !b.clip.auto } } : b))
+
   const toBoard = (e: React.PointerEvent): Pt => {
     const m = layer.current!.getScreenCTM()!.inverse()
     const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m)
@@ -502,6 +679,7 @@ export default function App() {
   }
 
   const onDown = (e: React.PointerEvent) => {
+    if (rec) { recDown(e); return }
     if (pointer.current !== null) return
     const isPen = e.pointerType === 'pen'
     // Con el lápiz apoyado se ignora la palma de la mano.
@@ -575,6 +753,12 @@ export default function App() {
       const d = allDrawings.find((x) => x.id === labelId)
       if (d) { action.current = { kind: 'moveText', id: d.id, dx: d.points[0][0] - p[0], dy: d.points[0][1] - p[1] }; return }
     }
+    if (mode === 'move' && board.clip && tokenId && board.tokens.find((x) => x.id === tokenId)?.kind === 'player') {
+      // En una jugada grabada los jugadores se mueven grabando otra capa.
+      action.current = { kind: 'none' }
+      setToast(t('Jugada grabada: para cambiar un movimiento pulsa ● Grabar capa y arrástralo de nuevo.'))
+      return
+    }
     if (mode === 'move') {
       const t = board.tokens.find((x) => x.id === tokenId)
       // La barra de la ficha aparece al soltar: si apareciera ya, la pizarra se movería bajo el dedo.
@@ -598,6 +782,7 @@ export default function App() {
   }
 
   const onMove = (e: React.PointerEvent) => {
+    if (rec) { recMove(e); return }
     if (e.pointerId !== pointer.current) return
     const a = action.current
     if (a.kind === 'move') {
@@ -659,6 +844,7 @@ export default function App() {
   }
 
   const onUp = (e: React.PointerEvent) => {
+    if (rec) { recUp(e); return }
     if (e.pointerId !== pointer.current) return
     pointer.current = null
     if (e.pointerType === 'pen') penDown.current = false
@@ -786,7 +972,7 @@ export default function App() {
         >
           <Markers />
           <g ref={layer} transform={vertical ? `translate(${H} 0) rotate(90)` : undefined}>
-            <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} ident={ident} look={look} upright={vertical} selected={selected} live={live} ghost={anim === null && !playing} />
+            <Scene board={board} s={board.clip ? anim ?? clipT : anim ?? cur} view={recView} zones={zones} brand={mark} ident={ident} look={look} upright={vertical} selected={selected} live={live} ghost={anim === null && !playing} />
           </g>
         </svg>
         {frames && frames[shown].note && !showHint && (
@@ -817,7 +1003,18 @@ export default function App() {
             </div>
           </div>
         )}
-        {toast && <div className="toast" role="status">{toast}</div>}
+        {toast && !rec && <div className="toast" role="status">{toast}</div>}
+        {rec && (
+          <div className={`recbar${rec.phase === 'count' ? ' counting' : ''}`} role="status">
+            {rec.phase === 'count' ? (
+              <><b className="rec-count">{Math.ceil(rec.t)}</b><span>{t('Prepárate: arrastra jugadores con el dedo, el ratón o el lápiz. Toca a un compañero para pasarle el balón.')}</span></>
+            ) : (
+              <><b className="rec-dot">● REC</b><span className="rec-time">{rec.t.toFixed(1)} {t('s')}</span>
+                <span className="muted small">{t('Arrastra jugadores (puedes usar dos dedos). Toca a un compañero para pasarle el balón.')}</span></>
+            )}
+            <button className="primary" onClick={stopRec}>{t('■ Parar')}</button>
+          </div>
+        )}
         {label && (
           <div className="scrim" onClick={() => setLabel(null)}>
             <form className="sheet label-sheet" role="dialog" aria-label={t('Letrero')} onClick={(e) => e.stopPropagation()} onSubmit={(e) => { e.preventDefault(); saveLabel(label.text) }}>
@@ -892,7 +1089,19 @@ export default function App() {
         </div>
       )}
       <div className="animbar">
-          {frames ? (
+          {board.clip ? (
+            <>
+              <button className="primary" onClick={play} disabled={!!rec} aria-label={playing ? t('Pausa') : t('Reproducir')}>{playing ? t('❚❚ Pausa') : t('▶ Reproducir')}</button>
+              <input className="clip-time" type="range" min={0} max={board.clip.dur} step={0.01} value={Math.min(board.clip.dur, anim ?? clipT)} aria-label={t('Momento de la jugada')}
+                onChange={(e) => { stopAnim(); setClipT(+e.target.value) }} disabled={!!rec} />
+              <span className="muted small">{(anim ?? clipT).toFixed(1)} / {board.clip.dur.toFixed(1)} {t('s')}</span>
+              <span className="sep" />
+              <button onClick={startRec} disabled={!!rec}>{t('● Grabar capa')}</button>
+              <label className="pick"><input type="checkbox" checked={!!board.clip.auto} onChange={toggleAuto} disabled={!!rec} /><span>{t('Defensa automática')}</span></label>
+              <button onClick={clearClip} disabled={!!rec}>{t('Borrar grabación')}</button>
+              <button onClick={() => setSheet('export')} disabled={video !== null || !!rec}>{t('Exportar vídeo')}</button>
+            </>
+          ) : frames ? (
             <>
               <button className="primary" onClick={play} aria-label={playing ? t('Pausa') : t('Reproducir')}>{playing ? t('❚❚ Pausa') : t('▶ Reproducir')}</button>
               <button onClick={prevStep} disabled={cur === 0} aria-label={t('Paso anterior')}>‹</button>
@@ -907,10 +1116,12 @@ export default function App() {
               <button onClick={() => setNoteOpen(true)} aria-label={t('Ampliar la explicación del paso')} title={t('Ampliar la explicación del paso')}>⤢</button>
               <button onClick={addStep}>{t('+ Paso')}</button>
               <button onClick={removeStep}>{t('Quitar paso')}</button>
+              {PRO && <button onClick={startRec} disabled={!!rec} title={t('Grabar los movimientos en tiempo real')}>{t('● Grabar')}</button>}
               <label className="pace">
                 <span className="muted small">{t('Cada paso')}</span>
-                <select value={pace.step} onChange={(e) => setPace({ step: +e.target.value })} aria-label={t('Segundos por paso')}>
+                <select value={pace.flow ? 0 : pace.step} onChange={(e) => setPace(+e.target.value ? { step: +e.target.value, flow: false } : { flow: true })} aria-label={t('Segundos por paso')}>
                   {STEP_SECONDS.map((x) => <option key={x} value={x}>{x} {' '}{t('s')}</option>)}
+                  {PRO && <option value={0}>{t('Sin pausas')}</option>}
                 </select>
               </label>
               <label className="pace">
@@ -925,6 +1136,7 @@ export default function App() {
             <>
               <span className="muted small">{t('Para animar: coloca las fichas en su posición inicial y pulsa “+ Paso”. Después mueve las fichas a donde van en ese paso.')}</span>
               <button onClick={addStep}>{t('+ Paso')}</button>
+              {PRO && <button onClick={startRec} disabled={!!rec} title={t('Grabar los movimientos en tiempo real')}>{t('● Grabar')}</button>}
             </>
           )}
       </div>
@@ -1136,7 +1348,7 @@ export default function App() {
       )}
       {sheet === 'export' && (
         <ExportSheet
-          hasFrames={!!frames}
+          hasFrames={!!frames || !!board.clip}
           brand={brand}
           setBrand={setBrand}
           brandMode={brandMode}
@@ -1170,7 +1382,7 @@ export default function App() {
           onClose={() => setSheet(null)}
         />
       )}
-      {preview && frames && (
+      {preview && (frames || board.clip) && (
         <Preview
           board={board}
           opts={exportOpts}
@@ -1198,12 +1410,13 @@ export default function App() {
           <svg viewBox={vertical ? `${-PAD} ${-PAD} ${H + 2 * PAD} ${W + 2 * PAD}` : `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`} className="present-board">
             <Markers />
             <g transform={vertical ? `translate(${H} 0) rotate(90)` : undefined}>
-              <Scene board={board} s={anim ?? cur} zones={zones} brand={mark} ident={ident} look={look} upright={vertical} />
+              <Scene board={board} s={board.clip ? anim ?? clipT : anim ?? cur} zones={zones} brand={mark} ident={ident} look={look} upright={vertical} />
             </g>
           </svg>
           {frames && <button className="present-zone left" onClick={prevStep} aria-label={t('Paso anterior')} />}
           {frames && <button className="present-zone right" onClick={nextStep} aria-label={t('Paso siguiente')} />}
           <div className="present-bar">
+            {board.clip && <button className="primary" onClick={play}>{playing ? t('❚❚ Pausa') : t('▶ Reproducir')}</button>}
             {frames && (
               <>
                 <button onClick={prevStep} disabled={cur === 0 && anim === null} aria-label={t('Paso anterior')}>‹</button>

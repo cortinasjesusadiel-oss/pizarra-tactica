@@ -176,13 +176,15 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
 
   // Cada paso dura lo elegido (5, 8 o 10 s): quietos para leer y luego el movimiento al siguiente.
   const pace = opts.pace ?? DEFAULT_PACE
-  const animSec = paceTotal(n, pace)
+  // Jugada grabada: dura lo grabado y se queda un momento quieta al final.
+  const clip = board.clip
+  const animSec = clip ? clip.dur + 1.2 : paceTotal(n, pace)
   const endSec = opts.end ? endDuration(opts.end) : 0
   const seconds = animSec + endSec + (logo ? OUTRO : 0)
   let lastScene: { s: number; img: HTMLImageElement } | null = null
 
   const draw = async (sec: number) => {
-    const s = paceAt(n, pace, Math.min(sec, animSec))
+    const s = clip ? Math.min(sec, clip.dur) : paceAt(n, pace, Math.min(sec, animSec))
     // En las pantallas finales la jugada ya no se mueve: se reutiliza la última imagen.
     const scene = lastScene && lastScene.s === s ? lastScene.img
       : await svgImage(renderToStaticMarkup(createElement('g', null, createElement(Markers), rot(createElement(Scene, { board, s, grass: false, look: opts.look, upright: vert })))), viewBox, bw * k, bh * k)
@@ -227,7 +229,8 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
       ctx.globalAlpha = 1
     }
     // Primero se va la explicación anterior y luego entra la nueva, para que no se monten las dos.
-    if (cap.fade < 0.5) drawCaption(cap.prev, 1 - cap.fade * 2)
+    if (clip) { /* la jugada grabada no tiene pasos que explicar */ }
+    else if (cap.fade < 0.5) drawCaption(cap.prev, 1 - cap.fade * 2)
     else drawCaption(cap.k, cap.fade * 2 - 1)
 
     // La identidad va en la franja libre a la derecha del campo, abajo: nunca tapa jugadores, flechas ni líneas.
@@ -251,7 +254,7 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
 export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<Result> {
   const n = board.frames?.length ?? 0
   const picked = await pickCodec()
-  if (!picked || n < 2) return 'unsupported'
+  if (!picked || (n < 2 && !board.clip)) return 'unsupported'
   let r = await videoRenderer(board, opts)
   // Si el equipo no puede hacer H.264 a ese tamaño (pasa con «campo a todo el ancho»), se prueba a 1080 px de ancho
   // antes de usar VP9, que WhatsApp y el iPhone no siempre reproducen.
@@ -349,7 +352,7 @@ export async function exportMany(items: { name: string; board: Board }[], opts: 
   for (const [i, it] of items.entries()) {
     opts.onItem?.(i)
     let file: File
-    if ((it.board.frames?.length ?? 0) > 1) {
+    if ((it.board.frames?.length ?? 0) > 1 || it.board.clip) {
       const res = await exportVideo(it.board, opts)
       file = res === 'unsupported' ? await exportImage(it.board, opts) : res.file
     } else file = await exportImage(it.board, opts)

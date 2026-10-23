@@ -1,3 +1,4 @@
+import { GRABADAS } from './more/grabadas'
 import { type Board, type Pt, type Token, player, ballAt, coneAt, item, line } from './model'
 import { animate, press, type Template } from './anim'
 import { TACTICS } from './tactics'
@@ -307,6 +308,7 @@ export const TEMPLATES: Template[] = [
   ...EJERCICIOS,
   ...TACTICAS2,
   ...TACTICAS3,
+  ...GRABADAS,
 ]
 
 export const emptyBoard = (pitch: Board['pitch'] = 'full'): Board => ({ pitch, tokens: [], drawings: [] })

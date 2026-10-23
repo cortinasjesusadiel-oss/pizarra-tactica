@@ -1,4 +1,4 @@
-import { lobAt, posAt, type Board, type Drawing, type Pt, type Token } from './model'
+import { PITCH, lobAt, posAt, type Board, type Drawing, type Pt, type Token } from './model'
 import { t } from './i18n'
 
 // Posición continua de una ficha en el instante `s`, medido en pasos (1.5 = a mitad entre el paso 1 y el 2).
@@ -14,6 +14,12 @@ export function sampleAt(b: Board, t: Token, s: number): Pt {
   const p1 = posAt(b, t, i), p2 = posAt(b, t, i + 1)
   if (p1[0] === p2[0] && p1[1] === p2[1]) return p1
   if (t.kind === 'ball') {
+    // Conducción: el balón va pegado al pie del jugador que lo lleva (no por su cuenta, que se adelantaría o quedaría atrás).
+    const own = dribbler(b, i, p1, p2)
+    if (own) {
+      const q = sampleAt(b, own.t, c)
+      return [q[0] + own.o1[0] + (own.o2[0] - own.o1[0]) * u, q[1] + own.o1[1] + (own.o2[1] - own.o1[1]) * u]
+    }
     const lob = lobFor(b, i, p1, p2)
     return lob ? lobAt(p1, p2, u, lob.bend) : [p1[0] + (p2[0] - p1[0]) * u, p1[1] + (p2[1] - p1[1]) * u]
   }
@@ -29,6 +35,18 @@ export function sampleAt(b: Board, t: Token, s: number): Pt {
     h00 * p1[0] + h10 * m1[0] + h01 * p2[0] + h11 * m2[0],
     h00 * p1[1] + h10 * m1[1] + h01 * p2[1] + h11 * m2[1],
   ]
+}
+
+// Jugador que lleva el balón al principio y al final del paso `i` (conduce), con la posición del balón respecto a él.
+function dribbler(b: Board, i: number, p1: Pt, p2: Pt): { t: Token; o1: Pt; o2: Pt } | null {
+  const near = PITCH[b.pitch].r * 1.3
+  for (const t of b.tokens) {
+    if (t.kind !== 'player') continue
+    const a = posAt(b, t, i), z = posAt(b, t, i + 1)
+    if (Math.hypot(a[0] - p1[0], a[1] - p1[1]) < near && Math.hypot(z[0] - p2[0], z[1] - p2[1]) < near)
+      return { t, o1: [p1[0] - a[0], p1[1] - a[1]], o2: [p2[0] - z[0], p2[1] - z[1]] }
+  }
+  return null
 }
 
 // Si el balón sale y llega donde empieza y acaba un pase aéreo del paso `i`, ese pase (salida y llegada del balón).
@@ -61,7 +79,8 @@ export const positionsAt = (b: Board, s: number): Record<string, Pt> =>
 
 // Ritmo de la reproducción y del vídeo: cuántos segundos dura cada paso en total y con qué velocidad se mueven
 // las fichas. El resto del paso las fichas están quietas, para leer la explicación y ver las flechas.
-export type Pace = { step: number; speed: Speed }
+// `flow`: reproducción continua, sin pausas entre pasos (las fichas enlazan un movimiento con el siguiente).
+export type Pace = { step: number; speed: Speed; flow?: boolean }
 export type Speed = 'lenta' | 'normal' | 'rapida'
 export const STEP_SECONDS = [3, 5, 8, 10]
 export const SPEEDS: { id: Speed; name: string; move: number }[] = [
@@ -72,12 +91,18 @@ export const SPEEDS: { id: Speed; name: string; move: number }[] = [
 export const DEFAULT_PACE: Pace = { step: 5, speed: 'normal' }
 
 // Duración total de la animación en segundos: cada paso dura lo elegido, también el último.
-export const paceTotal = (n: number, p: Pace) => Math.max(1, n) * p.step
+// En continuo: un instante quieto al empezar, los movimientos seguidos y un rato al final para ver cómo acaba.
+const FLOW_IN = 0.6, FLOW_OUT = 1.6
+const moveSec = (p: Pace) => SPEEDS.find((x) => x.id === p.speed)?.move ?? 1.6
+export const paceTotal = (n: number, p: Pace) => (p.flow ? FLOW_IN + Math.max(0, n - 1) * moveSec(p) + FLOW_OUT : Math.max(1, n) * p.step)
+// Segundo en el que empieza el paso `i`.
+export const paceStart = (i: number, p: Pace) => (p.flow ? (i > 0 ? FLOW_IN + i * moveSec(p) : 0) : i * p.step)
 
 // Instante `s` (en pasos) a los `t` segundos de empezar: primero las fichas quietas en el paso, luego el
 // movimiento hacia el siguiente, que arranca y frena con suavidad.
 export function paceAt(n: number, p: Pace, t: number): number {
   if (n < 2) return 0
+  if (p.flow) return Math.max(0, Math.min(n - 1, (t - FLOW_IN) / moveSec(p)))
   const move = Math.min(SPEEDS.find((x) => x.id === p.speed)?.move ?? 1.6, p.step - 1)
   const hold = p.step - move
   const i = Math.floor(t / p.step)

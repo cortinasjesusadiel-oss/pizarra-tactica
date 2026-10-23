@@ -1,4 +1,5 @@
 import { t } from './i18n'
+import type { Clip } from './clip'
 // Todas las coordenadas están en metros, con el equipo local atacando hacia la derecha (+x).
 
 export type PitchKind = 'full' | 'half' | 'grid'
@@ -86,6 +87,8 @@ export interface Board {
   tokens: Token[]
   drawings: Drawing[]
   frames?: Frame[]
+  // Jugada grabada en tiempo real (función Pro). Si existe, manda sobre los pasos.
+  clip?: Clip
 }
 
 // Posición de una ficha en el paso `step`: la última posición definida hasta ese paso.

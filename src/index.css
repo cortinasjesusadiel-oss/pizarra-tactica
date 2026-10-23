@@ -323,3 +323,13 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 @media (min-width: 760px) and (max-width: 1440px) and (min-height: 501px) {
   .animbar .pace > .muted { display: none; }
 }
+
+/* Grabar en vivo (Pro) */
+.recbar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; max-width: calc(100% - 24px);
+  background: rgba(15, 23, 18, .92); border: 1px solid #ff5a4f; border-radius: 14px; padding: 8px 12px; font-size: 14px; z-index: 5; }
+.recbar.counting { border-color: var(--accent); }
+.rec-dot { color: #ff5a4f; letter-spacing: .04em; white-space: nowrap; }
+.rec-time { font-variant-numeric: tabular-nums; min-width: 3.6em; }
+.rec-count { font-size: 30px; line-height: 1; color: var(--accent); min-width: 1ch; text-align: center; }
+.clip-time { flex: 1 1 160px; min-width: 120px; accent-color: var(--accent); }
+@media (max-width: 700px) { .recbar .muted { display: none; } }

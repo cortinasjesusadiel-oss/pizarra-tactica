@@ -3,10 +3,13 @@ import { ballAir, drawParts, sampleAt } from './motion'
 import { Pitch } from './Pitch'
 import type { Mark } from './identity'
 import { DrawingShape, TokenShape } from './Shapes'
+import { clipView, type ClipView } from './clip'
+import { PRO } from './pro'
 
 // Lo que se dibuja dentro del campo en el instante `s` (puede ser fraccionario): césped, trazos y fichas.
 // Se usa en la pizarra y al exportar el vídeo, para que ambos se vean igual.
-export function Scene({ board, s, zones, brand, ident, look, upright = false, selected = null, live = null, grass = true, ghost = false }: {
+// En una jugada grabada (`board.clip`), `s` son segundos; `view` es lo que se ve mientras se graba.
+export function Scene({ board, s, zones, brand, ident, look, upright = false, selected = null, live = null, grass = true, ghost = false, view }: {
   board: Board
   brand?: string
   ident?: Mark | null
@@ -18,10 +21,26 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
   live?: Drawing | null
   grass?: boolean
   ghost?: boolean
+  view?: ClipView | null
 }) {
   const { r, w: PW, h: PH } = PITCH[board.pitch]
   const bounds: [number, number] = [PW, PH]
+  const cv = view ?? (board.clip ? clipView(board, s) : null)
+  if (cv) return (
+    <>
+      {grass && <Pitch kind={board.pitch} zones={zones} brand={brand} ident={ident} />}
+      {board.drawings.filter((d) => d.type !== 'text').map((d) => <DrawingShape key={d.id} d={d} />)}
+      {live && <DrawingShape d={live} />}
+      {cv.holder && cv.pos[cv.holder] && <circle cx={cv.pos[cv.holder][0]} cy={cv.pos[cv.holder][1]} r={r * 1.32} fill="none" stroke="#ffffff" strokeWidth={r * 0.1} strokeOpacity={0.55} pointerEvents="none" />}
+      {board.tokens.map((t) => {
+        const [x, y] = cv.pos[t.id] ?? [t.x, t.y]
+        return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} look={look} face={t.kind === 'player' ? cv.face[t.id] : undefined} />
+      })}
+      {board.drawings.filter((d) => d.type === 'text').map((d) => <DrawingShape key={d.id} d={d} upright={upright} bounds={bounds} />)}
+    </>
+  )
   const parts = drawParts(board, s)
+  const faces = PRO && (board.frames?.length ?? 0) > 1 ? facesAt(board, s) : null
   return (
     <>
       {grass && <Pitch kind={board.pitch} zones={zones} brand={brand} ident={ident} />}
@@ -40,7 +59,7 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
             <TokenShape t={{ ...t, x, y }} r={r * (1 + air.lift * 0.7)} selected={t.id === selected} upright={upright} look={look} />
           </g>
         )
-        return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} look={look} />
+        return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} look={look} face={faces?.[t.id]} />
       })}
       {/* Los letreros van encima de todo para que siempre se lean. */}
       {board.drawings.filter((d) => d.type === 'text').map((d) => <DrawingShape key={d.id} d={d} upright={upright} bounds={bounds} />)}
@@ -118,4 +137,24 @@ function Motion({ board, s, look = DEFAULT_LOOK }: { board: Board; s: number; lo
       {holder && <circle cx={now[holder][0]} cy={now[holder][1]} r={r * 1.32} fill="none" stroke="#ffffff" strokeWidth={r * 0.1} strokeOpacity={0.6} />}
     </g>
   )
+}
+
+// Hacia dónde mira cada jugador en una animación por pasos: hacia donde corre y, parado, hacia el balón.
+function facesAt(board: Board, s: number): Record<string, number> {
+  const out: Record<string, number> = {}
+  const ball = board.tokens.find((t) => t.kind === 'ball')
+  const bp = ball ? sampleAt(board, ball, s) : null
+  const e = 0.03
+  for (const t of board.tokens) {
+    if (t.kind !== 'player') continue
+    const a = sampleAt(board, t, s - e), z = sampleAt(board, t, s + e), p = sampleAt(board, t, s)
+    const vx = (z[0] - a[0]) / (2 * e), vy = (z[1] - a[1]) / (2 * e), sp = Math.hypot(vx, vy)
+    let tx = 0, ty = 0
+    if (bp) { const d = Math.hypot(bp[0] - p[0], bp[1] - p[1]); if (d > 0.05) { tx = (bp[0] - p[0]) / d; ty = (bp[1] - p[1]) / d } }
+    if (!tx && !ty) { tx = t.team === 'away' ? -1 : 1 }
+    const w = Math.max(0, Math.min(1, (sp - 1) / 4)), k = w * w * (3 - 2 * w)
+    const mx = sp > 1e-6 ? vx / sp : 0, my = sp > 1e-6 ? vy / sp : 0
+    out[t.id] = Math.atan2(my * k + ty * (1 - k), mx * k + tx * (1 - k))
+  }
+  return out
 }

@@ -253,7 +253,8 @@ export function BallArt({ R }: { R: number }) {
 // Camiseta vista de frente, centrada en (0,0), de unas 2,1 unidades de ancho.
 const SHIRT = 'M-0.42,-0.95 L-1,-0.66 L-1.08,-0.12 L-0.7,-0.02 L-0.7,0.98 L0.7,0.98 L0.7,-0.02 L1.08,-0.12 L1,-0.66 L0.42,-0.95 Q0,-0.62 -0.42,-0.95 Z'
 
-export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK }: { t: Token; r: number; selected: boolean; upright: boolean; look?: Look }) {
+// `face`: hacia dónde mira el jugador (ángulo en radianes sobre el campo). Se marca con una pequeña punta en el borde.
+export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK, face }: { t: Token; r: number; selected: boolean; upright: boolean; look?: Look; face?: number }) {
   const rot = upright ? 'rotate(-90)' : undefined
   if (t.kind === 'ball')
     return (
@@ -294,6 +295,10 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK }: { t
     <g data-token={t.id} transform={`translate(${t.x} ${t.y})`} className="token">
       <circle r={r * 1.5} fill="transparent" />
       {selected && <circle r={r * 1.45} fill="none" stroke="#fff" strokeWidth={0.25} />}
+      {face !== undefined && (
+        <path d={`M${r * 0.96} ${-r * 0.42} L${r * 1.42} 0 L${r * 0.96} ${r * 0.42} Z`} transform={`rotate(${(face * 180) / Math.PI})`}
+          fill={fill} stroke="rgba(0,0,0,.6)" strokeWidth={r * 0.09} strokeLinejoin="round" />
+      )}
       <g transform={rot}>
         {look.shape === 'disc' && <circle r={r} fill={fill} stroke="rgba(0,0,0,.5)" strokeWidth={r * 0.12} />}
         {look.shape === 'pro' && (
