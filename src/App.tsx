@@ -1046,7 +1046,16 @@ export default function App() {
             ))}
             <div className="tool-menu-title">{t('Vista')}</div>
             <button role="menuitemcheckbox" aria-checked={zones} className={zones ? 'on' : ''} onClick={() => { toggleZones(); setTopMenu(null) }}>{zones ? '✓ ' : ''}{t('Zonas')}</button>
-            <button role="menuitem" onClick={() => { setSheet('look'); setTopMenu(null) }}>{t('Fichas')}</button>
+            {PRO && (<>
+              <div className="tool-menu-title">{t('Césped')}</div>
+              {(['clasico', 'dia', 'cuadros', 'noche'] as GrassKind[]).map((g) => (
+                <button key={g} role="menuitemradio" aria-checked={(look.grass ?? 'clasico') === g} className={(look.grass ?? 'clasico') === g ? 'on' : ''}
+                  onClick={() => { setLook({ grass: g }); setTopMenu(null) }}>
+                  {g === 'clasico' ? t('Clásico') : g === 'dia' ? t('Estadio de día') : g === 'cuadros' ? t('Cuadros') : t('Noche')}
+                </button>
+              ))}
+            </>)}
+            <button role="menuitem" onClick={() => { setSheet('look'); setTopMenu(null) }}>{PRO ? t('Fichas y colores') : t('Fichas')}</button>
           </>) : (<>
             <div className="tool-menu-title">{t('Biblioteca')}</div>
             <button role="menuitem" onClick={() => { setSheet('templates'); setTopMenu(null) }}>{t('Plantillas')}</button>
