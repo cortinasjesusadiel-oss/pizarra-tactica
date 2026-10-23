@@ -9,7 +9,7 @@ import { useArt } from './material'
 import { Scene } from './Scene'
 import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, clipRate, paceAt, paceStart, sampleAt, shownStep, type Pace, type Speed } from './motion'
 import { Sim, HOLD, clipStep, holdAt, holdTotal, holdWall, keyPasses, clipToSteps, stepsToClip, withMarks, newClip, smoothTrack, trimPauses, type Clip, type ClipView, type Focus } from './clip'
-import { PRO, numberPlayers } from './pro'
+import { PERSONAL, PRO, numberPlayers } from './pro'
 import { carrier, movesFromArrows } from './steps'
 import { SESSIONS } from './sessions'
 import { TEMPLATES, emptyBoard } from './templates'
@@ -309,7 +309,12 @@ export default function App() {
     try {
       const l: Look = { ...DEFAULT_LOOK, ...JSON.parse(localStorage.getItem('pizarra.fichas') ?? '{}') }
       // Las fichas con forma de muñeco se quitaron: quien las tuviera vuelve a la ficha pro.
-      if (!['pro', 'disc', 'shirt'].includes(l.shape)) { l.shape = 'pro'; localStorage.setItem('pizarra.fichas', JSON.stringify(l)) }
+      if (!['pro', 'disc', 'shirt', 'kit'].includes(l.shape) || (l.shape === 'kit' && !PRO)) { l.shape = 'pro'; localStorage.setItem('pizarra.fichas', JSON.stringify(l)) }
+      // Pizarra personal: la primera vez se estrena la camiseta élite (amarilla contra azul).
+      if (PERSONAL && !localStorage.getItem('pizarra.kitVisto')) {
+        Object.assign(l, { shape: 'kit', home: '#ffd23f', away: '#5bb6ff' })
+        localStorage.setItem('pizarra.kitVisto', '1'); localStorage.setItem('pizarra.fichas', JSON.stringify(l))
+      }
       return l
     } catch { return DEFAULT_LOOK }
   })
@@ -2100,10 +2105,10 @@ function LookSheet({ look, setLook, onClose }: { look: Look; setLook: (p: Partia
       <section>
         <h3>{t('Forma')}</h3>
         <div className="shapes">
-          {(['pro', 'disc', 'shirt'] as TokenShapeKind[]).map((sh) => (
+          {((PRO ? ['kit', 'pro', 'disc', 'shirt'] : ['pro', 'disc', 'shirt']) as TokenShapeKind[]).map((sh) => (
             <button key={sh} className={look.shape === sh ? 'on' : ''} onClick={() => setLook({ shape: sh })}>
               {preview(sh)}
-              <span>{sh === 'pro' ? t('Ficha pro') : sh === 'disc' ? t('Clásica') : t('Camiseta')}</span>
+              <span>{sh === 'kit' ? t('Camiseta élite') : sh === 'pro' ? t('Ficha pro') : sh === 'disc' ? t('Clásica') : t('Camiseta')}</span>
             </button>
           ))}
         </div>

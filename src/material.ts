@@ -60,3 +60,17 @@ export function equipmentRadius(kind: Token['kind'], r: number, scale = 1): numb
   const k = (kind === 'goal' ? 1 : Math.max(1, r / 1.1)) * scale
   return ((SHOW[kind] ?? 2) * k) / 2.6
 }
+
+// Camisetas de la ficha «Camiseta élite» (solo en la versión con funciones extra; van aparte por su peso).
+type Kit = Record<'yellow' | 'blue' | 'white', string>
+let kit: Kit | null = null
+let kitLoad: Promise<Kit> | null = null
+export const kitReady = (): Promise<Kit> => (kitLoad ??= import('./kitArt').then((m) => {
+  kit = m.default
+  subs.forEach((f) => f())
+  return kit
+}))
+export const useKit = (want: boolean) => {
+  if (want) void kitReady()
+  return useSyncExternalStore(subscribe, () => kit, () => kit)
+}

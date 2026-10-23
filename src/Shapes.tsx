@@ -1,11 +1,16 @@
 import { useId } from 'react'
-import { artPicks, equipmentRadius, SHOW, useArt } from './material'
+import { artPicks, equipmentRadius, SHOW, useArt, useKit } from './material'
+import { CAP, GLYPHS } from './kitGlyphs'
 import { BALL_HEXAGONS, BALL_PENTAGONS } from './ball'
 import { COLORS, DEFAULT_LOOK, LABEL_DEFAULT_BG, lobAt, lobControl, type Drawing, type Look, type Pt, type Token } from './model'
 
 export function Markers() {
   return (
     <defs>
+      {/* Sombra de la camiseta élite: la misma imagen en negro translúcido, desplazada. */}
+      <filter id="kit-shadow" colorInterpolationFilters="sRGB">
+        <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.38 0" />
+      </filter>
       <radialGradient id="tok-shine" cx="35%" cy="30%" r="70%">
         <stop offset="0%" stopColor="#fff" stopOpacity={0.55} />
         <stop offset="45%" stopColor="#fff" stopOpacity={0.08} />
@@ -253,9 +258,58 @@ export function BallArt({ R }: { R: number }) {
 // Camiseta vista de frente, centrada en (0,0), de unas 2,1 unidades de ancho.
 const SHIRT = 'M-0.42,-0.95 L-1,-0.66 L-1.08,-0.12 L-0.7,-0.02 L-0.7,0.98 L0.7,0.98 L0.7,-0.02 L1.08,-0.12 L1,-0.66 L0.42,-0.95 Q0,-0.62 -0.42,-0.95 Z'
 
+// Camiseta élite: foto de camiseta (sin dorsal) y el dorsal encima como trazado, centrado en el pecho.
+// Amarilla para el local, azul para el rival y blanca para el comodín; con otros colores se tiñe la blanca.
+const KIT_W = 2.8, KIT_H = KIT_W * 256 / 288
+const KIT_YELLOW = '#ffd23f', KIT_BLUE = '#5bb6ff'
+function KitShirt({ team, fill, r, kit }: { team: Token['team']; fill: string; r: number; kit: ReturnType<typeof useKit> }) {
+  const w = KIT_W * r, h = KIT_H * r
+  const key = team === 'home' && fill === KIT_YELLOW ? 'yellow' : team === 'away' && fill === KIT_BLUE ? 'blue' : 'white'
+  const tint = team !== 'neutral' && key === 'white' ? fill : null
+  const fid = tint ? `kit-t${tint.replace('#', '')}` : undefined
+  if (!kit) return <path d={SHIRT} transform={`scale(${r * 1.2})`} fill={fill} stroke="rgba(0,0,0,.4)" strokeWidth={0.06} />
+  const c = tint ? [1, 3, 5].map((i) => parseInt(tint.slice(i, i + 2), 16) / 255) : null
+  return (
+    <>
+      {c && (
+        <filter id={fid} colorInterpolationFilters="sRGB">
+          <feColorMatrix type="matrix" values={`${c[0] * 1.06} 0 0 0 0  0 ${c[1] * 1.06} 0 0 0  0 0 ${c[2] * 1.06} 0 0  0 0 0 1 0`} />
+        </filter>
+      )}
+      <image href={kit[key]} x={-w / 2 + r * 0.1} y={-h / 2 + r * 0.16} width={w} height={h} filter="url(#kit-shadow)" />
+      <image href={kit[key]} x={-w / 2} y={-h / 2} width={w} height={h} filter={fid ? `url(#${fid})` : undefined} />
+    </>
+  )
+}
+const kitInk = (team: Token['team'], fill: string) =>
+  team === 'away' && fill === KIT_BLUE ? '#fff' : (team === 'home' && fill === KIT_YELLOW) || team === 'neutral' ? '#141414' : inkFor(fill)
+
+// Dorsal como trazado (Montserrat ExtraBold algo estrecha, como los números de camiseta). Se ve igual en el vídeo.
+function KitNumber({ text, r, ink }: { text: string; r: number; ink: string }) {
+  const chars = [...text.toUpperCase()]
+  if (!chars.every((ch) => GLYPHS[ch]))
+    return <text y={r * 0.05} textAnchor="middle" dominantBaseline="central" fontSize={r * 1.1} fontWeight={800} fill={ink} fontFamily="Montserrat, system-ui, sans-serif">{text}</text>
+  const sx = 0.84, gap = -0.02
+  const adv = chars.map((ch) => GLYPHS[ch][1] + gap)
+  const total = adv.reduce((a, b) => a + b, 0) - gap
+  // Letra de 1,4r (mayúscula ≈ 1r); si el texto es largo, se achica para no salirse del pecho.
+  const size = Math.min(r * 1.4, (r * 1.5) / (total * sx))
+  let x = -total / 2
+  const paths = chars.map((ch) => { const d = GLYPHS[ch][0], at = x; x += GLYPHS[ch][1] + gap; return { d, at } })
+  const tf = `translate(0 ${r * 0.06 + (CAP * size) / 2}) scale(${size * sx} ${size})`
+  const shadow = ink === '#fff' ? 'rgba(0,0,0,.35)' : 'rgba(255,255,255,.18)'
+  return (
+    <g pointerEvents="none">
+      <g transform={`translate(${r * 0.035} ${r * 0.05}) ${tf}`} fill={shadow}>{paths.map((p, i) => <path key={i} d={p.d} transform={`translate(${p.at} 0)`} />)}</g>
+      <g transform={tf} fill={ink}>{paths.map((p, i) => <path key={i} d={p.d} transform={`translate(${p.at} 0)`} />)}</g>
+    </g>
+  )
+}
+
 // `face`: hacia dónde mira el jugador (ángulo en radianes sobre el campo). Se marca con una pequeña punta en el borde.
 export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK, face }: { t: Token; r: number; selected: boolean; upright: boolean; look?: Look; face?: number }) {
   const rot = upright ? 'rotate(-90)' : undefined
+  const kit = useKit(look.shape === 'kit' && t.kind === 'player')
   if (t.kind === 'ball')
     return (
       <g data-token={t.id} transform={`translate(${t.x} ${t.y})`} className="token">
@@ -291,16 +345,18 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK, face 
   const num = look.text !== 'name' ? t.label : ''
   const name = look.text !== 'number' ? t.name?.trim() : ''
   const fs = r * (num.length > 2 ? 0.8 : 1.05)
+  // Radio del indicador de orientación: con la camiseta va por fuera, para no cortar las mangas.
+  const fr = r * (look.shape === 'kit' ? 1.62 : 1.34)
   return (
     <g data-token={t.id} transform={`translate(${t.x} ${t.y})`} className="token">
       <circle r={r * 1.5} fill="transparent" />
-      {selected && <circle r={r * 1.45} fill="none" stroke="#fff" strokeWidth={0.25} />}
+      {selected && <circle r={r * (look.shape === 'kit' ? 1.75 : 1.45)} fill="none" stroke="#fff" strokeWidth={0.25} />}
       {/* Hacia dónde mira: un arco fino sobre un halo, como en los datos de seguimiento de la tele. */}
       {face !== undefined && (
         <g transform={`rotate(${(face * 180) / Math.PI})`} pointerEvents="none">
-          <circle r={r * 1.34} fill="none" stroke={fill} strokeOpacity={0.35} strokeWidth={r * 0.07} />
-          <path d={`M${Math.cos(-0.62) * r * 1.34} ${Math.sin(-0.62) * r * 1.34} A${r * 1.34} ${r * 1.34} 0 0 1 ${Math.cos(0.62) * r * 1.34} ${Math.sin(0.62) * r * 1.34}`}
-            fill="none" stroke="#fff" strokeWidth={r * 0.17} strokeLinecap="round" />
+          <circle r={fr} fill="none" stroke={fill} strokeOpacity={look.shape === 'kit' ? 0.22 : 0.35} strokeWidth={r * 0.07} />
+          <path d={`M${Math.cos(-0.62) * fr} ${Math.sin(-0.62) * fr} A${fr} ${fr} 0 0 1 ${Math.cos(0.62) * fr} ${Math.sin(0.62) * fr}`}
+            fill="none" stroke="#fff" strokeWidth={r * (look.shape === 'kit' ? 0.14 : 0.17)} strokeLinecap="round" />
         </g>
       )}
       <g transform={rot}>
@@ -319,13 +375,15 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK, face 
             <path d="M-0.42,-0.95 Q0,-0.62 0.42,-0.95" transform={`scale(${r * 1.05})`} fill="none" stroke={ink} strokeOpacity={0.5} strokeWidth={0.08} />
           </>
         )}
-        {num && (
+        {look.shape === 'kit' && <KitShirt team={t.team} fill={fill} r={r} kit={kit} />}
+        {num && look.shape === 'kit' && <KitNumber text={num} r={r} ink={kitInk(t.team, fill)} />}
+        {num && look.shape !== 'kit' && (
           <text y={look.shape === 'shirt' ? r * 0.18 : 0} textAnchor="middle" dominantBaseline="central" fontSize={look.shape === 'shirt' ? fs * 0.95 : fs} fontWeight={800} fill={ink} fontFamily="system-ui, sans-serif">
             {num}
           </text>
         )}
         {name && (
-          <text y={r * (look.shape === 'shirt' ? 1.95 : 1.85)} textAnchor="middle" dominantBaseline="central" fontSize={r * 0.62} fontWeight={700} fill="#fff" stroke="rgba(0,0,0,.75)" strokeWidth={r * 0.16} paintOrder="stroke" strokeLinejoin="round" fontFamily="system-ui, sans-serif">
+          <text y={r * (look.shape === 'kit' ? 1.95 : look.shape === 'shirt' ? 1.95 : 1.85)} textAnchor="middle" dominantBaseline="central" fontSize={r * 0.62} fontWeight={700} fill="#fff" stroke="rgba(0,0,0,.75)" strokeWidth={r * 0.16} paintOrder="stroke" strokeLinejoin="round" fontFamily="system-ui, sans-serif">
             {name}
           </text>
         )}
