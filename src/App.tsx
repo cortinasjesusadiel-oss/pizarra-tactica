@@ -309,7 +309,7 @@ export default function App() {
     try {
       const l: Look = { ...DEFAULT_LOOK, ...JSON.parse(localStorage.getItem('pizarra.fichas') ?? '{}') }
       // Las fichas con forma de muñeco se quitaron: quien las tuviera vuelve a la ficha pro.
-      if (!['pro', 'disc', 'shirt', 'kit'].includes(l.shape) || (l.shape === 'kit' && !PRO)) { l.shape = 'pro'; localStorage.setItem('pizarra.fichas', JSON.stringify(l)) }
+      if (!['pro', 'disc', 'shirt', 'kit', 'alu', 'perfil'].includes(l.shape) || (['kit', 'alu', 'perfil'].includes(l.shape) && !PRO)) { l.shape = 'pro'; localStorage.setItem('pizarra.fichas', JSON.stringify(l)) }
       // Pizarra personal: la primera vez se estrena la camiseta élite (amarilla contra azul).
       if (PERSONAL && !localStorage.getItem('pizarra.kitVisto')) {
         Object.assign(l, { shape: 'kit', home: '#ffd23f', away: '#5bb6ff' })
@@ -2103,12 +2103,12 @@ function LookSheet({ look, setLook, onClose }: { look: Look; setLook: (p: Partia
   return (
     <Sheet title={t('Fichas')} onClose={onClose}>
       <section>
-        <h3>{t('Forma')}</h3>
+        <h3>{t('Estilo de fichas')}</h3>
         <div className="shapes">
-          {((PRO ? ['kit', 'pro', 'disc', 'shirt'] : ['pro', 'disc', 'shirt']) as TokenShapeKind[]).map((sh) => (
+          {((PRO ? ['kit', 'alu', 'perfil', 'pro', 'disc', 'shirt'] : ['pro', 'disc', 'shirt']) as TokenShapeKind[]).map((sh) => (
             <button key={sh} className={look.shape === sh ? 'on' : ''} onClick={() => setLook({ shape: sh })}>
               {preview(sh)}
-              <span>{sh === 'kit' ? t('Camiseta élite') : sh === 'pro' ? t('Ficha pro') : sh === 'disc' ? t('Clásica') : t('Camiseta')}</span>
+              <span>{sh === 'kit' ? t('Camiseta élite') : sh === 'alu' ? t('Aluminio técnico') : sh === 'perfil' ? t('Perfil táctico') : sh === 'pro' ? t('Ficha pro') : sh === 'disc' ? t('Clásica') : t('Camiseta')}</span>
             </button>
           ))}
         </div>

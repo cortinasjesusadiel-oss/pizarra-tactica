@@ -48,7 +48,7 @@ export interface Token {
 }
 
 // Aspecto de las fichas, elegido por el usuario y común a todas las pizarras.
-export type TokenShapeKind = 'disc' | 'pro' | 'shirt' | 'kit'
+export type TokenShapeKind = 'disc' | 'pro' | 'shirt' | 'kit' | 'alu' | 'perfil'
 export type TokenText = 'number' | 'name' | 'both'
 // Estilo del césped: el de siempre o uno de los realistas (solo en la versión con funciones extra).
 export type GrassKind = 'clasico' | 'dia' | 'cuadros' | 'noche'

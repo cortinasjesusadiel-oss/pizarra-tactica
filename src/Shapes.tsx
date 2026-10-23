@@ -11,6 +11,33 @@ export function Markers() {
       <filter id="kit-shadow" colorInterpolationFilters="sRGB">
         <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.38 0" />
       </filter>
+      {/* Fichas Aluminio técnico y Perfil táctico: sombra, brillo sobre el color del equipo, metal y grafito. */}
+      <radialGradient id="tok-drop">
+        <stop offset="70%" stopColor="#000" stopOpacity={0.5} />
+        <stop offset="100%" stopColor="#000" stopOpacity={0} />
+      </radialGradient>
+      <linearGradient id="tok-tint" x1="0.2" y1="0" x2="0.8" y2="1">
+        <stop offset="0%" stopColor="#fff" stopOpacity={0.38} />
+        <stop offset="45%" stopColor="#fff" stopOpacity={0.04} />
+        <stop offset="100%" stopColor="#000" stopOpacity={0.38} />
+      </linearGradient>
+      <linearGradient id="alu-rim" x1="0.15" y1="0" x2="0.85" y2="1">
+        <stop offset="0%" stopColor="#f2f4f6" />
+        <stop offset="30%" stopColor="#b9bec4" />
+        <stop offset="55%" stopColor="#7d838a" />
+        <stop offset="78%" stopColor="#c4c9ce" />
+        <stop offset="100%" stopColor="#4f555b" />
+      </linearGradient>
+      <linearGradient id="alu-bevel" x1="0.15" y1="0" x2="0.85" y2="1">
+        <stop offset="0%" stopColor="#5a6066" />
+        <stop offset="50%" stopColor="#9aa0a6" />
+        <stop offset="100%" stopColor="#eef0f2" />
+      </linearGradient>
+      <radialGradient id="graphite" cx="45%" cy="38%" r="70%">
+        <stop offset="0%" stopColor="#3b3f43" />
+        <stop offset="70%" stopColor="#222528" />
+        <stop offset="100%" stopColor="#141618" />
+      </radialGradient>
       <radialGradient id="tok-shine" cx="35%" cy="30%" r="70%">
         <stop offset="0%" stopColor="#fff" stopOpacity={0.55} />
         <stop offset="45%" stopColor="#fff" stopOpacity={0.08} />
@@ -286,23 +313,62 @@ const kitInk = (team: Token['team'], fill: string) =>
 
 // Dorsal como trazado (Montserrat ExtraBold algo estrecha, como los números de camiseta). Se ve igual en el vídeo.
 function KitNumber({ text, r, ink }: { text: string; r: number; ink: string }) {
+  return <GlyphNumber text={text} ink={ink} size={r * 1.4} maxW={r * 1.5} y={r * 0.06} sx={0.84} shadow={ink === '#fff' ? 'rgba(0,0,0,.35)' : 'rgba(255,255,255,.18)'} sh={[r * 0.035, r * 0.05]} />
+}
+
+// Número o letra como trazado, centrado en (0, y): `size` = tamaño de letra, `maxW` = ancho máximo,
+// `sx` = estrechamiento (los dorsales de camiseta y de ficha son algo estrechos). Sombra opcional desplazada `sh`.
+function GlyphNumber({ text, ink, size: big, maxW, y, sx, shadow, sh }: { text: string; ink: string; size: number; maxW: number; y: number; sx: number; shadow?: string; sh?: [number, number] }) {
   const chars = [...text.toUpperCase()]
   if (!chars.every((ch) => GLYPHS[ch]))
-    return <text y={r * 0.05} textAnchor="middle" dominantBaseline="central" fontSize={r * 1.1} fontWeight={800} fill={ink} fontFamily="Montserrat, system-ui, sans-serif">{text}</text>
-  const sx = 0.84, gap = -0.02
-  const adv = chars.map((ch) => GLYPHS[ch][1] + gap)
-  const total = adv.reduce((a, b) => a + b, 0) - gap
-  // Letra de 1,4r (mayúscula ≈ 1r); si el texto es largo, se achica para no salirse del pecho.
-  const size = Math.min(r * 1.4, (r * 1.5) / (total * sx))
+    return <text y={y} textAnchor="middle" dominantBaseline="central" fontSize={big * 0.78} fontWeight={800} fill={ink} fontFamily="Montserrat, system-ui, sans-serif">{text}</text>
+  const gap = -0.02
+  const total = chars.reduce((a, ch) => a + GLYPHS[ch][1] + gap, 0) - gap
+  const size = Math.min(big, maxW / (total * sx))
   let x = -total / 2
   const paths = chars.map((ch) => { const d = GLYPHS[ch][0], at = x; x += GLYPHS[ch][1] + gap; return { d, at } })
-  const tf = `translate(0 ${r * 0.06 + (CAP * size) / 2}) scale(${size * sx} ${size})`
-  const shadow = ink === '#fff' ? 'rgba(0,0,0,.35)' : 'rgba(255,255,255,.18)'
+  const tf = `translate(0 ${y + (CAP * size) / 2}) scale(${size * sx} ${size})`
+  const glyphs = paths.map((p, i) => <path key={i} d={p.d} transform={`translate(${p.at} 0)`} />)
   return (
     <g pointerEvents="none">
-      <g transform={`translate(${r * 0.035} ${r * 0.05}) ${tf}`} fill={shadow}>{paths.map((p, i) => <path key={i} d={p.d} transform={`translate(${p.at} 0)`} />)}</g>
-      <g transform={tf} fill={ink}>{paths.map((p, i) => <path key={i} d={p.d} transform={`translate(${p.at} 0)`} />)}</g>
+      {shadow && sh && <g transform={`translate(${sh[0]} ${sh[1]}) ${tf}`} fill={shadow}>{glyphs}</g>}
+      <g transform={tf} fill={ink}>{glyphs}</g>
     </g>
+  )
+}
+
+// Aluminio técnico: borde de aluminio satinado con bisel, anillo del color del equipo, cara de grafito y dorsal blanco.
+function AluDisc({ fill, r, num }: { fill: string; r: number; num: string }) {
+  const R = r * 1.12
+  return (
+    <>
+      <circle cx={R * 0.06} cy={R * 0.16} r={R * 1.18} fill="url(#tok-drop)" />
+      <circle r={R} fill="url(#alu-rim)" stroke="rgba(0,0,0,.65)" strokeWidth={R * 0.035} />
+      <circle r={R * 0.885} fill="url(#alu-bevel)" />
+      <circle r={R * 0.8} fill={fill} />
+      <circle r={R * 0.8} fill="url(#tok-tint)" />
+      <circle r={R * 0.665} fill="url(#graphite)" stroke="rgba(0,0,0,.7)" strokeWidth={R * 0.03} />
+      <circle r={R * 0.63} fill="none" stroke="rgba(0,0,0,.45)" strokeWidth={R * 0.05} />
+      <path d={`M${-R * 0.82} ${-R * 0.18} A${R * 0.84} ${R * 0.84} 0 0 1 ${R * 0.66} ${-R * 0.52}`} fill="none" stroke="#fff" strokeOpacity={0.35} strokeWidth={R * 0.03} strokeLinecap="round" />
+      {num && <GlyphNumber text={num} ink="#f4f5f6" size={R * 1.06} maxW={R * 1.0} y={R * 0.02} sx={0.8} shadow="rgba(0,0,0,.6)" sh={[0, R * 0.04]} />}
+    </>
+  )
+}
+
+// Perfil táctico: cara de grafito con borde y dorsal del color del equipo. El triangulito de orientación va
+// aparte (gira con el jugador) y el dorsal se queda derecho.
+function ProfileDisc({ fill, r, num }: { fill: string; r: number; num: string }) {
+  const R = r * 1.12
+  return (
+    <>
+      <circle cx={R * 0.06} cy={R * 0.16} r={R * 1.18} fill="url(#tok-drop)" />
+      <circle r={R} fill={fill} stroke="rgba(0,0,0,.7)" strokeWidth={R * 0.035} />
+      <circle r={R} fill="url(#tok-tint)" />
+      <circle r={R * 0.9} fill="none" stroke="#fff" strokeOpacity={0.28} strokeWidth={R * 0.025} />
+      <circle r={R * 0.84} fill="url(#graphite)" stroke="rgba(0,0,0,.75)" strokeWidth={R * 0.04} />
+      <circle r={R * 0.8} fill="none" stroke="rgba(0,0,0,.4)" strokeWidth={R * 0.06} />
+      {num && <GlyphNumber text={num} ink={fill} size={R * 0.96} maxW={R * 0.82} y={R * 0.03} sx={0.78} shadow="rgba(0,0,0,.65)" sh={[0, R * 0.045]} />}
+    </>
   )
 }
 
@@ -346,13 +412,13 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK, face 
   const name = look.text !== 'number' ? t.name?.trim() : ''
   const fs = r * (num.length > 2 ? 0.8 : 1.05)
   // Radio del indicador de orientación: con la camiseta va por fuera, para no cortar las mangas.
-  const fr = r * (look.shape === 'kit' ? 1.62 : 1.34)
+  const fr = r * (look.shape === 'kit' ? 1.62 : look.shape === 'alu' ? 1.42 : 1.34)
   return (
     <g data-token={t.id} transform={`translate(${t.x} ${t.y})`} className="token">
       <circle r={r * 1.5} fill="transparent" />
       {selected && <circle r={r * (look.shape === 'kit' ? 1.75 : 1.45)} fill="none" stroke="#fff" strokeWidth={0.25} />}
       {/* Hacia dónde mira: un arco fino sobre un halo, como en los datos de seguimiento de la tele. */}
-      {face !== undefined && (
+      {face !== undefined && look.shape !== 'perfil' && (
         <g transform={`rotate(${(face * 180) / Math.PI})`} pointerEvents="none">
           <circle r={fr} fill="none" stroke={fill} strokeOpacity={look.shape === 'kit' ? 0.22 : 0.35} strokeWidth={r * 0.07} />
           <path d={`M${Math.cos(-0.62) * fr} ${Math.sin(-0.62) * fr} A${fr} ${fr} 0 0 1 ${Math.cos(0.62) * fr} ${Math.sin(0.62) * fr}`}
@@ -376,18 +442,25 @@ export function TokenShape({ t, r, selected, upright, look = DEFAULT_LOOK, face 
           </>
         )}
         {look.shape === 'kit' && <KitShirt team={t.team} fill={fill} r={r} kit={kit} />}
+        {look.shape === 'alu' && <AluDisc fill={fill} r={r} num={num} />}
+        {look.shape === 'perfil' && <ProfileDisc fill={t.team === 'neutral' ? '#d6d9dc' : fill} r={r} num={num} />}
         {num && look.shape === 'kit' && <KitNumber text={num} r={r} ink={kitInk(t.team, fill)} />}
-        {num && look.shape !== 'kit' && (
+        {num && look.shape !== 'kit' && look.shape !== 'alu' && look.shape !== 'perfil' && (
           <text y={look.shape === 'shirt' ? r * 0.18 : 0} textAnchor="middle" dominantBaseline="central" fontSize={look.shape === 'shirt' ? fs * 0.95 : fs} fontWeight={800} fill={ink} fontFamily="system-ui, sans-serif">
             {num}
           </text>
         )}
         {name && (
-          <text y={r * (look.shape === 'kit' ? 1.95 : look.shape === 'shirt' ? 1.95 : 1.85)} textAnchor="middle" dominantBaseline="central" fontSize={r * 0.62} fontWeight={700} fill="#fff" stroke="rgba(0,0,0,.75)" strokeWidth={r * 0.16} paintOrder="stroke" strokeLinejoin="round" fontFamily="system-ui, sans-serif">
+          <text y={r * (look.shape === 'kit' || look.shape === 'shirt' ? 1.95 : look.shape === 'alu' || look.shape === 'perfil' ? 2.0 : 1.85)} textAnchor="middle" dominantBaseline="central" fontSize={r * 0.62} fontWeight={700} fill="#fff" stroke="rgba(0,0,0,.75)" strokeWidth={r * 0.16} paintOrder="stroke" strokeLinejoin="round" fontFamily="system-ui, sans-serif">
             {name}
           </text>
         )}
       </g>
+      {look.shape === 'perfil' && (
+        <g transform={`rotate(${((face ?? (t.team === 'away' ? Math.PI : t.team === 'home' ? 0 : -Math.PI / 2)) * 180) / Math.PI})`} pointerEvents="none">
+          <path d={`M${r * 0.99} 0 L${r * 0.63} ${-r * 0.25} L${r * 0.63} ${r * 0.25} Z`} fill={t.team === 'neutral' ? '#d6d9dc' : fill} stroke="rgba(0,0,0,.35)" strokeWidth={r * 0.03} strokeLinejoin="round" />
+        </g>
+      )}
     </g>
   )
 }
