@@ -462,7 +462,7 @@ export function clipToSteps(b0: Board): Board {
     const runners = movers.filter((t) => t.kind === 'player' && t.team !== 'away' && t.id !== v.holder && frames[i].drawings.some((d) => d.type === 'run' && d.points[0] === v.pos[t.id]))
     if (runners.length === 1) parts.push(tr('El {a} se desmarca.', { a: name(runners[0].id) }))
     else if (runners.length > 1) parts.push(tr('Se desmarcan {a}.', { a: runners.map((x) => name(x.id)).join(', ') }))
-    const press = movers.filter((t) => t.kind === 'player' && t.team === 'away' && frames[i].drawings.some((d) => d.type === 'run' && d.points[0] === v.pos[t.id]))
+    const press = movers.filter((t) => t.kind === 'player' && t.team === 'away' && frames[i].drawings.some((d) => d.type === 'press' && d.points[0] === v.pos[t.id]))
     // Lo de la defensa solo se dice cuando empieza a ajustarse, no en todos los pasos.
     if (press.length && !(i > 0 && frames[i - 1].note.includes(tr('La defensa se ajusta y presiona.')))) parts.push(tr('La defensa se ajusta y presiona.'))
     frames[i].note = parts.join(' ')
