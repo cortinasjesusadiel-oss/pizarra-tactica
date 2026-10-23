@@ -8,7 +8,7 @@ import { Markers, TokenShape } from './Shapes'
 import { useArt } from './material'
 import { Scene } from './Scene'
 import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, paceAt, paceStart, sampleAt, shownStep, type Pace, type Speed } from './motion'
-import { Sim, newClip, smoothTrack, type Clip, type ClipView } from './clip'
+import { Sim, newClip, smoothTrack, trimPauses, type Clip, type ClipView } from './clip'
 import { PRO } from './pro'
 import { carrier, movesFromArrows } from './steps'
 import { SESSIONS } from './sessions'
@@ -545,7 +545,9 @@ export default function App() {
     for (const id of Object.keys(r.from)) if (r.clip.tracks[id]) r.clip.tracks[id] = smoothTrack(r.clip.tracks[id], r.from[id])
     const dur = Math.max(r.clip.dur, r.sim.t)
     if (!Object.keys(r.from).length && r.clip.passes.length === (r.board.clip?.passes.length ?? 0) && !r.board.clip) return
-    commit({ ...r.board, frames: undefined, clip: { ...r.clip, dur: +dur.toFixed(3) } })
+    // El rato quieto del final (hasta que pulsas Parar) se recorta solo.
+    const full: Board = { ...r.board, frames: undefined, clip: { ...r.clip, dur: +dur.toFixed(3) } }
+    commit({ ...full, clip: trimPauses(full, 0.7, Infinity) })
     setClipT(0)
     setToast(t('Grabación guardada. Pulsa ▶ Reproducir para verla o graba otra capa.'))
   }
@@ -610,7 +612,7 @@ export default function App() {
     if (d.ball) {
       setLive(null)
       // Pase hacia donde sueltas el balón: a un compañero si lo sueltas cerca de él; si no, a ese punto.
-      let to: string | null = null, best = 4
+      let to: string | null = null, best = 6
       for (const tk of board.tokens) {
         if (tk.kind !== 'player' || tk.id === r.sim.holder) continue
         const q = r.sim.pos[tk.id]
@@ -629,6 +631,16 @@ export default function App() {
     const q = r.live[d.id]
     delete r.live[d.id]
     if (q) r.clip.tracks[d.id].push([+(r.sim.t + 0.001).toFixed(3), +q[0].toFixed(3), +q[1].toFixed(3)])
+  }
+  const cutPauses = () => {
+    if (!board.clip) return
+    stopAnim()
+    const c = trimPauses(board)
+    if (c === board.clip) { setToast(t('No hay tiempos muertos que quitar.')); return }
+    const saved = board.clip.dur - c.dur
+    commit((b) => ({ ...b, clip: c }))
+    setClipT(0)
+    setToast(t('Quitados {s} s de tiempos muertos. Si no te gusta, pulsa Deshacer.', { s: saved.toFixed(1) }))
   }
   const clearClip = () => { stopAnim(); commit((b) => ({ ...b, clip: undefined })); setClipT(0) }
   const toggleAuto = () => commit((b) => (b.clip ? { ...b, clip: { ...b.clip, auto: !b.clip.auto } } : b))
@@ -1098,6 +1110,7 @@ export default function App() {
               <span className="sep" />
               <button onClick={startRec} disabled={!!rec}>{t('● Grabar capa')}</button>
               <label className="pick"><input type="checkbox" checked={!!board.clip.auto} onChange={toggleAuto} disabled={!!rec} /><span>{t('Defensa automática')}</span></label>
+              <button onClick={cutPauses} disabled={!!rec}>{t('Quitar tiempos muertos')}</button>
               <button onClick={clearClip} disabled={!!rec}>{t('Borrar grabación')}</button>
               <button onClick={() => setSheet('export')} disabled={video !== null || !!rec}>{t('Exportar vídeo')}</button>
             </>

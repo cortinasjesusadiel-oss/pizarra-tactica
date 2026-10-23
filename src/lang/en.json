@@ -1530,5 +1530,8 @@
  "■ Parar": "■ Stop",
  "● Grabar": "● Record",
  "● Grabar capa": "● Record layer",
- "Rondo 4+1 contra 4 en tiempo real": "4+1 v 4 rondo in real time"
+ "Rondo 4+1 contra 4 en tiempo real": "4+1 v 4 rondo in real time",
+ "No hay tiempos muertos que quitar.": "There are no idle moments to remove.",
+ "Quitados {s} s de tiempos muertos. Si no te gusta, pulsa Deshacer.": "Removed {s} s of idle time. If you don’t like it, tap Undo.",
+ "Quitar tiempos muertos": "Remove idle time"
 }

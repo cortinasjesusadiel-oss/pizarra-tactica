@@ -360,3 +360,55 @@ export function smoothTrack(tr: Sample[], from: number): Sample[] {
 }
 
 export const newClip = (auto = true): Clip => ({ dur: 0, tracks: {}, passes: [], auto })
+
+// Quita los tiempos muertos: los ratos en los que nadie se mueve ni viaja el balón (mientras pensabas el siguiente
+// movimiento al grabar) se acortan a `keep` segundos, y el final quieto se recorta. Devuelve la jugada nueva.
+export function trimPauses(b: Board, keep = 0.7, min = 1.2): Clip {
+  const clip = b.clip!
+  const step = 1 / 30
+  const n = Math.floor(clip.dur / step)
+  const still: boolean[] = []
+  let prev = clipView(b, 0)
+  for (let i = 1; i <= n; i++) {
+    const v = clipView(b, i * step)
+    let moving = false
+    for (const id of Object.keys(v.pos)) {
+      const a = prev.pos[id], z = v.pos[id]
+      if (Math.hypot(z[0] - a[0], z[1] - a[1]) / step > 0.8) { moving = true; break }
+    }
+    // Un pase a punto de salir también cuenta como acción.
+    if (!moving && clip.passes.some((p) => Math.abs(p.t - i * step) < 0.25)) moving = true
+    still.push(!moving)
+    prev = v
+  }
+  // Tramos quietos largos: [inicio, fin] en segundos.
+  const cuts: [number, number][] = []
+  let s0 = -1
+  for (let i = 0; i <= still.length; i++) {
+    if (i < still.length && still[i]) { if (s0 < 0) s0 = i; continue }
+    if (s0 >= 0) {
+      const a = s0 * step, z = i * step
+      const end = i >= still.length
+      if (end) { if (z - a > 0.5) cuts.push([a + 0.6, z]) }
+      else if (z - a > min) cuts.push([a + keep / 2, z - keep / 2])
+      s0 = -1
+    }
+  }
+  if (!cuts.length) return clip
+  const map = (t: number) => {
+    let out = t
+    for (const [a, z] of cuts) { if (t >= z) out -= z - a; else if (t > a) { out -= t - a; break } else break }
+    return +out.toFixed(3)
+  }
+  const tracks: Record<string, Sample[]> = {}
+  for (const [id, tr] of Object.entries(clip.tracks)) {
+    const out: Sample[] = []
+    for (const [t, x, y] of tr) {
+      const m = map(t)
+      if (out.length && m <= out[out.length - 1][0]) out[out.length - 1] = [out[out.length - 1][0], x, y]
+      else out.push([m, x, y])
+    }
+    tracks[id] = out
+  }
+  return { ...clip, tracks, passes: clip.passes.map((p) => ({ ...p, t: map(p.t) })), dur: map(clip.dur) }
+}

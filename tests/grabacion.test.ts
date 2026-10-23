@@ -1,7 +1,7 @@
 // Jugada grabada (Pro): el balón llega al compañero aunque corra, nadie da saltos y la defensa automática presiona.
 import { describe, expect, it } from 'vitest'
 import { ballAt, player, type Board, type Token } from '../src/model'
-import { clipView, trackAt, type Clip, type Sample } from '../src/clip'
+import { clipView, trackAt, trimPauses, type Clip, type Sample } from '../src/clip'
 
 // Rondo 4 contra 2 en el 40×30: los cuatro de fuera se mueven por la banda y se pasan el balón.
 function rondo(auto: boolean): Board {
@@ -73,5 +73,27 @@ describe('Jugada grabada', () => {
     const b2 = rondo(false)
     const still = clipView(b2, 5.4)
     for (const t of b2.tokens.filter((x) => x.team === 'away')) expect(still.pos[t.id]).toEqual([t.x, t.y])
+  })
+
+  it('quitar tiempos muertos acorta las esperas y el balón sigue llegando a cada compañero', () => {
+    const b = rondo(false)
+    // Todos quietos 6 s en medio (como si pensaras el siguiente movimiento) y otros 5 s al final.
+    const T = 2.4, P = 6
+    for (const tr of Object.values(b.clip!.tracks)) {
+      const out: Sample[] = []
+      for (const [t, x, y] of tr) {
+        if (t <= T) out.push([t, x, y])
+        else { if (out[out.length - 1][0] <= T) out.push([T + P, out[out.length - 1][1], out[out.length - 1][2]]); out.push([t + P, x, y]) }
+      }
+      tr.splice(0, tr.length, ...out)
+    }
+    b.clip!.passes = b.clip!.passes.map((p) => ({ ...p, t: p.t < T ? p.t : p.t + P }))
+    b.clip!.passes[1].t = 2
+    b.clip!.dur = 5.5 + P + 5
+    const c = trimPauses(b)
+    expect(c.dur).toBeLessThan(b.clip!.dur - 7)
+    const nb = { ...b, clip: c }
+    const last = clipView(nb, c.dur)
+    expect(last.holder).toBe(b.tokens[3].id)
   })
 })
