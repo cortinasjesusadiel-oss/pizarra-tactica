@@ -8,7 +8,7 @@ import { Markers, TokenShape } from './Shapes'
 import { useArt } from './material'
 import { Scene } from './Scene'
 import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, paceAt, paceStart, sampleAt, shownStep, type Pace, type Speed } from './motion'
-import { Sim, newClip, smoothTrack, trimPauses, type Clip, type ClipView } from './clip'
+import { Sim, clipToSteps, newClip, smoothTrack, trimPauses, type Clip, type ClipView } from './clip'
 import { PRO } from './pro'
 import { carrier, movesFromArrows } from './steps'
 import { SESSIONS } from './sessions'
@@ -642,6 +642,15 @@ export default function App() {
     setClipT(0)
     setToast(t('Quitados {s} s de tiempos muertos. Si no te gusta, pulsa Deshacer.', { s: saved.toFixed(1) }))
   }
+  const toSteps = () => {
+    if (!board.clip) return
+    stopAnim()
+    const nb = clipToSteps(board)
+    commit(nb)
+    setStep(0)
+    setPace({ flow: true })
+    setToast(t('Listo: {n} pasos. Escribe la explicación de cada uno. Si no te gusta, pulsa Deshacer.', { n: nb.frames!.length }))
+  }
   const clearClip = () => { stopAnim(); commit((b) => ({ ...b, clip: undefined })); setClipT(0) }
   const toggleAuto = () => commit((b) => (b.clip ? { ...b, clip: { ...b.clip, auto: !b.clip.auto } } : b))
 
@@ -1111,6 +1120,7 @@ export default function App() {
               <button onClick={startRec} disabled={!!rec}>{t('● Grabar capa')}</button>
               <label className="pick"><input type="checkbox" checked={!!board.clip.auto} onChange={toggleAuto} disabled={!!rec} /><span>{t('Defensa automática')}</span></label>
               <button onClick={cutPauses} disabled={!!rec}>{t('Quitar tiempos muertos')}</button>
+              <button onClick={toSteps} disabled={!!rec}>{t('Convertir en pasos')}</button>
               <button onClick={clearClip} disabled={!!rec}>{t('Borrar grabación')}</button>
               <button onClick={() => setSheet('export')} disabled={video !== null || !!rec}>{t('Exportar vídeo')}</button>
             </>

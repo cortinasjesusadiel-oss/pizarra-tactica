@@ -1,7 +1,7 @@
 // Jugada grabada (Pro): el balón llega al compañero aunque corra, nadie da saltos y la defensa automática presiona.
 import { describe, expect, it } from 'vitest'
 import { ballAt, player, type Board, type Token } from '../src/model'
-import { clipView, trackAt, trimPauses, type Clip, type Sample } from '../src/clip'
+import { clipToSteps, clipView, trackAt, trimPauses, type Clip, type Sample } from '../src/clip'
 
 // Rondo 4 contra 2 en el 40×30: los cuatro de fuera se mueven por la banda y se pasan el balón.
 function rondo(auto: boolean): Board {
@@ -95,5 +95,15 @@ describe('Jugada grabada', () => {
     const nb = { ...b, clip: c }
     const last = clipView(nb, c.dur)
     expect(last.holder).toBe(b.tokens[3].id)
+  })
+
+  it('convertir en pasos: un paso por pase, con la flecha del pase y su explicación', () => {
+    const b = rondo(true)
+    const s = clipToSteps(b)
+    expect(s.clip).toBeUndefined()
+    expect(s.frames!.length).toBeGreaterThanOrEqual(4)
+    const withPass = s.frames!.filter((f) => f.drawings.some((d) => d.type === 'pass'))
+    expect(withPass.length).toBe(3)
+    expect(withPass[0].note).toMatch(/(pasa al|passes to) 2/)
   })
 })

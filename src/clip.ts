@@ -1,4 +1,5 @@
-import { PITCH, type Board, type Pt, type Token } from './model'
+import { t as tr } from './i18n'
+import { PITCH, line, type Board, type Frame, type Pt, type Token } from './model'
 
 // «Jugada grabada» (función Pro): en vez de pasos, las fichas se mueven en tiempo real tal y como las arrastras
 // con el dedo, el ratón o el S Pen. Se graba por capas: primero unos jugadores, luego otros, mientras lo ya grabado
@@ -411,4 +412,60 @@ export function trimPauses(b: Board, keep = 0.7, min = 1.2): Clip {
     tracks[id] = out
   }
   return { ...clip, tracks, passes: clip.passes.map((p) => ({ ...p, t: map(p.t) })), dur: map(clip.dur) }
+}
+
+// Convierte la jugada grabada en una animación por pasos: un paso en cada pase (y otro cada pocos segundos si
+// hay mucho rato sin pases), con las flechas del pase y de las carreras. Así se puede escribir la explicación de
+// cada paso y editarla como cualquier otra jugada.
+export function clipToSteps(b0: Board): Board {
+  // Primero se quitan los tiempos muertos, para que no salgan pasos en los que no pasa nada.
+  const b: Board = { ...b0, clip: trimPauses(b0) }
+  const clip = b.clip!
+  const times = [0]
+  // Justo antes de cada pase, cuando el balón aún lo tiene el que pasa.
+  for (const p of clip.passes) if (p.t - 0.05 > times[times.length - 1] + 0.4 && p.t < clip.dur - 0.2) times.push(p.t - 0.05)
+  times.push(clip.dur)
+  // Tramos largos sin pases: se parten para que las carreras no se aplanen.
+  const keys: number[] = []
+  for (let i = 0; i < times.length - 1; i++) {
+    const a = times[i], z = times[i + 1], parts = Math.max(1, Math.ceil((z - a) / 3.5))
+    for (let k = 0; k < parts; k++) keys.push(a + ((z - a) * k) / parts)
+  }
+  keys.push(clip.dur)
+  const views = keys.map((k) => clipView(b, k))
+
+  const movers = b.tokens.filter((t) => t.kind === 'player' || t.kind === 'ball')
+  const tokens = b.tokens.map((t) => { const p = views[0].pos[t.id]; return p ? { ...t, x: +p[0].toFixed(2), y: +p[1].toFixed(2) } : t })
+  const frames: Frame[] = views.map((v, i) => {
+    const pos: Record<string, Pt> = {}
+    if (i > 0) for (const t of movers) {
+      const a = views[i - 1].pos[t.id], z = v.pos[t.id]
+      if (a && z && Math.hypot(z[0] - a[0], z[1] - a[1]) > 0.3) pos[t.id] = [+z[0].toFixed(2), +z[1].toFixed(2)]
+    }
+    return { pos, drawings: [], note: '' }
+  })
+  // Flechas de cada paso: lo que pasa hasta el siguiente (pase del balón y carreras de más de 2 m).
+  for (let i = 0; i < views.length - 1; i++) {
+    const v = views[i], w = views[i + 1]
+    for (const t of movers) {
+      const a = v.pos[t.id], z = w.pos[t.id]
+      if (!a || !z || Math.hypot(z[0] - a[0], z[1] - a[1]) < 2) continue
+      if (t.kind === 'ball') {
+        if (v.holder && w.holder && v.holder !== w.holder) frames[i].drawings.push(line('pass', [a, z]))
+      } else frames[i].drawings.push(line(t.team === 'away' ? 'press' : t.id === v.holder && t.id === w.holder ? 'dribble' : 'run', [a, z]))
+    }
+    // Explicación básica escrita sola; el entrenador la cambia a su gusto.
+    const name = (id: string | null) => { const t = b.tokens.find((x) => x.id === id); return t ? (t.name?.trim() || t.label) : '' }
+    const parts: string[] = []
+    if (v.holder && w.holder && v.holder !== w.holder) parts.push(tr('El {a} pasa al {b}.', { a: name(v.holder), b: name(w.holder) }))
+    else if (v.holder && v.holder === w.holder && frames[i].drawings.some((d) => d.type === 'dribble')) parts.push(tr('El {a} conduce.', { a: name(v.holder) }))
+    const runners = movers.filter((t) => t.kind === 'player' && t.team !== 'away' && t.id !== v.holder && frames[i].drawings.some((d) => d.type === 'run' && d.points[0] === v.pos[t.id]))
+    if (runners.length === 1) parts.push(tr('El {a} se desmarca.', { a: name(runners[0].id) }))
+    else if (runners.length > 1) parts.push(tr('Se desmarcan {a}.', { a: runners.map((x) => name(x.id)).join(', ') }))
+    const press = movers.filter((t) => t.kind === 'player' && t.team === 'away' && frames[i].drawings.some((d) => d.type === 'run' && d.points[0] === v.pos[t.id]))
+    // Lo de la defensa solo se dice cuando empieza a ajustarse, no en todos los pasos.
+    if (press.length && !(i > 0 && frames[i - 1].note.includes(tr('La defensa se ajusta y presiona.')))) parts.push(tr('La defensa se ajusta y presiona.'))
+    frames[i].note = parts.join(' ')
+  }
+  return { ...b, tokens, clip: undefined, frames }
 }

@@ -1533,5 +1533,12 @@
  "Rondo 4+1 contra 4 en tiempo real": "4+1 v 4 rondo in real time",
  "No hay tiempos muertos que quitar.": "There are no idle moments to remove.",
  "Quitados {s} s de tiempos muertos. Si no te gusta, pulsa Deshacer.": "Removed {s} s of idle time. If you don’t like it, tap Undo.",
- "Quitar tiempos muertos": "Remove idle time"
+ "Quitar tiempos muertos": "Remove idle time",
+ "Convertir en pasos": "Convert to steps",
+ "Listo: {n} pasos. Escribe la explicación de cada uno. Si no te gusta, pulsa Deshacer.": "Done: {n} steps. Write the explanation for each one. If you don’t like it, tap Undo.",
+ "El {a} pasa al {b}.": "{a} passes to {b}.",
+ "El {a} conduce.": "{a} dribbles forward.",
+ "El {a} se desmarca.": "{a} gets free.",
+ "Se desmarcan {a}.": "{a} get free.",
+ "La defensa se ajusta y presiona.": "The defence shifts and presses."
 }
