@@ -32,7 +32,7 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
   const stepDraw = cs ? (board.frames![cs.i]?.drawings ?? []).filter((d) => d.type !== 'text').map((d) => ({ d, part: [d.type === 'pass' || d.type === 'lob' ? cs.u : cs.u * cs.u * (3 - 2 * cs.u), 1] as [number, number] })) : []
   if (cv) return (
     <>
-      {grass && <Pitch kind={board.pitch} zones={zones} brand={brand} ident={ident} />}
+      {grass && <Pitch kind={board.pitch} zones={zones} brand={brand} ident={ident} grass={look?.grass} />}
       {board.drawings.filter((d) => d.type !== 'text').map((d) => <DrawingShape key={d.id} d={d} />)}
       {stepDraw.map(({ d, part }) => <DrawingShape key={d.id} d={d} part={part} />)}
       {live && <DrawingShape d={live} />}
@@ -62,7 +62,7 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
   const faces = fs?.face ?? null
   return (
     <>
-      {grass && <Pitch kind={board.pitch} zones={zones} brand={brand} ident={ident} />}
+      {grass && <Pitch kind={board.pitch} zones={zones} brand={brand} ident={ident} grass={look?.grass} />}
       {board.drawings.filter((d) => d.type !== 'text').map((d) => <DrawingShape key={d.id} d={d} />)}
       {ghost && <Ghost board={board} step={Math.round(s)} upright={upright} look={look} />}
       {parts.filter(({ d }) => d.type !== 'text').map(({ d, part }) => <DrawingShape key={d.id} d={d} part={part} />)}

@@ -1,5 +1,7 @@
 import { memo } from 'react'
-import { PITCH, type PitchKind } from './model'
+import { PITCH, type GrassKind, type PitchKind } from './model'
+import { useGrass } from './material'
+const GRASS_TILE_M = 6
 import { LOGO, LOGO_RATIO } from './brandLogo'
 import type { LineKind, Mark } from './identity'
 import { t } from './i18n'
@@ -9,7 +11,7 @@ const L = { fill: 'none', stroke: CHALK, strokeWidth: 0.22 }
 
 // Un extremo de campo (área, área pequeña, punto de penalti, semicírculo y portería con red).
 // `x` es la línea de fondo y `dir` hacia dónde mira el campo (+1 a la derecha, -1 a la izquierda).
-function End({ x, dir }: { x: number; dir: 1 | -1 }) {
+function End({ x, dir, real }: { x: number; dir: 1 | -1; real?: boolean }) {
   const ax = dir > 0 ? x : x - 16.5
   const gx = dir > 0 ? x : x - 5.5
   const spot = x + dir * 11
@@ -21,7 +23,88 @@ function End({ x, dir }: { x: number; dir: 1 | -1 }) {
       <rect x={gx} y={24.84} width={5.5} height={18.32} {...L} />
       <circle cx={spot} cy={34} r={0.25} fill={CHALK} />
       <path d={`M${arcX} ${34 - 7.31} A9.15 9.15 0 0 ${dir > 0 ? 1 : 0} ${arcX} ${34 + 7.31}`} {...L} />
-      <rect x={netX} y={30.34} width={2} height={7.32} fill="url(#net)" stroke={CHALK} strokeWidth={0.18} />
+      {real ? <RealGoal x={x} dir={dir} /> : <rect x={netX} y={30.34} width={2} height={7.32} fill="url(#net)" stroke={CHALK} strokeWidth={0.18} />}
+    </g>
+  )
+}
+
+// Portería vista desde arriba: postes y larguero blancos con volumen, red de malla fina que cae hacia atrás
+// (más oscura al fondo, donde está más baja) y la sombra que la red y el marco dejan en el césped.
+function RealGoal({ x, dir }: { x: number; dir: 1 | -1 }) {
+  const y0 = 30.34, y1 = 37.66, d = 2.2
+  const bx = x - dir * d
+  // Contorno de la red: algo más estrecha al fondo, porque los soportes de atrás van hacia dentro.
+  const net = `M${x} ${y0} L${bx} ${y0 + 0.25} L${bx} ${y1 - 0.25} L${x} ${y1} Z`
+  return (
+    <g>
+      <path d={net} transform={`translate(${-dir * 0.45} 0.6)`} fill="#000" opacity={0.2} />
+      <path d={net} fill="rgba(255,255,255,.06)" />
+      <path d={net} fill="url(#goal-mesh)" />
+      <path d={net} fill={`url(#goal-depth-${dir > 0 ? 'l' : 'r'})`} />
+      <path d={`M${x} ${y0} L${bx} ${y0 + 0.25} L${bx} ${y1 - 0.25} L${x} ${y1}`} fill="none" stroke="#d9dde0" strokeWidth={0.09} strokeLinejoin="round" />
+      <rect x={x - 0.15} y={y0 - 0.15} width={0.3} height={y1 - y0 + 0.3} rx={0.15} fill="url(#goal-bar)" stroke="rgba(0,0,0,.25)" strokeWidth={0.03} />
+      {[y0, y1].map((y) => <circle key={y} cx={x} cy={y} r={0.23} fill="url(#goal-post)" stroke="rgba(0,0,0,.3)" strokeWidth={0.03} />)}
+    </g>
+  )
+}
+
+// Césped realista: color, franjas de corte, textura de briznas que se repite sin costuras y luz.
+// dia = estadio de día con la sombra de la grada; cuadros = corte en damero con focos; noche = oscuro y mate.
+const GRASS: Record<Exclude<GrassKind, 'clasico'>, { base: string; a: string; b: string; out: string; tex: number }> = {
+  dia: { base: '#418f3d', a: '#4c9b46', b: '#3d8739', out: '#326f31', tex: 0.4 },
+  cuadros: { base: '#2f7c38', a: '#378641', b: '#2b7334', out: '#245e2b', tex: 0.38 },
+  noche: { base: '#1f4a31', a: '#244f35', b: '#1c452d', out: '#163a26', tex: 0.3 },
+}
+function RealGrass({ style, kind, w, h, tile }: { style: Exclude<GrassKind, 'clasico'>; kind: PitchKind; w: number; h: number; tile: string | null }) {
+  const g = GRASS[style]
+  const sw = kind === 'grid' ? 5 : 105 / 18
+  const n = Math.ceil((w + 6) / sw)
+  const rows = kind === 'grid' ? 6 : 10
+  const goals = kind === 'full' ? [5, w - 5] : kind === 'half' ? [w - 5] : []
+  return (
+    <g>
+      <defs>
+        {tile && (
+          <pattern id="grass-tex" width={GRASS_TILE_M} height={GRASS_TILE_M} patternUnits="userSpaceOnUse">
+            <image href={tile} width={GRASS_TILE_M} height={GRASS_TILE_M} />
+          </pattern>
+        )}
+        <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#000" stopOpacity={0.26} />
+          <stop offset="78%" stopColor="#000" stopOpacity={0.2} />
+          <stop offset="100%" stopColor="#000" stopOpacity={0} />
+        </linearGradient>
+        <radialGradient id="wear">
+          <stop offset="0%" stopColor="#a8935a" stopOpacity={0.22} />
+          <stop offset="100%" stopColor="#a8935a" stopOpacity={0} />
+        </radialGradient>
+        <radialGradient id="flood">
+          <stop offset="0%" stopColor="#fff" stopOpacity={0.09} />
+          <stop offset="100%" stopColor="#fff" stopOpacity={0} />
+        </radialGradient>
+        <clipPath id="grass-clip"><rect x={-5} y={-5} width={w + 10} height={h + 10} /></clipPath>
+        <radialGradient id="vig" cx="50%" cy="50%" r="72%">
+          <stop offset="55%" stopColor="#000" stopOpacity={0} />
+          <stop offset="100%" stopColor="#000" stopOpacity={style === 'noche' ? 0.5 : 0.25} />
+        </radialGradient>
+      </defs>
+      <rect x={-5} y={-5} width={w + 10} height={h + 10} fill={g.out} />
+      <rect x={-3} y={-3} width={w + 6} height={h + 6} fill={g.base} />
+      {Array.from({ length: n }, (_, i) => (
+        <rect key={i} x={-3 + i * sw} y={-3} width={Math.min(sw, w + 3 - (-3 + i * sw))} height={h + 6} fill={i % 2 ? g.b : g.a} />
+      ))}
+      {style === 'cuadros' && Array.from({ length: rows }, (_, i) =>
+        <rect key={`r${i}`} x={-3} y={-3 + (i * (h + 6)) / rows} width={w + 6} height={(h + 6) / rows} fill={i % 2 ? '#000' : '#fff'} opacity={i % 2 ? 0.06 : 0.05} />)}
+      {tile && <rect x={-5} y={-5} width={w + 10} height={h + 10} fill="url(#grass-tex)" opacity={g.tex} />}
+      {style !== 'noche' && goals.map((x) => <ellipse key={x} cx={x} cy={h / 2} rx={6.5} ry={5} fill="url(#wear)" />)}
+      {style === 'dia' && kind === 'full' && <ellipse cx={w / 2} cy={h / 2} rx={8} ry={6} fill="url(#wear)" opacity={0.6} />}
+      {style === 'dia' && <rect x={-5} y={-5} width={w + 10} height={h * 0.2 + 5} fill="url(#roof)" />}
+      {style === 'cuadros' && (
+        <g clipPath="url(#grass-clip)">
+          {[[0, 0], [w, 0], [0, h], [w, h]].map(([x, y]) => <circle key={`${x}${y}`} cx={x} cy={y} r={w * 0.45} fill="url(#flood)" />)}
+        </g>
+      )}
+      <rect x={-5} y={-5} width={w + 10} height={h + 10} fill="url(#vig)" />
     </g>
   )
 }
@@ -49,8 +132,10 @@ function Zones({ kind, w, h }: { kind: PitchKind; w: number; h: number }) {
 // Marca de agua pequeña y transparente en el margen inferior derecho, fuera de las líneas del campo:
 // `brand` = 'logo' para el logo del autor, otro texto para escribirlo, o nada para no poner marca.
 // `ident` = la identidad del entrenador (escudo, equipo, nombre, eslogan), en el mismo sitio.
-export const Pitch = memo(function Pitch({ kind, zones, brand, ident }: { kind: PitchKind; zones?: boolean; brand?: string; ident?: Mark | null }) {
+export const Pitch = memo(function Pitch({ kind, zones, brand, ident, grass = 'clasico' }: { kind: PitchKind; zones?: boolean; brand?: string; ident?: Mark | null; grass?: GrassKind }) {
   const { w, h } = PITCH[kind]
+  const real = grass !== 'clasico'
+  const tile = useGrass(real)
   const stripeW = kind === 'grid' ? 5 : 105 / 18
   const stripes = Math.ceil(w / stripeW)
   const bands = kind === 'grid' ? 6 : 8
@@ -66,16 +151,38 @@ export const Pitch = memo(function Pitch({ kind, zones, brand, ident }: { kind: 
           <rect width={0.5} height={0.5} fill="rgba(255,255,255,.12)" />
           <path d="M0 0 L0.5 0.5 M0.5 0 L0 0.5" stroke="rgba(255,255,255,.5)" strokeWidth={0.05} />
         </pattern>
+        <pattern id="goal-mesh" width={0.16} height={0.16} patternUnits="userSpaceOnUse">
+          <path d="M0 0 H0.16 M0 0 V0.16" stroke="rgba(255,255,255,.62)" strokeWidth={0.026} />
+        </pattern>
+        {(['l', 'r'] as const).map((sd) => (
+          <linearGradient key={sd} id={`goal-depth-${sd}`} x1={sd === 'l' ? 1 : 0} y1="0" x2={sd === 'l' ? 0 : 1} y2="0">
+            <stop offset="0%" stopColor="#000" stopOpacity={0} />
+            <stop offset="100%" stopColor="#000" stopOpacity={0.28} />
+          </linearGradient>
+        ))}
+        <linearGradient id="goal-bar" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="55%" stopColor="#eef0f2" />
+          <stop offset="100%" stopColor="#b8bec4" />
+        </linearGradient>
+        <radialGradient id="goal-post" cx="35%" cy="35%" r="70%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#b5bbc1" />
+        </radialGradient>
       </defs>
-      <rect x={-5} y={-5} width={w + 10} height={h + 10} fill="var(--pitch-out)" />
-      <rect x={-3} y={-3} width={w + 6} height={h + 6} fill="var(--pitch)" />
-      {Array.from({ length: stripes }, (_, i) =>
-        i % 2 ? null : <rect key={i} x={i * stripeW} y={-3} width={Math.min(stripeW, w - i * stripeW)} height={h + 6} fill="var(--pitch-2)" />,
+      {real ? <RealGrass style={grass} kind={kind} w={w} h={h} tile={tile} /> : (
+        <>
+        <rect x={-5} y={-5} width={w + 10} height={h + 10} fill="var(--pitch-out)" />
+        <rect x={-3} y={-3} width={w + 6} height={h + 6} fill="var(--pitch)" />
+        {Array.from({ length: stripes }, (_, i) =>
+          i % 2 ? null : <rect key={i} x={i * stripeW} y={-3} width={Math.min(stripeW, w - i * stripeW)} height={h + 6} fill="var(--pitch-2)" />,
+        )}
+        {Array.from({ length: bands }, (_, i) =>
+          i % 2 ? null : <rect key={`b${i}`} x={-3} y={(i * h) / bands} width={w + 6} height={h / bands} fill="#fff" opacity={0.035} />,
+        )}
+        <rect x={-5} y={-5} width={w + 10} height={h + 10} fill="url(#light)" />
+        </>
       )}
-      {Array.from({ length: bands }, (_, i) =>
-        i % 2 ? null : <rect key={`b${i}`} x={-3} y={(i * h) / bands} width={w + 6} height={h / bands} fill="#fff" opacity={0.035} />,
-      )}
-      <rect x={-5} y={-5} width={w + 10} height={h + 10} fill="url(#light)" />
       {zones && <Zones kind={kind} w={w} h={h} />}
       {brand === 'logo' && (
         <image href={LOGO} x={w - 2.3 * LOGO_RATIO} y={h + 0.3} width={2.3 * LOGO_RATIO} height={2.3} opacity={0.5} preserveAspectRatio="xMaxYMid meet" />
@@ -90,8 +197,8 @@ export const Pitch = memo(function Pitch({ kind, zones, brand, ident }: { kind: 
           <line x1={52.5} y1={0} x2={52.5} y2={68} {...L} />
           <circle cx={52.5} cy={34} r={9.15} {...L} />
           <circle cx={52.5} cy={34} r={0.25} fill={CHALK} />
-          <End x={0} dir={1} />
-          <End x={105} dir={-1} />
+          <End x={0} dir={1} real={real} />
+          <End x={105} dir={-1} real={real} />
           {[[0, 0, 0], [105, 0, 90], [105, 68, 180], [0, 68, 270]].map(([x, y, r]) => (
             <path key={`${x}${y}`} d="M1 0 A1 1 0 0 1 0 1" transform={`translate(${x} ${y}) rotate(${r})`} {...L} />
           ))}
@@ -100,7 +207,7 @@ export const Pitch = memo(function Pitch({ kind, zones, brand, ident }: { kind: 
       {kind === 'half' && (
         <>
           <path d={`M0 ${34 - 9.15} A9.15 9.15 0 0 1 0 ${34 + 9.15}`} {...L} />
-          <End x={52.5} dir={-1} />
+          <End x={52.5} dir={-1} real={real} />
           <path d="M51.5 0 A1 1 0 0 0 52.5 1" {...L} />
           <path d="M52.5 67 A1 1 0 0 0 51.5 68" {...L} />
         </>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { MOVES_BALL, MOVES_PLAYER, STRAIGHT,
-  COLORS, DEFAULT_COLOR, DEFAULT_LOOK, TEAM_COLORS, type Look, type TokenShapeKind, type TokenText, EQUIPMENT, KIND_NAME, PITCH, TOOL_NAME, ballAt, item, player, posAt, uid,
+  COLORS, DEFAULT_COLOR, DEFAULT_LOOK, TEAM_COLORS, type GrassKind, type Look, type TokenShapeKind, type TokenText, EQUIPMENT, KIND_NAME, PITCH, TOOL_NAME, ballAt, item, player, posAt, uid,
   type Board, type TokenKind, type DrawTool, type Drawing, type PitchKind, type Pt, type Team, type Token, type Tool,
   LABEL_BG_COLORS, LABEL_DEFAULT_BG, lobBend, LABEL_SIZES, LABEL_TEXT_COLORS,
 } from './model'
@@ -2113,6 +2113,18 @@ function LookSheet({ look, setLook, onClose }: { look: Look; setLook: (p: Partia
           ))}
         </div>
       </section>
+      {PRO && (
+        <section>
+          <h3>{t('Césped')}</h3>
+          <div className="seg" role="group" aria-label={t('Césped')}>
+            {(['clasico', 'dia', 'cuadros', 'noche'] as GrassKind[]).map((g) => (
+              <button key={g} className={(look.grass ?? 'clasico') === g ? 'on' : ''} onClick={() => setLook({ grass: g })}>
+                {g === 'clasico' ? t('Clásico') : g === 'dia' ? t('Estadio de día') : g === 'cuadros' ? t('Cuadros') : t('Noche')}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       <section>
         <h3>{t('Mostrar')}</h3>
         <div className="seg" role="group" aria-label={t('Qué mostrar')}>

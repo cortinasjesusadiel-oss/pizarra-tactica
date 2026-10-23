@@ -1,5 +1,5 @@
 import { createElement } from 'react'
-import { artReady, kitReady } from './material'
+import { artReady, grassReady, kitReady } from './material'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer'
 import { PITCH, type Board, type Look } from './model'
@@ -132,6 +132,7 @@ export interface Renderer { canvas: HTMLCanvasElement; seconds: number; animSeco
 export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas = document.createElement('canvas')): Promise<Renderer> {
   await artReady
   if (opts.look?.shape === 'kit') await kitReady()
+  if (opts.look?.grass && opts.look.grass !== 'clasico') await grassReady()
   const n = board.frames?.length ?? 0
   // Texto del paso en una franja fina arriba y el campo lo más grande posible debajo.
   // Sin explicaciones en los pasos basta con una franja más fina para «PASO 2/5».
@@ -166,7 +167,7 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
 
   await fontsReady()
   // El césped no cambia: se dibuja una sola vez.
-  const grass = await svgImage(renderToStaticMarkup(rot(createElement(Pitch, { kind: board.pitch, zones: opts.zones, brand: opts.brand }))), viewBox, bw * k, bh * k)
+  const grass = await svgImage(renderToStaticMarkup(rot(createElement(Pitch, { kind: board.pitch, zones: opts.zones, brand: opts.brand, grass: opts.look?.grass }))), viewBox, bw * k, bh * k)
   const logo = opts.outro ? await loadImage(logoFull) : null
   const firma = opts.outro ? await loadImage(firmaCreador) : null
   const crest = opts.ident?.crest ? await loadImage(opts.ident.crest).catch(() => null) : null
@@ -332,6 +333,7 @@ export async function exportVideo(board: Board, opts: ExportOpts = {}): Promise<
 export async function exportImage(board: Board, opts: ExportOpts & { s?: number } = {}): Promise<File> {
   await artReady
   if (opts.look?.shape === 'kit') await kitReady()
+  if (opts.look?.grass && opts.look.grass !== 'clasico') await grassReady()
   const { w: W, h: H } = PITCH[board.pitch]
   const vert = !!opts.vertical
   const vbW = (vert ? H : W) + 2 * PAD, vbH = (vert ? W : H) + 2 * PAD

@@ -74,3 +74,16 @@ export const useKit = (want: boolean) => {
   if (want) void kitReady()
   return useSyncExternalStore(subscribe, () => kit, () => kit)
 }
+
+// Textura del césped realista (estilos de campo de la versión con funciones extra).
+let grass: string | null = null
+let grassLoad: Promise<string> | null = null
+export const grassReady = (): Promise<string> => (grassLoad ??= import('./grassArt').then((m) => {
+  grass = m.GRASS_TILE
+  subs.forEach((f) => f())
+  return grass
+}))
+export const useGrass = (want: boolean) => {
+  if (want) void grassReady()
+  return useSyncExternalStore(subscribe, () => grass, () => grass)
+}
