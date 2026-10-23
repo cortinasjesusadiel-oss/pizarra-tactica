@@ -65,6 +65,7 @@ export class Sim {
   marks: Record<string, string | null> = {}
   passIdx = 0
   private simulated = new Set<string>()
+  private lastTeam: Token['team'] | undefined
   readonly ballId: string | null
   readonly players: Token[]
   readonly auto: Set<string>
@@ -136,6 +137,7 @@ export class Sim {
         to = this.future(p.to, T)
       }
     } else T = Math.max(0.3, len(to[0] - from[0], to[1] - from[1]) / passSpeed(this.b))
+    this.lastTeam = this.players.find((x) => x.id === (this.holder ?? p.to))?.team ?? this.lastTeam
     this.flight = { t0: this.t, T, from, to, recv: p.to }
     this.holder = null
   }
@@ -210,10 +212,10 @@ export class Sim {
           // Marca: entre su jugador y el balón (y su portería en campo grande), a un par de metros.
           const a = this.pos[m]
           const tb = unit(this.ball[0] - a[0], this.ball[1] - a[1]), tg = grid ? [0, 0] : unit(goal[0] - a[0], goal[1] - a[1])
-          const dir = unit(tb[0] * 0.75 + tg[0] * 0.5, tb[1] * 0.75 + tg[1] * 0.5)
+          const dir = unit(tb[0] * 0.6 + tg[0] * 0.6, tb[1] * 0.6 + tg[1] * 0.6)
           // Cerca del balón marca encima; lejos, se separa de su jugador y se acerca al balón (cierra por dentro).
           const far = len(this.ball[0] - a[0], this.ball[1] - a[1])
-          const dist = Math.min(Math.max(grid ? 2.6 : 3, this.r * 2.5) + far * (grid ? 0.22 : 0.18), far * 0.5 + this.r * 2.5)
+          const dist = Math.min(Math.max(grid ? 2.4 : 3, this.r * 2.3) + far * (grid ? 0.08 : 0.12), grid ? 5 : 9)
           aim = [a[0] + dir[0] * dist, a[1] + dir[1] * dist]
         } else {
           // Sin marca: cierra por dentro, entre el balón y su portería (o el centro del espacio).
@@ -286,8 +288,10 @@ export class Sim {
     } else if (!this.holder) {
       // Balón suelto: el primero que llega a él se lo queda (y sigue con él pegado al pie).
       let best = this.r * 1.25, id: string | null = null
+      // Solo lo recogen los del equipo que lo jugó (los rivales lo cortan solo si se marca un pase a ellos).
       for (const p of this.players) {
-        const q = this.pos[p.id], d = len(q[0] - this.ball[0], q[1] - this.ball[1]) + (p.team === 'away' ? this.r * 0.3 : 0)
+        if (p.team === 'away' && this.lastTeam !== 'away') continue
+        const q = this.pos[p.id], d = len(q[0] - this.ball[0], q[1] - this.ball[1])
         if (d < best) { best = d; id = p.id }
       }
       if (id) { this.holder = id; this.got = this.t }

@@ -613,9 +613,12 @@ export default function App() {
     if (d.ball) {
       setLive(null)
       // Pase hacia donde sueltas el balón: a un compañero si lo sueltas cerca de él; si no, a ese punto.
+      const holderTeam = board.tokens.find((x) => x.id === r.sim.holder)?.team
       let to: string | null = null, best = 6
       for (const tk of board.tokens) {
         if (tk.kind !== 'player' || tk.id === r.sim.holder) continue
+        // El pase va a un compañero, no a un rival que esté cerca.
+        if (holderTeam && tk.team !== holderTeam && tk.team !== 'neutral' && holderTeam !== 'neutral') continue
         const q = r.sim.pos[tk.id]
         const dd = Math.hypot(q[0] - p[0], q[1] - p[1])
         if (dd < best) { best = dd; to = tk.id }
@@ -626,7 +629,22 @@ export default function App() {
     }
     if (!d.moved) {
       // Toque rápido sobre un jugador: pase a él.
-      if (performance.now() - d.at < 450 && d.id !== r.sim.holder) r.sim.pass(d.id)
+      if (performance.now() - d.at < 450 && d.id !== r.sim.holder) {
+        // Si tocas cerca de un rival pero hay un compañero al lado, el pase es para el compañero.
+        const team = (id: string | null) => board.tokens.find((x) => x.id === id)?.team
+        const ht = team(r.sim.holder)
+        let to = d.id
+        if (ht && ht !== 'neutral' && team(d.id) !== ht && team(d.id) !== 'neutral') {
+          const reach = PITCH[board.pitch].r * 3
+          let best = reach
+          for (const tk of board.tokens) {
+            if (tk.kind !== 'player' || tk.id === r.sim.holder || (tk.team !== ht && tk.team !== 'neutral')) continue
+            const q = r.sim.pos[tk.id], dd = Math.hypot(q[0] - p[0], q[1] - p[1])
+            if (dd < best) { best = dd; to = tk.id }
+          }
+        }
+        r.sim.pass(to)
+      }
       return
     }
     const q = r.live[d.id]
