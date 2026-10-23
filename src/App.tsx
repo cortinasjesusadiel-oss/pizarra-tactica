@@ -386,7 +386,11 @@ export default function App() {
       setProgressLabel('')
     }
   }
-  const doVideo = () => runExport([{ name: 'jugada', board }])
+  // Jugada de pasos que también se ve en tiempo real: el vídeo puede salir por pasos (con su tiempo para leer) o en tiempo real.
+  const bothModes = !!board.clip && (board.frames?.length ?? 0) > 1
+  const [videoLive, setVideoLive] = useState(false)
+  const videoBoard = bothModes && !videoLive ? { ...board, clip: undefined } : board
+  const doVideo = () => runExport([{ name: 'jugada', board: videoBoard }])
   const shareReady = async () => {
     if (!ready) return
     const { shareFiles, saveFiles } = await import('./exportVideo')
@@ -1410,6 +1414,9 @@ export default function App() {
       {sheet === 'export' && (
         <ExportSheet
           hasFrames={!!frames || !!board.clip}
+          bothModes={bothModes}
+          videoLive={videoLive}
+          setVideoLive={setVideoLive}
           brand={brand}
           setBrand={setBrand}
           brandMode={brandMode}
@@ -1445,7 +1452,7 @@ export default function App() {
       )}
       {preview && (frames || board.clip) && (
         <Preview
-          board={board}
+          board={videoBoard}
           opts={exportOpts}
           vopts={vopts}
           setVopts={setVopts}
@@ -1644,10 +1651,13 @@ function loadVopts(): VideoOpts {
   return v
 }
 
-function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, profile, onIdentity, end, setEnd, phrase, setPhrase, onPreview, onClose, onImage, onVideo, onMany, vopts, setVopts }: {
+function ExportSheet({ hasFrames, bothModes, videoLive, setVideoLive, brand, setBrand, brandMode, setBrandMode, profile, onIdentity, end, setEnd, phrase, setPhrase, onPreview, onClose, onImage, onVideo, onMany, vopts, setVopts }: {
   vopts: VideoOpts
   setVopts: (p: Partial<VideoOpts>) => void
   hasFrames: boolean
+  bothModes: boolean
+  videoLive: boolean
+  setVideoLive: (v: boolean) => void
   brand: string
   setBrand: (v: string) => void
   brandMode: BrandMode
@@ -1689,6 +1699,12 @@ function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, prof
           <button onClick={onPreview} disabled={!hasFrames}>{t('Vista previa')}</button>
         </div>
         {!hasFrames && <p className="muted small">{t('El vídeo y la vista previa necesitan una jugada con pasos (pulsa + Paso).')}</p>}
+        {bothModes && (
+          <div className="seg" role="group" aria-label={t('Cómo sale el vídeo')}>
+            <button className={!videoLive ? 'on' : ''} aria-pressed={!videoLive} onClick={() => setVideoLive(false)}>{t('Por pasos, con tiempo para leer')}</button>
+            <button className={videoLive ? 'on' : ''} aria-pressed={videoLive} onClick={() => setVideoLive(true)}>{t('En tiempo real')}</button>
+          </div>
+        )}
       </section>
       <section>
         <h3>{t('Mi identidad')}</h3>

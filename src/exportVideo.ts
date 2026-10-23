@@ -3,6 +3,7 @@ import { artReady } from './material'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer'
 import { PITCH, type Board, type Look } from './model'
+import { clipStep } from './clip'
 import { DEFAULT_PACE, caption, paceAt, paceTotal, type Pace } from './motion'
 import { Pitch } from './Pitch'
 import { Scene } from './Scene'
@@ -229,7 +230,15 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
       ctx.globalAlpha = 1
     }
     // Primero se va la explicación anterior y luego entra la nueva, para que no se monten las dos.
-    if (clip) { /* la jugada grabada no tiene pasos que explicar */ }
+    if (clip) {
+      // En tiempo real: si la jugada viene de pasos, se ve la explicación del paso en curso.
+      if (clip.marks && n > 1) {
+        const { i } = clipStep(clip, s)
+        const fade = Math.min(1, (s - clip.marks[i]) / 0.25)
+        if (fade < 1 && i > 0) drawCaption(i - 1, 1 - fade)
+        drawCaption(i, fade)
+      }
+    }
     else if (cap.fade < 0.5) drawCaption(cap.prev, 1 - cap.fade * 2)
     else drawCaption(cap.k, cap.fade * 2 - 1)
 
