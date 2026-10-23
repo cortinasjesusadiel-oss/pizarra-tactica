@@ -16,6 +16,18 @@ export interface Clip {
   tracks: Record<string, Sample[]>
   passes: Pass[]
   auto?: boolean
+  // Si viene de una animación por pasos: el segundo en que empieza cada paso (para ver su explicación y sus flechas).
+  marks?: number[]
+}
+
+// En qué paso está la jugada en el segundo `s` (i) y cuánto lleva de ese paso (u, de 0 a 1).
+export function clipStep(c: Clip, s: number): { i: number; u: number } {
+  const m = c.marks
+  if (!m?.length) return { i: 0, u: 0 }
+  let i = 0
+  while (i + 1 < m.length && s >= m[i + 1]) i++
+  const z = i + 1 < m.length ? m[i + 1] : c.dur
+  return { i, u: z > m[i] ? Math.max(0, Math.min(1, (s - m[i]) / (z - m[i]))) : 0 }
 }
 
 // Lo que se ve en un instante de la jugada grabada.
@@ -425,7 +437,7 @@ export function trimPauses(b: Board, keep = 0.7, min = 1.2): Clip {
     }
     tracks[id] = out
   }
-  return { ...clip, tracks, passes: clip.passes.map((p) => ({ ...p, t: map(p.t) })), dur: map(clip.dur) }
+  return { ...clip, tracks, passes: clip.passes.map((p) => ({ ...p, t: map(p.t) })), dur: map(clip.dur), ...(clip.marks ? { marks: clip.marks.map(map) } : {}) }
 }
 
 // Convierte la jugada grabada en una animación por pasos: un paso en cada pase (y otro cada pocos segundos si
@@ -552,5 +564,12 @@ export function stepsToClip(b: Board): Board {
       else if (!z) passes.push({ t: +start[i].toFixed(3), to: null, at: bz })
     }
   }
-  return { ...b, clip: { dur: +total.toFixed(3), tracks, passes, auto: false } }
+  return { ...b, clip: { dur: +total.toFixed(3), tracks, passes, auto: false, marks: [0, ...start.slice(1).map((v) => +v.toFixed(3))] } }
+}
+
+// Jugadas pasadas a tiempo real antes de que se guardara dónde empieza cada paso: se rehace para que se vean los pasos.
+export function withMarks(b: Board): Board {
+  if (!b.clip || b.clip.marks || (b.frames?.length ?? 0) < 2) return b
+  const nb = stepsToClip(b)
+  return { ...nb, clip: { ...nb.clip!, auto: b.clip.auto } }
 }

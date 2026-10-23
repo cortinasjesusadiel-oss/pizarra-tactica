@@ -3,7 +3,7 @@ import { ballAir, drawParts, sampleAt } from './motion'
 import { Pitch } from './Pitch'
 import type { Mark } from './identity'
 import { DrawingShape, TokenShape } from './Shapes'
-import { clipView, type ClipView } from './clip'
+import { clipStep, clipView, type ClipView } from './clip'
 import { PRO } from './pro'
 
 // Lo que se dibuja dentro del campo en el instante `s` (puede ser fraccionario): césped, trazos y fichas.
@@ -26,10 +26,14 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
   const { r, w: PW, h: PH } = PITCH[board.pitch]
   const bounds: [number, number] = [PW, PH]
   const cv = view ?? (board.clip ? clipView(board, s) : null)
+  // Jugada de pasos vista en tiempo real: se ven las flechas del paso en curso, que se recogen a medida que avanza.
+  const cs = !view && board.clip?.marks && board.frames ? clipStep(board.clip, s) : null
+  const stepDraw = cs ? (board.frames![cs.i]?.drawings ?? []).filter((d) => d.type !== 'text').map((d) => ({ d, part: [d.type === 'pass' || d.type === 'lob' ? cs.u : cs.u * cs.u * (3 - 2 * cs.u), 1] as [number, number] })) : []
   if (cv) return (
     <>
       {grass && <Pitch kind={board.pitch} zones={zones} brand={brand} ident={ident} />}
       {board.drawings.filter((d) => d.type !== 'text').map((d) => <DrawingShape key={d.id} d={d} />)}
+      {stepDraw.map(({ d, part }) => <DrawingShape key={d.id} d={d} part={part} />)}
       {live && <DrawingShape d={live} />}
       {cv.holder && cv.pos[cv.holder] && <circle cx={cv.pos[cv.holder][0]} cy={cv.pos[cv.holder][1]} r={r * 1.32} fill="none" stroke="#ffffff" strokeWidth={r * 0.1} strokeOpacity={0.55} pointerEvents="none" />}
       {board.tokens.map((t) => {

@@ -8,8 +8,8 @@ import { Markers, TokenShape } from './Shapes'
 import { useArt } from './material'
 import { Scene } from './Scene'
 import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, paceAt, paceStart, sampleAt, shownStep, type Pace, type Speed } from './motion'
-import { Sim, clipToSteps, stepsToClip, newClip, smoothTrack, trimPauses, type Clip, type ClipView } from './clip'
-import { PRO } from './pro'
+import { Sim, clipStep, clipToSteps, stepsToClip, withMarks, newClip, smoothTrack, trimPauses, type Clip, type ClipView } from './clip'
+import { PRO, numberPlayers } from './pro'
 import { carrier, movesFromArrows } from './steps'
 import { SESSIONS } from './sessions'
 import { TEMPLATES, emptyBoard } from './templates'
@@ -69,7 +69,7 @@ const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 const inLang = (b: Board): Board => (b.frames ? { ...b, frames: b.frames.map((f) => ({ ...f, note: tr(f.note) })) } : b)
 
 export default function App() {
-  const [board, setBoard] = useState<Board>(() => { const l = loadLast(); return l ? inLang(l) : TEMPLATES.find((t) => t.animated)!.build() })
+  const [board, setBoard] = useState<Board>(() => { const l = loadLast(); return l ? withMarks(inLang(l)) : numberPlayers(TEMPLATES.find((t) => t.animated)!.build()) })
   const past = useRef<Board[]>([])
   const future = useRef<Board[]>([])
   const [, force] = useState(0)
@@ -189,7 +189,7 @@ export default function App() {
   // Cargar una pizarra nueva (plantilla, jugada guardada o campo vacío).
   const load = useCallback((b: Board) => {
     stopAnim()
-    commit(inLang(b))
+    commit(withMarks(inLang(b)))
     setStep(0)
     setSelected(null)
   }, [commit, stopAnim])
@@ -959,6 +959,7 @@ export default function App() {
     : `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`
   const activeDraw = tool === 'move' || tool === 'erase' ? penTool : tool
   const shown = anim !== null ? shownStep(board, anim) : cur
+  const clipSt = board.clip?.marks ? clipStep(board.clip, anim ?? clipT) : null
   const cap = anim !== null ? caption(board, anim) : { k: cur, prev: cur, fade: 1 }
   const stepDrawings = frames ? frames[cur].drawings : []
 
@@ -1024,6 +1025,9 @@ export default function App() {
         </svg>
         {frames && !board.clip && frames[shown].note && !showHint && (
           <div className="note" aria-live="polite"><b>{t('Paso')}{' '}{shown + 1}.</b> {tr(frames[shown].note)}</div>
+        )}
+        {frames && clipSt && frames[clipSt.i]?.note && !showHint && !rec && (
+          <div className="note" aria-live="polite"><b>{t('Paso')}{' '}{clipSt.i + 1}.</b> {tr(frames[clipSt.i].note)}</div>
         )}
         {noteOpen && frames && (
           <div className="note-editor" role="dialog" aria-label={t('Explicación del paso {n}', { n: cur + 1 })}>
@@ -1142,6 +1146,13 @@ export default function App() {
               <input className="clip-time" type="range" min={0} max={board.clip.dur} step={0.01} value={Math.min(board.clip.dur, anim ?? clipT)} aria-label={t('Momento de la jugada')}
                 onChange={(e) => { stopAnim(); setClipT(+e.target.value) }} disabled={!!rec} />
               <span className="muted small">{(anim ?? clipT).toFixed(1)} / {board.clip.dur.toFixed(1)} {t('s')}</span>
+              {frames && board.clip.marks && clipSt && (
+                <div className="steps" role="group" aria-label={t('Pasos de la animación')}>
+                  {board.clip.marks.map((m, i) => (
+                    <button key={i} className={i === clipSt.i ? 'on' : ''} aria-label={t('Ir al paso {n}', { n: i + 1 })} onClick={() => { stopAnim(); setClipT(m + 0.01) }} disabled={!!rec}>{i + 1}</button>
+                  ))}
+                </div>
+              )}
               <span className="sep" />
               <button onClick={startRec} disabled={!!rec}>{t('● Grabar capa')}</button>
               <label className="pick"><input type="checkbox" checked={!!board.clip.auto} onChange={toggleAuto} disabled={!!rec} /><span>{t('Defensa automática')}</span></label>
@@ -1287,7 +1298,7 @@ export default function App() {
                 <summary><b>{g.name}</b><span className="muted small">{list.length}</span></summary>
                 <div className="list">
                   {list.map((t) => (
-                    <button key={t.id} className="row" onClick={() => { load(t.build()); setSheet(null); if (t.animated) setAutoplay(true) }}>
+                    <button key={t.id} className="row" onClick={() => { load(numberPlayers(t.build())); setSheet(null); if (t.animated) setAutoplay(true) }}>
                       {t.animated && <span className="anim-badge">▶</span>}{t.name}
                     </button>
                   ))}
@@ -1327,7 +1338,7 @@ export default function App() {
                   return (
                     <li key={i}>
                       {tpl ? (
-                        <button className="row" onClick={() => { load(tpl.build()); setSheet(null); if (tpl.animated) setAutoplay(true) }}>
+                        <button className="row" onClick={() => { load(numberPlayers(tpl.build())); setSheet(null); if (tpl.animated) setAutoplay(true) }}>
                           <span><span className="anim-badge">▶</span><b>{bl.title}</b> · {bl.minutes} {' '}{t('min')}</span>
                           <span className="muted small">{bl.tips}</span>
                         </button>
@@ -1358,7 +1369,7 @@ export default function App() {
                 <div className="row-actions lesson-links">
                   {l.templates.map((id) => TEMPLATES.find((t) => t.id === id)).filter((t) => t !== undefined).map((t) => (
                     <button key={t.id} onClick={() => {
-                      load(t.build())
+                      load(numberPlayers(t.build()))
                       setSheet(null)
                       if (l.zones && !zones) toggleZones()
                       if (t.animated) setAutoplay(true)

@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { PITCH, ballAt, player, type Board, type Token } from '../src/model'
 import { TEMPLATES } from '../src/templates'
-import { clipToSteps, clipView, stepsToClip, trackAt, trimPauses, type Clip, type Sample } from '../src/clip'
+import { clipStep, clipToSteps, clipView, stepsToClip, trackAt, trimPauses, type Clip, type Sample } from '../src/clip'
 
 // Rondo 4 contra 2 en el 40×30: los cuatro de fuera se mueven por la banda y se pasan el balón.
 function rondo(auto: boolean): Board {
@@ -128,5 +128,17 @@ describe('Jugada grabada', () => {
       }
     }
     expect(n).toBeGreaterThan(10)
+  })
+})
+
+describe('pasos en tiempo real', () => {
+  it('guarda dónde empieza cada paso y siguen ahí tras quitar tiempos muertos', () => {
+    const tpl = TEMPLATES.find((x) => x.animated)!
+    const b = stepsToClip(tpl.build())
+    const m = b.clip!.marks!
+    expect(m.length).toBe(b.frames!.length)
+    expect(clipStep(b.clip!, m[2] + 0.01).i).toBe(2)
+    const cut = trimPauses(b)
+    expect(cut.marks!.length).toBe(m.length)
   })
 })
