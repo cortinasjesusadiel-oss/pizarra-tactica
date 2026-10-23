@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer'
 import { PITCH, type Board, type Look } from './model'
 import { clipStep } from './clip'
-import { DEFAULT_PACE, caption, paceAt, paceTotal, type Pace } from './motion'
+import { DEFAULT_PACE, caption, clipRate, paceAt, paceTotal, type Pace } from './motion'
 import { Pitch } from './Pitch'
 import { Scene } from './Scene'
 import { Markers } from './Shapes'
@@ -179,13 +179,14 @@ export async function videoRenderer(board: Board, opts: ExportOpts = {}, canvas 
   const pace = opts.pace ?? DEFAULT_PACE
   // Jugada grabada: dura lo grabado y se queda un momento quieta al final.
   const clip = board.clip
-  const animSec = clip ? clip.dur + 1.2 : paceTotal(n, pace)
+  const rate = clipRate(pace)
+  const animSec = clip ? clip.dur / rate + 1.2 : paceTotal(n, pace)
   const endSec = opts.end ? endDuration(opts.end) : 0
   const seconds = animSec + endSec + (logo ? OUTRO : 0)
   let lastScene: { s: number; img: HTMLImageElement } | null = null
 
   const draw = async (sec: number) => {
-    const s = clip ? Math.min(sec, clip.dur) : paceAt(n, pace, Math.min(sec, animSec))
+    const s = clip ? Math.min(sec * rate, clip.dur) : paceAt(n, pace, Math.min(sec, animSec))
     // En las pantallas finales la jugada ya no se mueve: se reutiliza la última imagen.
     const scene = lastScene && lastScene.s === s ? lastScene.img
       : await svgImage(renderToStaticMarkup(createElement('g', null, createElement(Markers), rot(createElement(Scene, { board, s, grass: false, look: opts.look, upright: vert })))), viewBox, bw * k, bh * k)

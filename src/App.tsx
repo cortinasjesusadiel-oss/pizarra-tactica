@@ -7,7 +7,7 @@ import { MOVES_BALL, MOVES_PLAYER, STRAIGHT,
 import { Markers, TokenShape } from './Shapes'
 import { useArt } from './material'
 import { Scene } from './Scene'
-import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, paceAt, paceStart, sampleAt, shownStep, type Pace, type Speed } from './motion'
+import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, clipRate, paceAt, paceStart, sampleAt, shownStep, type Pace, type Speed } from './motion'
 import { Sim, clipStep, clipToSteps, stepsToClip, withMarks, newClip, smoothTrack, trimPauses, type Clip, type ClipView } from './clip'
 import { PRO, numberPlayers } from './pro'
 import { carrier, movesFromArrows } from './steps'
@@ -284,9 +284,9 @@ export default function App() {
     const start = from ?? (clipT >= clip.dur - 0.05 ? 0 : clipT)
     setPlaying(true)
     setAnim(start)
-    const t0 = performance.now() - start * 1000
+    const t0 = performance.now(), rate = clipRate(pace)
     const tick = (now: number) => {
-      const s = (now - t0) / 1000
+      const s = start + ((now - t0) / 1000) * rate
       if (s < clip.dur) { setAnim(s); raf.current = requestAnimationFrame(tick) }
       else { animRef.current = null; setAnimState(null); setClipT(clip.dur); setPlaying(false) }
     }
@@ -1150,6 +1150,12 @@ export default function App() {
               <input className="clip-time" type="range" min={0} max={board.clip.dur} step={0.01} value={Math.min(board.clip.dur, anim ?? clipT)} aria-label={t('Momento de la jugada')}
                 onChange={(e) => { stopAnim(); setClipT(+e.target.value) }} disabled={!!rec} />
               <span className="muted small">{(anim ?? clipT).toFixed(1)} / {board.clip.dur.toFixed(1)} {t('s')}</span>
+              <label className="pace">
+                <span className="muted small">{t('Velocidad')}</span>
+                <select value={pace.speed} onChange={(e) => { stopAnim(); setPace({ speed: e.target.value as Speed }) }} aria-label={t('Velocidad de la jugada')} disabled={!!rec}>
+                  {SPEEDS.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                </select>
+              </label>
               {frames && board.clip.marks && clipSt && (
                 <div className="steps" role="group" aria-label={t('Pasos de la animación')}>
                   {board.clip.marks.map((m, i) => (

@@ -90,6 +90,8 @@ export const SPEEDS: { id: Speed; name: string; move: number }[] = [
   { id: 'rapida', name: t('Rápida'), move: 0.9 },
 ]
 export const DEFAULT_PACE: Pace = { step: 5, speed: 'normal' }
+// Jugada en tiempo real: a qué ritmo se reproduce (normal = la velocidad grabada).
+export const clipRate = (p: Pace) => (p.speed === 'lenta' ? 0.6 : p.speed === 'rapida' ? 1.5 : 1)
 
 // Duración total de la animación en segundos: cada paso dura lo elegido, también el último.
 // En continuo: un instante quieto al empezar, los movimientos seguidos y un rato al final para ver cómo acaba.

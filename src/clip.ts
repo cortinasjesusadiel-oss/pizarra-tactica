@@ -506,7 +506,7 @@ export function stepsToClip(b: Board): Board {
   const ball = b.tokens.find((t) => t.kind === 'ball')
   const players = b.tokens.filter((t) => t.kind === 'player')
   const near = (p: Pt, q: Pt) => Math.hypot(p[0] - q[0], p[1] - q[1])
-  // Cuánto dura cada paso: lo que tarde el que más corre (a unos 6 m/s) o el pase (a unos 14 m/s).
+  // Cuánto dura cada paso: lo que tarde el que más corre (a ritmo de partido, unos 4,5 m/s) o el pase (unos 11 m/s).
   const dur: number[] = []
   for (let i = 0; i < n - 1; i++) {
     let run = 0, pass = 0
@@ -514,7 +514,7 @@ export function stepsToClip(b: Board): Board {
       const d = near(posAt(b, t, i), posAt(b, t, i + 1))
       if (t.kind === 'ball') pass = d; else if (t.kind === 'player') run = Math.max(run, d)
     }
-    dur.push(Math.max(1.1, run / 5.5, pass / 13))
+    dur.push(Math.max(1.5, run / 4.5, pass / 11))
   }
   const IN = 0.6, OUT = 1.6
   const start = [IN]
