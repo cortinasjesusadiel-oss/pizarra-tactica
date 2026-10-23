@@ -37,9 +37,20 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
       {stepDraw.map(({ d, part }) => <DrawingShape key={d.id} d={d} part={part} />)}
       {live && <DrawingShape d={live} />}
       {focus && <rect x={-6} y={-6} width={PW + 12} height={PH + 12} fill="#000" fillOpacity={0.45 * fade(focus.a)} pointerEvents="none" />}
+      {board.clip?.show && <Reading board={board} cv={cv} s={s} />}
       {cv.holder && cv.pos[cv.holder] && <circle cx={cv.pos[cv.holder][0]} cy={cv.pos[cv.holder][1]} r={r * 1.32} fill="none" stroke="#ffffff" strokeWidth={r * 0.1} strokeOpacity={0.55} pointerEvents="none" />}
       {depth(board.tokens, (t) => cv.pos[t.id] ?? [t.x, t.y], upright, look).map((t) => {
         const [x, y] = cv.pos[t.id] ?? [t.x, t.y]
+        // Pase por alto: la sombra sigue por el suelo y el balón sube (hacia arriba en la pantalla) y se ve más grande.
+        if (t.kind === 'ball' && cv.air > 0.02) {
+          const lift = cv.air * r * 2.6, bx = upright ? x - lift : x, by = upright ? y : y - lift
+          return (
+            <g key={t.id}>
+              <ellipse cx={x} cy={y} rx={r * 0.5 * (1 - cv.air * 0.3)} ry={r * 0.32 * (1 - cv.air * 0.3)} fill="#000" fillOpacity={0.45 - cv.air * 0.15} />
+              <TokenShape t={{ ...t, x: bx, y: by }} r={r * (1 + cv.air * 0.6)} selected={false} upright={upright} look={look} />
+            </g>
+          )
+        }
         return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} look={look} face={t.kind === 'player' ? cv.face[t.id] : undefined} gait={t.kind === 'player' ? gaitOf(t.id, s, cv.moving[t.id] ?? 0) : undefined} />
       })}
       {focus && <KeyMoment board={board} cv={cv} focus={focus} />}
@@ -225,4 +236,56 @@ function KeyMoment({ board, cv, focus }: { board: Board; cv: ClipView; focus: Fo
       )}
     </g>
   )
+}
+
+// Ayudas de lectura del juego en la jugada en tiempo real.
+// Fuera de juego: línea a la altura del penúltimo defensor y aro rojo a los atacantes que están más allá.
+// Visión: el cono hacia donde mira el que lleva el balón y las líneas de pase que tiene libres (sin rival en medio).
+function Reading({ board, cv, s }: { board: Board; cv: ClipView; s: number }) {
+  const show = board.clip!.show!
+  const { r, w: W, h: H } = PITCH[board.pitch]
+  const players = board.tokens.filter((t) => t.kind === 'player')
+  const ball = board.tokens.find((t) => t.kind === 'ball')
+  const holder = cv.holder ?? clipView(board, Math.max(0, s - 0.5)).holder
+  const atk = players.find((p) => p.id === holder)?.team
+  const out: React.ReactNode[] = []
+  if (show.offside && atk && ball && board.pitch !== 'grid') {
+    const def = players.filter((p) => p.team !== atk && p.team)
+    // El equipo que defiende la portería de la derecha es el rival (away); el local defiende la de la izquierda.
+    const right = atk === 'home'
+    const depthOf = (p: Pt) => (right ? W - p[0] : p[0])
+    const ds = def.map((p) => cv.pos[p.id]).filter(Boolean).sort((a, b) => depthOf(a) - depthOf(b))
+    if (ds.length >= 2) {
+      const lx = ds[1][0], bx = cv.pos[ball.id][0]
+      out.push(<line key="off" x1={lx} y1={0} x2={lx} y2={H} stroke="#ffe14d" strokeWidth={r * 0.12} strokeDasharray={`${r * 0.8} ${r * 0.5}`} strokeOpacity={0.9} />)
+      for (const p of players) {
+        if (p.team !== atk || p.id === holder) continue
+        const q = cv.pos[p.id]
+        const beyond = right ? q[0] > lx + 0.2 && q[0] > bx && q[0] > W / 2 : q[0] < lx - 0.2 && q[0] < bx && q[0] < W / 2
+        if (beyond) out.push(<circle key={`o${p.id}`} cx={q[0]} cy={q[1]} r={r * 1.5} fill="#ff4d4d" fillOpacity={0.18} stroke="#ff4d4d" strokeWidth={r * 0.14} />)
+      }
+    }
+  }
+  if (show.vision && holder && cv.pos[holder]) {
+    const p = cv.pos[holder], f = cv.face[holder] ?? 0
+    const L = board.pitch === 'grid' ? 12 : 24, A = 0.62
+    const a1: Pt = [p[0] + Math.cos(f - A) * L, p[1] + Math.sin(f - A) * L], a2: Pt = [p[0] + Math.cos(f + A) * L, p[1] + Math.sin(f + A) * L]
+    out.push(<path key="cone" d={`M${p[0]} ${p[1]} L${a1[0]} ${a1[1]} A${L} ${L} 0 0 1 ${a2[0]} ${a2[1]} Z`} fill="#fff" fillOpacity={0.13} stroke="#fff" strokeOpacity={0.3} strokeWidth={r * 0.06} />)
+    const team = players.find((x) => x.id === holder)?.team
+    const reach = board.pitch === 'grid' ? 25 : 40
+    for (const m of players) {
+      if (m.id === holder || m.team !== team) continue
+      const q = cv.pos[m.id], dx = q[0] - p[0], dy = q[1] - p[1], d = Math.hypot(dx, dy)
+      if (d > reach || d < r * 2) continue
+      // ¿Algún rival corta la línea? Distancia de cada rival al segmento del pase.
+      const blocked = players.some((o) => {
+        if (o.team === team) return false
+        const c = cv.pos[o.id], k = Math.max(0, Math.min(1, ((c[0] - p[0]) * dx + (c[1] - p[1]) * dy) / (d * d)))
+        return Math.hypot(c[0] - (p[0] + dx * k), c[1] - (p[1] + dy * k)) < r * 1.4
+      })
+      if (blocked) continue
+      out.push(<line key={`v${m.id}`} x1={p[0]} y1={p[1]} x2={q[0]} y2={q[1]} stroke="#4FD18B" strokeWidth={r * 0.13} strokeDasharray={`${r * 0.5} ${r * 0.35}`} strokeOpacity={0.85} strokeLinecap="round" />)
+    }
+  }
+  return <g pointerEvents="none" style={{ pointerEvents: 'none' }}>{out}</g>
 }

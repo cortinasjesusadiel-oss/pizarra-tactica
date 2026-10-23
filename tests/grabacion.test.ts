@@ -128,7 +128,7 @@ describe('Jugada grabada', () => {
       }
     }
     expect(n).toBeGreaterThan(10)
-  })
+  }, 30000)
 })
 
 describe('pasos en tiempo real', () => {

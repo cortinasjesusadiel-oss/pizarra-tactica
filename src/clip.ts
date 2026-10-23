@@ -10,7 +10,8 @@ import { posAt, PITCH, line, type Board, type Frame, type Pt, type Token } from 
 // Muestra de una ficha grabada: [segundo, x, y].
 export type Sample = [number, number, number]
 // Pase: en el segundo `t` el balón sale hacia el jugador `to` (o hacia el punto `at` si no va a nadie).
-export interface Pass { t: number; to: string | null; at?: Pt }
+// `lob`: pase por alto (si no se dice, los pases muy largos van por alto).
+export interface Pass { t: number; to: string | null; at?: Pt; lob?: boolean }
 export interface Clip {
   dur: number
   tracks: Record<string, Sample[]>
@@ -20,6 +21,8 @@ export interface Clip {
   marks?: number[]
   // Momentos clave: en esos segundos la jugada se congela un instante y se resalta el pase.
   keys?: number[]
+  // Ayudas de análisis que se ven encima (también en el vídeo): línea de fuera de juego y visión del que lleva el balón.
+  show?: { offside?: boolean; vision?: boolean }
 }
 
 // Cuánto dura la pausa en cada momento clave (en segundos de jugada).
@@ -75,7 +78,8 @@ export function clipStep(c: Clip, s: number): { i: number; u: number } {
 }
 
 // Lo que se ve en un instante de la jugada grabada.
-export interface ClipView { pos: Record<string, Pt>; face: Record<string, number>; holder: string | null; moving: Record<string, number> }
+// `air`: altura del balón (0 = por el suelo, 1 = lo más alto de un pase por alto).
+export interface ClipView { pos: Record<string, Pt>; face: Record<string, number>; holder: string | null; moving: Record<string, number>; air: number }
 
 const HZ = 30
 const SUB = 2
@@ -115,12 +119,16 @@ export class Sim {
   face: Record<string, number> = {}
   ball: Pt = [0, 0]
   holder: string | null = null
-  flight: { t0: number; T: number; from: Pt; to: Pt; recv: string | null } | null = null
+  flight: { t0: number; T: number; from: Pt; to: Pt; recv: string | null; lob: boolean } | null = null
+  air = 0
+  // Primer control: el balón sigue un poco en la dirección del pase y el jugador lo acomoda al pie.
+  private touch: Pt = [0, 0]
   got = 0
   presser: string | null = null
   marks: Record<string, string | null> = {}
   passIdx = 0
   private simulated = new Set<string>()
+  private backLine: string[] = []
   private lastTeam: Token['team'] | undefined
   readonly ballId: string | null
   readonly players: Token[]
@@ -153,6 +161,8 @@ export class Sim {
     const usedA = new Set<string>()
     for (const [, d, a] of pairs) if (!(d in this.marks) && !usedA.has(a)) { this.marks[d] = a; usedA.add(a) }
     for (const d of defs) if (!(d.id in this.marks)) this.marks[d.id] = null
+    // Los cuatro más cercanos a su portería forman la línea defensiva (en campo grande).
+    this.backLine = b.pitch === 'grid' || defs.length < 5 ? [] : [...defs].sort((x, y) => y.x - x.x).slice(0, 4).map((d) => d.id)
     this.facing(0)
   }
 
@@ -186,15 +196,19 @@ export class Sim {
     const from: Pt = [...this.ball]
     let to: Pt = p.at ?? from
     let T = 0.3
+    const far = len((p.at ?? (p.to ? this.pos[p.to] : from))[0] - from[0], (p.at ?? (p.to ? this.pos[p.to] : from))[1] - from[1])
+    const lob = p.lob ?? (this.b.pitch !== 'grid' && far > 32)
+    // Por alto el balón va más despacio (sube y baja), por el suelo va tenso.
+    const speed = passSpeed(this.b) * (lob ? 0.72 : 1)
     if (p.to && this.pos[p.to]) {
       to = this.pos[p.to]
       for (let k = 0; k < 4; k++) {
-        T = Math.max(0.3, len(to[0] - from[0], to[1] - from[1]) / passSpeed(this.b))
+        T = Math.max(0.3, len(to[0] - from[0], to[1] - from[1]) / speed)
         to = this.future(p.to, T)
       }
-    } else T = Math.max(0.3, len(to[0] - from[0], to[1] - from[1]) / passSpeed(this.b))
+    } else T = Math.max(0.3, len(to[0] - from[0], to[1] - from[1]) / speed)
     this.lastTeam = this.players.find((x) => x.id === (this.holder ?? p.to))?.team ?? this.lastTeam
-    this.flight = { t0: this.t, T, from, to, recv: p.to }
+    this.flight = { t0: this.t, T, from, to, recv: p.to, lob }
     this.holder = null
   }
 
@@ -250,10 +264,12 @@ export class Sim {
       for (const p of free) if (d(p.id) < d(best)) best = p.id
       if (!this.presser || !free.some((p) => p.id === this.presser) || d(best) < d(this.presser) - 1.5) this.presser = best
     } else this.presser = null
+    const aims: Record<string, { aim: Pt; vmax: number }> = {}
     for (const p of this.players) {
       if (!this.auto.has(p.id) || this.scripted(p.id, t)) continue
       const q = this.pos[p.id]
-      let aim: Pt, vmax = 6.2
+      // Cada uno tiene su velocidad punta (entre 5,7 y 6,8 m/s).
+      let aim: Pt, vmax = 5.7 + ((seed(p.id) % 100) / 100) * 1.1
       if (isKeeper(b, p)) {
         aim = [W - 2.2, H / 2 + (this.ball[1] - H / 2) * 0.18]; vmax = 4
       } else if (p.id === this.presser) {
@@ -279,6 +295,20 @@ export class Sim {
           aim = [this.ball[0] + (c[0] - this.ball[0]) * 0.35, this.ball[1] + (c[1] - this.ball[1]) * 0.35]
         }
       }
+      aims[p.id] = { aim, vmax }
+    }
+    // Línea defensiva: los de atrás se mueven juntos, a la misma altura, y suben o bajan como un bloque.
+    // Si uno sale a presionar, deja la línea y los demás la mantienen.
+    const line = this.backLine.filter((id) => aims[id] && id !== this.presser)
+    if (line.length >= 3) {
+      const xs = line.map((id) => aims[id].aim[0]).sort((a, b) => a - b)
+      const lx = xs[Math.floor(xs.length / 2)]
+      for (const id of line) aims[id].aim = [lx * 0.8 + aims[id].aim[0] * 0.2, aims[id].aim[1]]
+    }
+    for (const p of this.players) {
+      const am = aims[p.id]
+      if (!am) continue
+      const q = this.pos[p.id], { aim, vmax } = am
       // Arranca y frena como una persona: velocidad limitada y aceleración limitada.
       const v = this.vel[p.id]
       let dx = (aim[0] - q[0]) * 2.4, dy = (aim[1] - q[1]) * 2.4
@@ -331,8 +361,9 @@ export class Sim {
     const f = this.flight
     if (f) {
       const u = Math.min(1, (this.t - f.t0) / f.T)
-      // El balón sale fuerte y llega algo más lento, como un pase de verdad.
-      const k = u * (1.25 - 0.25 * u)
+      // Por el suelo el césped lo frena: sale fuerte y llega más lento. Por alto va casi a velocidad constante.
+      const k = f.lob ? u : u * (1.45 - 0.45 * u)
+      this.air = f.lob ? 4 * u * (1 - u) : 0
       let x = f.from[0] + (f.to[0] - f.from[0]) * k, y = f.from[1] + (f.to[1] - f.from[1]) * k
       if (f.recv) {
         // Si el compañero no está justo donde se calculó, el balón le acaba llegando igual.
@@ -340,7 +371,11 @@ export class Sim {
         x += (rp[0] - f.to[0]) * c; y += (rp[1] - f.to[1]) * c
       }
       this.ball = [x, y]
-      if (u >= 1) { this.flight = null; this.holder = f.recv; this.got = this.t }
+      if (u >= 1) {
+        this.flight = null; this.holder = f.recv; this.got = this.t; this.air = 0
+        const d = unit(f.to[0] - f.from[0], f.to[1] - f.from[1])
+        this.touch = [d[0] * this.r * 0.55, d[1] * this.r * 0.55]
+      }
     } else if (!this.holder) {
       // Balón suelto: el primero que llega a él se lo queda (y sigue con él pegado al pie).
       let best = this.r * 1.25, id: string | null = null
@@ -358,7 +393,10 @@ export class Sim {
       const sp = len(this.vel[this.holder][0], this.vel[this.holder][1])
       const k = this.got < 0 ? 1 : smooth((this.t - this.got) / 0.3)
       const off = this.r * (0.78 + 0.3 * Math.min(1, sp / 5)) * k
-      const tx = q[0] + Math.cos(a) * off, ty = q[1] + Math.sin(a) * off
+      let tx = q[0] + Math.cos(a) * off, ty = q[1] + Math.sin(a) * off
+      // Primer toque: el balón se adelanta un poco en la dirección en que venía y se acomoda en medio segundo.
+      const ctl = this.got < 0 ? 0 : 1 - smooth((this.t - this.got) / 0.5)
+      tx += this.touch[0] * ctl; ty += this.touch[1] * ctl
       this.ball = this.got >= 0 && this.t - this.got < 0.3 ? [this.ball[0] + (tx - this.ball[0]) * 0.35, this.ball[1] + (ty - this.ball[1]) * 0.35] : [tx, ty]
     }
     this.pos[this.ballId] = [...this.ball]
@@ -367,7 +405,7 @@ export class Sim {
   view(): ClipView {
     const moving: Record<string, number> = {}
     for (const p of this.players) moving[p.id] = len(this.vel[p.id][0], this.vel[p.id][1])
-    return { pos: { ...this.pos }, face: { ...this.face }, holder: this.holder, moving }
+    return { pos: { ...this.pos }, face: { ...this.face }, holder: this.holder, moving, air: this.air }
   }
 
   // Avanza hasta el segundo `t`.
@@ -375,7 +413,7 @@ export class Sim {
 }
 
 // La jugada entera calculada una sola vez (30 imágenes por segundo) para reproducirla y exportarla sin coste.
-interface Baked { n: number; ids: string[]; pos: Float32Array; face: Float32Array; speed: Float32Array; holder: (string | null)[] }
+interface Baked { n: number; ids: string[]; pos: Float32Array; face: Float32Array; speed: Float32Array; holder: (string | null)[]; air: Float32Array }
 const cache = new WeakMap<Clip, { b: Board; baked: Baked }>()
 
 function bake(b: Board, clip: Clip): Baked {
@@ -386,6 +424,7 @@ function bake(b: Board, clip: Clip): Baked {
   const n = Math.ceil(clip.dur * HZ) + 1
   const pos = new Float32Array(n * ids.length * 2), face = new Float32Array(n * ids.length), speed = new Float32Array(n * ids.length)
   const holder: (string | null)[] = []
+  const air = new Float32Array(n)
   for (let f = 0; f < n; f++) {
     if (f) for (let k = 0; k < SUB; k++) sim.step()
     const v = sim.view()
@@ -395,8 +434,9 @@ function bake(b: Board, clip: Clip): Baked {
       face[i] = v.face[id] ?? 0; speed[i] = v.moving[id] ?? 0
     })
     holder.push(v.holder)
+    air[f] = v.air
   }
-  const baked = { n, ids, pos, face, speed, holder }
+  const baked = { n, ids, pos, face, speed, holder, air }
   cache.set(clip, { b, baked })
   return baked
 }
@@ -407,7 +447,7 @@ export function clipView(b: Board, s: number): ClipView {
   const k = bake(b, clip)
   const x = Math.max(0, Math.min(k.n - 1, s * HZ))
   const i = Math.min(Math.floor(x), k.n - 2 < 0 ? 0 : k.n - 2), u = k.n > 1 ? x - i : 0
-  const out: ClipView = { pos: {}, face: {}, holder: k.holder[Math.round(x)] ?? null, moving: {} }
+  const out: ClipView = { pos: {}, face: {}, holder: k.holder[Math.round(x)] ?? null, moving: {}, air: k.air[i] + ((k.air[Math.min(k.n - 1, i + 1)] ?? 0) - k.air[i]) * u }
   const m = k.ids.length
   k.ids.forEach((id, j) => {
     const a = i * m + j, c = Math.min(k.n - 1, i + 1) * m + j
@@ -543,6 +583,8 @@ export function clipToSteps(b0: Board): Board {
 // Al revés: una jugada por pasos (las plantillas) pasa a tiempo real. Todos se mueven a la vez, de seguido, a
 // velocidad de persona, y el balón va al pie y viaja en los pases a velocidad real. Los pasos se guardan:
 // «Borrar grabación» vuelve a ellos.
+const seed = (s: string) => { let h = 7; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h }
+
 export function stepsToClip(b: Board): Board {
   const n = b.frames?.length ?? 0
   if (n < 2) return b
@@ -575,13 +617,22 @@ export function stepsToClip(b: Board): Board {
     for (let k = 0; k <= Math.ceil(total * 60); k++) {
       const t = k / 60, s = stepAt(t)
       // Paso a paso con la misma curva suave de siempre (arrancan y frenan con naturalidad).
-      const i = Math.min(Math.floor(s), n - 2), u = s - i
+      const i = Math.min(Math.floor(s), n - 2)
       const a = posAt(b, p, i), z = posAt(b, p, i + 1)
+      const prevMoves = i > 0 && near(posAt(b, p, i - 1), a) > 0.3
+      const nextMoves = i + 2 < n && near(z, posAt(b, p, i + 2)) > 0.3
+      // No todos corren igual: una carrera larga va a sprint todo el paso; un ajuste corto se hace al trote y
+      // arranca más tarde (cada uno con su momento), así no se mueven todos a la vez como un bloque.
+      let u = s - i
+      if (!prevMoves && !nextMoves) {
+        const d = near(a, z), v = d > 14 ? 6.8 : d > 6 ? 5 : 3.6
+        const md = Math.min(dur[i], Math.max(0.8, d / v))
+        const off = (dur[i] - md) * (0.35 + 0.65 * (seed(p.id + i) % 100) / 100)
+        u = Math.max(0, Math.min(1, ((s - i) * dur[i] - off) / md))
+      }
       let x: number, y: number
       if (a[0] === z[0] && a[1] === z[1]) { x = a[0]; y = a[1] } else {
         const e = u * u * (3 - 2 * u)
-        const prevMoves = i > 0 && near(posAt(b, p, i - 1), a) > 0.3
-        const nextMoves = i + 2 < n && near(z, posAt(b, p, i + 2)) > 0.3
         const k2 = prevMoves && nextMoves ? u : prevMoves ? 1 - (1 - u) * (1 - u) : nextMoves ? u * u : e
         x = a[0] + (z[0] - a[0]) * k2; y = a[1] + (z[1] - a[1]) * k2
       }
@@ -604,8 +655,9 @@ export function stepsToClip(b: Board): Board {
     for (let i = 0; i < n - 1; i++) {
       const a = owner(i, 'home'), z = owner(i + 1, teamOf(a) ?? 'home'), bp = posAt(b, ball, i), bz = posAt(b, ball, i + 1)
       if (near(bp, bz) < 1) continue
-      if (z && z !== a) passes.push({ t: +start[i].toFixed(3), to: z })
-      else if (!z) passes.push({ t: +start[i].toFixed(3), to: null, at: bz })
+      const lob = b.frames![i].drawings.some((d) => d.type === 'lob')
+      if (z && z !== a) passes.push({ t: +start[i].toFixed(3), to: z, lob })
+      else if (!z) passes.push({ t: +start[i].toFixed(3), to: null, at: bz, lob })
     }
   }
   return { ...b, clip: { dur: +total.toFixed(3), tracks, passes, auto: false, marks: [0, ...start.slice(1).map((v) => +v.toFixed(3))] } }

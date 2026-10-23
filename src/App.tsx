@@ -711,6 +711,7 @@ export default function App() {
     commit((b) => (b.clip ? { ...b, clip: { ...b.clip, keys: [...(b.clip.keys ?? []), k].sort((x, y) => x - y) } } : b))
     setToast(t('Pausa añadida: aquí la jugada se para y resalta el pase que viene.'))
   }
+  const toggleShow = (k: 'offside' | 'vision') => commit((b) => (b.clip ? { ...b, clip: { ...b.clip, show: { ...b.clip.show, [k]: !b.clip.show?.[k] } } } : b))
   const toggleAuto = () => commit((b) => (b.clip ? { ...b, clip: { ...b.clip, auto: !b.clip.auto } } : b))
 
   const toBoard = (e: React.PointerEvent): Pt => {
@@ -1197,6 +1198,8 @@ export default function App() {
               <label className="pick"><input type="checkbox" checked={!!board.clip.auto} onChange={toggleAuto} disabled={!!rec} /><span>{t('Defensa automática')}</span></label>
               <button onClick={toggleKeys} disabled={!!rec} aria-pressed={!!board.clip.keys?.length} className={board.clip.keys?.length ? 'toggle on' : 'toggle'}>{t('★ Momentos clave')}</button>
               <button onClick={addKey} disabled={!!rec || playing}>{t('★ Pausa aquí')}</button>
+              <label className="pick"><input type="checkbox" checked={!!board.clip.show?.offside} onChange={() => toggleShow('offside')} disabled={!!rec} /><span>{t('Fuera de juego')}</span></label>
+              <label className="pick"><input type="checkbox" checked={!!board.clip.show?.vision} onChange={() => toggleShow('vision')} disabled={!!rec} /><span>{t('Visión y pases libres')}</span></label>
               <button onClick={cutPauses} disabled={!!rec}>{t('Quitar tiempos muertos')}</button>
               <button onClick={toSteps} disabled={!!rec}>{t('Convertir en pasos')}</button>
               <button onClick={clearClip} disabled={!!rec}>{board.frames ? t('Volver a pasos') : t('Borrar grabación')}</button>
