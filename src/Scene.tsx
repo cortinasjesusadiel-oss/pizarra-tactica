@@ -38,16 +38,17 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
       {live && <DrawingShape d={live} />}
       {focus && <rect x={-6} y={-6} width={PW + 12} height={PH + 12} fill="#000" fillOpacity={0.45 * fade(focus.a)} pointerEvents="none" />}
       {cv.holder && cv.pos[cv.holder] && <circle cx={cv.pos[cv.holder][0]} cy={cv.pos[cv.holder][1]} r={r * 1.32} fill="none" stroke="#ffffff" strokeWidth={r * 0.1} strokeOpacity={0.55} pointerEvents="none" />}
-      {board.tokens.map((t) => {
+      {depth(board.tokens, (t) => cv.pos[t.id] ?? [t.x, t.y], upright, look).map((t) => {
         const [x, y] = cv.pos[t.id] ?? [t.x, t.y]
-        return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} look={look} face={t.kind === 'player' ? cv.face[t.id] : undefined} />
+        return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} look={look} face={t.kind === 'player' ? cv.face[t.id] : undefined} gait={t.kind === 'player' ? gaitOf(t.id, s, cv.moving[t.id] ?? 0) : undefined} />
       })}
       {focus && <KeyMoment board={board} cv={cv} focus={focus} />}
       {board.drawings.filter((d) => d.type === 'text').map((d) => <DrawingShape key={d.id} d={d} upright={upright} bounds={bounds} />)}
     </>
   )
   const parts = drawParts(board, s)
-  const faces = PRO && (board.frames?.length ?? 0) > 1 ? facesAt(board, s) : null
+  const fs = PRO && (board.frames?.length ?? 0) > 1 ? facesAt(board, s) : null
+  const faces = fs?.face ?? null
   return (
     <>
       {grass && <Pitch kind={board.pitch} zones={zones} brand={brand} ident={ident} />}
@@ -56,7 +57,7 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
       {parts.filter(({ d }) => d.type !== 'text').map(({ d, part }) => <DrawingShape key={d.id} d={d} part={part} />)}
       {live && <DrawingShape d={live} />}
       <Motion board={board} s={s} look={look} />
-      {board.tokens.map((t) => {
+      {depth(board.tokens, (t) => sampleAt(board, t, s), upright, look).map((t) => {
         const [x, y] = sampleAt(board, t, s)
         // Balón por el aire: su sombra va por el suelo y el balón se ve más grande cuanto más alto va.
         const air = ballAir(board, t, s)
@@ -66,7 +67,7 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
             <TokenShape t={{ ...t, x, y }} r={r * (1 + air.lift * 0.7)} selected={t.id === selected} upright={upright} look={look} />
           </g>
         )
-        return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} look={look} face={faces?.[t.id]} />
+        return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} look={look} face={faces?.[t.id]} gait={fs && t.kind === 'player' ? gaitOf(t.id, s * STEP_RUN, fs.speed[t.id] ?? 0) : undefined} />
       })}
       {/* Los letreros van encima de todo para que siempre se lean. */}
       {board.drawings.filter((d) => d.type === 'text').map((d) => <DrawingShape key={d.id} d={d} upright={upright} bounds={bounds} />)}
@@ -147,8 +148,18 @@ function Motion({ board, s, look = DEFAULT_LOOK }: { board: Board; s: number; lo
 }
 
 // Hacia dónde mira cada jugador en una animación por pasos: hacia donde corre y, parado, hacia el balón.
-function facesAt(board: Board, s: number): Record<string, number> {
+// Zancada: unas 1,7 zancadas por segundo, con un desfase distinto para cada jugador (no corren todos al compás).
+// Cuanto más rápido, más se abren piernas y brazos.
+function gaitOf(id: string, sec: number, speed: number) {
+  let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0
+  return { phase: sec * Math.PI * 2 * 1.7 + (h % 628) / 100, amp: Math.max(0, Math.min(1, (speed - 0.4) / 6)) }
+}
+// En la animación por pasos, un paso de movimiento dura alrededor de 1,6 s.
+const STEP_RUN = 1.6
+
+function facesAt(board: Board, s: number): { face: Record<string, number>; speed: Record<string, number> } {
   const out: Record<string, number> = {}
+  const speed: Record<string, number> = {}
   const ball = board.tokens.find((t) => t.kind === 'ball')
   const bp = ball ? sampleAt(board, ball, s) : null
   const e = 0.03
@@ -162,8 +173,19 @@ function facesAt(board: Board, s: number): Record<string, number> {
     const w = Math.max(0, Math.min(1, (sp - 1) / 4)), k = w * w * (3 - 2 * w)
     const mx = sp > 1e-6 ? vx / sp : 0, my = sp > 1e-6 ? vy / sp : 0
     out[t.id] = Math.atan2(my * k + ty * (1 - k), mx * k + tx * (1 - k))
+    speed[t.id] = sp / STEP_RUN
   }
-  return out
+  return { face: out, speed }
+}
+
+// Con jugadores de pie, el que está más abajo en la pantalla se dibuja delante (como en una foto).
+// El material va siempre debajo y el balón siempre encima, para no perderlo de vista.
+function depth<T extends { kind: string }>(list: T[], at: (t: T) => Pt, upright: boolean, look?: Look): T[] {
+  if (look?.shape !== 'player') return list
+  const key = (t: T) => { const p = at(t); return upright ? p[0] : p[1] }
+  const ground = list.filter((t) => t.kind !== 'player' && t.kind !== 'ball')
+  const up = list.filter((t) => t.kind === 'player').map((t) => ({ t, k: key(t) })).sort((a, b) => a.k - b.k).map((x) => x.t)
+  return [...ground, ...up, ...list.filter((t) => t.kind === 'ball')]
 }
 
 const fade = (a: number) => Math.max(0, Math.min(1, a * 5, (1 - a) * 5))
