@@ -18,6 +18,50 @@ export interface Clip {
   auto?: boolean
   // Si viene de una animación por pasos: el segundo en que empieza cada paso (para ver su explicación y sus flechas).
   marks?: number[]
+  // Momentos clave: en esos segundos la jugada se congela un instante y se resalta el pase.
+  keys?: number[]
+}
+
+// Cuánto dura la pausa en cada momento clave (en segundos de jugada).
+export const HOLD = 1.8
+export const holdTotal = (c: Clip) => c.dur + (c.keys?.length ?? 0) * HOLD
+// Instante de la jugada a los `w` segundos de reproducirla con sus pausas; `focus` dice si está en una pausa
+// (k = momento clave, a = cuánto lleva de la pausa, de 0 a 1).
+export function holdAt(c: Clip, w: number): { s: number; focus: Focus | null } {
+  let off = 0
+  for (const k of [...(c.keys ?? [])].sort((a, b) => a - b)) {
+    if (w < k + off) break
+    if (w < k + off + HOLD) return { s: k, focus: { k, a: (w - k - off) / HOLD } }
+    off += HOLD
+  }
+  return { s: Math.min(c.dur, w - off), focus: null }
+}
+// Al revés: desde qué punto de la reproducción se llega al segundo `s` de la jugada (antes de su pausa).
+export const holdWall = (c: Clip, s: number) => s + (c.keys ?? []).filter((k) => k < s - 1e-3).length * HOLD
+export interface Focus { k: number; a: number }
+
+// Los pases que más hacen avanzar al equipo (y los tiros): como mucho cuatro, en orden.
+export function keyPasses(b: Board): number[] {
+  const c = b.clip
+  if (!c) return []
+  const team = (id: string | null) => b.tokens.find((x) => x.id === id)?.team
+  const W = PITCH[b.pitch].w
+  const found: { t: number; gain: number }[] = []
+  for (const p of c.passes) {
+    const k = Math.max(0, p.t - 0.05)
+    const v = clipView(b, k)
+    const tm = team(v.holder)
+    const ball = b.tokens.find((x) => x.kind === 'ball')
+    if (!tm || !ball || !v.holder) continue
+    const from = v.pos[v.holder]
+    const to = p.to ? clipView(b, Math.min(c.dur, p.t + 0.7)).pos[p.to] : p.at
+    if (!from || !to) continue
+    if (p.to && team(p.to) !== tm) continue
+    const dir = tm === 'away' ? -1 : 1
+    const gain = (to[0] - from[0]) * dir + (!p.to && (dir > 0 ? to[0] > W - 18 : to[0] < 18) ? 20 : 0)
+    if (gain >= 10) found.push({ t: +k.toFixed(3), gain })
+  }
+  return found.sort((a, b) => b.gain - a.gain).slice(0, 4).map((f) => f.t).sort((a, b) => a - b)
 }
 
 // En qué paso está la jugada en el segundo `s` (i) y cuánto lleva de ese paso (u, de 0 a 1).
@@ -437,7 +481,7 @@ export function trimPauses(b: Board, keep = 0.7, min = 1.2): Clip {
     }
     tracks[id] = out
   }
-  return { ...clip, tracks, passes: clip.passes.map((p) => ({ ...p, t: map(p.t) })), dur: map(clip.dur), ...(clip.marks ? { marks: clip.marks.map(map) } : {}) }
+  return { ...clip, tracks, passes: clip.passes.map((p) => ({ ...p, t: map(p.t) })), dur: map(clip.dur), ...(clip.marks ? { marks: clip.marks.map(map) } : {}), ...(clip.keys ? { keys: clip.keys.map(map) } : {}) }
 }
 
 // Convierte la jugada grabada en una animación por pasos: un paso en cada pase (y otro cada pocos segundos si

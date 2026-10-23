@@ -3,13 +3,13 @@ import { ballAir, drawParts, sampleAt } from './motion'
 import { Pitch } from './Pitch'
 import type { Mark } from './identity'
 import { DrawingShape, TokenShape } from './Shapes'
-import { clipStep, clipView, type ClipView } from './clip'
+import { clipStep, clipView, type ClipView, type Focus } from './clip'
 import { PRO } from './pro'
 
 // Lo que se dibuja dentro del campo en el instante `s` (puede ser fraccionario): césped, trazos y fichas.
 // Se usa en la pizarra y al exportar el vídeo, para que ambos se vean igual.
 // En una jugada grabada (`board.clip`), `s` son segundos; `view` es lo que se ve mientras se graba.
-export function Scene({ board, s, zones, brand, ident, look, upright = false, selected = null, live = null, grass = true, ghost = false, view }: {
+export function Scene({ board, s, zones, brand, ident, look, upright = false, selected = null, live = null, grass = true, ghost = false, view, focus = null }: {
   board: Board
   brand?: string
   ident?: Mark | null
@@ -22,6 +22,7 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
   grass?: boolean
   ghost?: boolean
   view?: ClipView | null
+  focus?: Focus | null
 }) {
   const { r, w: PW, h: PH } = PITCH[board.pitch]
   const bounds: [number, number] = [PW, PH]
@@ -35,11 +36,13 @@ export function Scene({ board, s, zones, brand, ident, look, upright = false, se
       {board.drawings.filter((d) => d.type !== 'text').map((d) => <DrawingShape key={d.id} d={d} />)}
       {stepDraw.map(({ d, part }) => <DrawingShape key={d.id} d={d} part={part} />)}
       {live && <DrawingShape d={live} />}
+      {focus && <rect x={-6} y={-6} width={PW + 12} height={PH + 12} fill="#000" fillOpacity={0.45 * fade(focus.a)} pointerEvents="none" />}
       {cv.holder && cv.pos[cv.holder] && <circle cx={cv.pos[cv.holder][0]} cy={cv.pos[cv.holder][1]} r={r * 1.32} fill="none" stroke="#ffffff" strokeWidth={r * 0.1} strokeOpacity={0.55} pointerEvents="none" />}
       {board.tokens.map((t) => {
         const [x, y] = cv.pos[t.id] ?? [t.x, t.y]
         return <TokenShape key={t.id} t={{ ...t, x, y }} r={r} selected={t.id === selected} upright={upright} look={look} face={t.kind === 'player' ? cv.face[t.id] : undefined} />
       })}
+      {focus && <KeyMoment board={board} cv={cv} focus={focus} />}
       {board.drawings.filter((d) => d.type === 'text').map((d) => <DrawingShape key={d.id} d={d} upright={upright} bounds={bounds} />)}
     </>
   )
@@ -161,4 +164,43 @@ function facesAt(board: Board, s: number): Record<string, number> {
     out[t.id] = Math.atan2(my * k + ty * (1 - k), mx * k + tx * (1 - k))
   }
   return out
+}
+
+const fade = (a: number) => Math.max(0, Math.min(1, a * 5, (1 - a) * 5))
+
+// Momento clave: la jugada se congela, el campo se oscurece y se resaltan el que pasa, el que recibe y el pase.
+function KeyMoment({ board, cv, focus }: { board: Board; cv: ClipView; focus: Focus }) {
+  const c = board.clip!
+  const { r } = PITCH[board.pitch]
+  const p = c.passes.find((x) => x.t >= focus.k - 0.01 && x.t <= focus.k + 1.2)
+  const from = cv.holder ? cv.pos[cv.holder] : null
+  const al = fade(focus.a)
+  const G = '#4FD18B'
+  const to: Pt | undefined = p ? (p.to ? clipView(board, Math.min(c.dur, p.t + 0.7)).pos[p.to] : p.at) : undefined
+  // Sin pase cerca (una pausa puesta a mano): solo se resalta al que lleva el balón.
+  if (!p || !to) return from ? <circle cx={from[0]} cy={from[1]} r={r * 2.1} fill={G} fillOpacity={0.14} stroke={G} strokeWidth={r * 0.2} opacity={al} pointerEvents="none" /> : null
+  if (!from) return null
+  const g = Math.min(1, focus.a * 2.4), e = g * g * (3 - 2 * g)
+  const pulse = 1 + 0.12 * Math.sin(focus.a * Math.PI * 6)
+  const dx = to[0] - from[0], dy = to[1] - from[1], L = Math.hypot(dx, dy) || 1
+  const ux = dx / L, uy = dy / L
+  const sx = from[0] + ux * r * 1.6, sy = from[1] + uy * r * 1.6
+  const end = Math.max(0, L - r * (p.to ? 3 : 1.2) - r * 1.6)
+  const ex = sx + ux * end * e, ey = sy + uy * end * e
+  const hw = r * 0.75
+  const head = `M${ex + ux * hw * 1.4} ${ey + uy * hw * 1.4} L${ex - uy * hw} ${ey + ux * hw} L${ex + uy * hw} ${ey - ux * hw} Z`
+  return (
+    <g opacity={al} pointerEvents="none" style={{ pointerEvents: 'none' }}>
+      <circle cx={from[0]} cy={from[1]} r={r * 2.1 * pulse} fill={G} fillOpacity={0.14} stroke={G} strokeWidth={r * 0.2} />
+      {p.to && <circle cx={to[0]} cy={to[1]} r={r * 2.1 * (2 - pulse)} fill="#fff" fillOpacity={0.1} stroke="#fff" strokeWidth={r * 0.16} strokeDasharray={`${r * 0.6} ${r * 0.4}`} />}
+      {!p.to && <circle cx={to[0]} cy={to[1]} r={r * 1.2} fill="none" stroke="#fff" strokeWidth={r * 0.16} />}
+      {end > 0.2 && (
+        <>
+          <line x1={sx} y1={sy} x2={ex} y2={ey} stroke={G} strokeWidth={r * 0.75} strokeOpacity={0.25} strokeLinecap="round" />
+          <line x1={sx} y1={sy} x2={ex} y2={ey} stroke="#fff" strokeWidth={r * 0.28} strokeLinecap="round" />
+          <path d={head} fill="#fff" />
+        </>
+      )}
+    </g>
+  )
 }

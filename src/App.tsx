@@ -8,7 +8,7 @@ import { Markers, TokenShape } from './Shapes'
 import { useArt } from './material'
 import { Scene } from './Scene'
 import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, clipRate, paceAt, paceStart, sampleAt, shownStep, type Pace, type Speed } from './motion'
-import { Sim, clipStep, clipToSteps, stepsToClip, withMarks, newClip, smoothTrack, trimPauses, type Clip, type ClipView } from './clip'
+import { Sim, HOLD, clipStep, holdAt, holdTotal, holdWall, keyPasses, clipToSteps, stepsToClip, withMarks, newClip, smoothTrack, trimPauses, type Clip, type ClipView, type Focus } from './clip'
 import { PRO, numberPlayers } from './pro'
 import { carrier, movesFromArrows } from './steps'
 import { SESSIONS } from './sessions'
@@ -120,6 +120,7 @@ export default function App() {
   const raf = useRef(0)
   // Jugada grabada: segundo en el que está parada.
   const [clipT, setClipT] = useState(0)
+  const [focus, setFocus] = useState<Focus | null>(null)
   const [video, setVideo] = useState<number | null>(null)
 
   const stage = useRef<HTMLDivElement>(null)
@@ -168,6 +169,7 @@ export default function App() {
   }, [toast])
 
   const stopAnim = useCallback(() => {
+    setFocus(null)
     cancelAnimationFrame(raf.current)
     if (animRef.current !== null) { setStep(Math.round(animRef.current)); setClipT(animRef.current) }
     animRef.current = null
@@ -284,11 +286,12 @@ export default function App() {
     const start = from ?? (clipT >= clip.dur - 0.05 ? 0 : clipT)
     setPlaying(true)
     setAnim(start)
-    const t0 = performance.now(), rate = clipRate(pace)
+    // Se cuenta el tiempo de reproducción (con las pausas de los momentos clave) y se pasa al de la jugada.
+    const t0 = performance.now(), rate = clipRate(pace), w0 = holdWall(clip, start), total = holdTotal(clip)
     const tick = (now: number) => {
-      const s = start + ((now - t0) / 1000) * rate
-      if (s < clip.dur) { setAnim(s); raf.current = requestAnimationFrame(tick) }
-      else { animRef.current = null; setAnimState(null); setClipT(clip.dur); setPlaying(false) }
+      const w = w0 + ((now - t0) / 1000) * rate
+      if (w < total) { const h = holdAt(clip, w); setFocus(h.focus); setAnim(h.s); raf.current = requestAnimationFrame(tick) }
+      else { animRef.current = null; setAnimState(null); setFocus(null); setClipT(clip.dur); setPlaying(false) }
     }
     raf.current = requestAnimationFrame(tick)
   }
@@ -682,6 +685,27 @@ export default function App() {
     setAutoplay(true)
   }
   const clearClip = () => { stopAnim(); commit((b) => ({ ...b, clip: undefined })); setClipT(0) }
+  // Momentos clave: la jugada se congela un instante en los pases que más hacen avanzar, o donde tú digas.
+  const toggleKeys = () => {
+    if (!board.clip) return
+    stopAnim()
+    if (board.clip.keys?.length) { commit((b) => (b.clip ? { ...b, clip: { ...b.clip, keys: undefined } } : b)); setToast(t('Momentos clave quitados')); return }
+    const keys = keyPasses(board)
+    if (!keys.length) { setToast(t('No encontré pases que hagan avanzar mucho. Para la jugada donde quieras y pulsa «★ Pausa aquí».')); return }
+    commit((b) => (b.clip ? { ...b, clip: { ...b.clip, keys } } : b))
+    setToast(t('{n} momentos clave: la jugada se para {s} s en cada uno.', { n: keys.length, s: HOLD.toFixed(1) }))
+  }
+  const addKey = () => {
+    if (!board.clip) return
+    const k = +clipT.toFixed(3)
+    if (board.clip.keys?.some((x) => Math.abs(x - k) < 0.3)) {
+      commit((b) => (b.clip ? { ...b, clip: { ...b.clip, keys: b.clip.keys!.filter((x) => Math.abs(x - k) >= 0.3) } } : b))
+      setToast(t('Pausa quitada'))
+      return
+    }
+    commit((b) => (b.clip ? { ...b, clip: { ...b.clip, keys: [...(b.clip.keys ?? []), k].sort((x, y) => x - y) } } : b))
+    setToast(t('Pausa añadida: aquí la jugada se para y resalta el pase que viene.'))
+  }
   const toggleAuto = () => commit((b) => (b.clip ? { ...b, clip: { ...b.clip, auto: !b.clip.auto } } : b))
 
   const toBoard = (e: React.PointerEvent): Pt => {
@@ -1024,7 +1048,7 @@ export default function App() {
         >
           <Markers />
           <g ref={layer} transform={vertical ? `translate(${H} 0) rotate(90)` : undefined}>
-            <Scene board={board} s={board.clip ? anim ?? clipT : anim ?? cur} view={recView} zones={zones} brand={mark} ident={ident} look={look} upright={vertical} selected={selected} live={live} ghost={anim === null && !playing} />
+            <Scene board={board} s={board.clip ? anim ?? clipT : anim ?? cur} view={recView} focus={board.clip ? focus : null} zones={zones} brand={mark} ident={ident} look={look} upright={vertical} selected={selected} live={live} ghost={anim === null && !playing} />
           </g>
         </svg>
         {frames && !board.clip && frames[shown].note && !showHint && (
@@ -1166,6 +1190,8 @@ export default function App() {
               <span className="sep" />
               <button onClick={startRec} disabled={!!rec}>{t('● Grabar capa')}</button>
               <label className="pick"><input type="checkbox" checked={!!board.clip.auto} onChange={toggleAuto} disabled={!!rec} /><span>{t('Defensa automática')}</span></label>
+              <button onClick={toggleKeys} disabled={!!rec} aria-pressed={!!board.clip.keys?.length} className={board.clip.keys?.length ? 'toggle on' : 'toggle'}>{t('★ Momentos clave')}</button>
+              <button onClick={addKey} disabled={!!rec || playing}>{t('★ Pausa aquí')}</button>
               <button onClick={cutPauses} disabled={!!rec}>{t('Quitar tiempos muertos')}</button>
               <button onClick={toSteps} disabled={!!rec}>{t('Convertir en pasos')}</button>
               <button onClick={clearClip} disabled={!!rec}>{board.frames ? t('Volver a pasos') : t('Borrar grabación')}</button>
@@ -1484,7 +1510,7 @@ export default function App() {
           <svg viewBox={vertical ? `${-PAD} ${-PAD} ${H + 2 * PAD} ${W + 2 * PAD}` : `${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`} className="present-board">
             <Markers />
             <g transform={vertical ? `translate(${H} 0) rotate(90)` : undefined}>
-              <Scene board={board} s={board.clip ? anim ?? clipT : anim ?? cur} zones={zones} brand={mark} ident={ident} look={look} upright={vertical} />
+              <Scene board={board} s={board.clip ? anim ?? clipT : anim ?? cur} focus={board.clip ? focus : null} zones={zones} brand={mark} ident={ident} look={look} upright={vertical} />
             </g>
           </svg>
           {frames && <button className="present-zone left" onClick={prevStep} aria-label={t('Paso anterior')} />}

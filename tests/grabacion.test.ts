@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { PITCH, ballAt, player, type Board, type Token } from '../src/model'
 import { TEMPLATES } from '../src/templates'
-import { clipStep, clipToSteps, clipView, stepsToClip, trackAt, trimPauses, type Clip, type Sample } from '../src/clip'
+import { HOLD, clipStep, holdAt, holdTotal, holdWall, keyPasses, clipToSteps, clipView, stepsToClip, trackAt, trimPauses, type Clip, type Sample } from '../src/clip'
 
 // Rondo 4 contra 2 en el 40×30: los cuatro de fuera se mueven por la banda y se pasan el balón.
 function rondo(auto: boolean): Board {
@@ -140,5 +140,24 @@ describe('pasos en tiempo real', () => {
     expect(clipStep(b.clip!, m[2] + 0.01).i).toBe(2)
     const cut = trimPauses(b)
     expect(cut.marks!.length).toBe(m.length)
+  })
+})
+
+describe('momentos clave', () => {
+  it('la jugada se congela en cada momento clave y luego sigue sin saltos', () => {
+    const c: Clip = { dur: 10, tracks: {}, passes: [], keys: [2, 6] }
+    expect(holdTotal(c)).toBeCloseTo(10 + 2 * HOLD)
+    expect(holdAt(c, 1).s).toBeCloseTo(1)
+    expect(holdAt(c, 2 + HOLD / 2)).toMatchObject({ s: 2, focus: { k: 2 } })
+    expect(holdAt(c, 3 + HOLD).s).toBeCloseTo(3)
+    expect(holdAt(c, 7 + 2 * HOLD).s).toBeCloseTo(7)
+    expect(holdWall(c, 7)).toBeCloseTo(7 + 2 * HOLD)
+  })
+  it('encuentra los pases que hacen avanzar en una plantilla en tiempo real', () => {
+    const tpl = TEMPLATES.find((x) => x.animated)!
+    const b = stepsToClip(tpl.build())
+    const keys = keyPasses(b)
+    expect(keys.length).toBeGreaterThan(0)
+    expect(keys.length).toBeLessThanOrEqual(4)
   })
 })
