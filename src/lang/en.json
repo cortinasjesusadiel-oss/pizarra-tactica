@@ -1540,5 +1540,8 @@
  "El {a} conduce.": "{a} dribbles forward.",
  "El {a} se desmarca.": "{a} gets free.",
  "Se desmarcan {a}.": "{a} get free.",
- "La defensa se ajusta y presiona.": "The defence shifts and presses."
+ "La defensa se ajusta y presiona.": "The defence shifts and presses.",
+ "▶ Tiempo real": "▶ Real time",
+ "Todos se mueven a la vez y de seguido, a velocidad real": "Everyone moves at once, continuously, at real speed",
+ "Volver a pasos": "Back to steps"
 }

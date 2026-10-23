@@ -1,7 +1,8 @@
 // Jugada grabada (Pro): el balón llega al compañero aunque corra, nadie da saltos y la defensa automática presiona.
 import { describe, expect, it } from 'vitest'
-import { ballAt, player, type Board, type Token } from '../src/model'
-import { clipToSteps, clipView, trackAt, trimPauses, type Clip, type Sample } from '../src/clip'
+import { PITCH, ballAt, player, type Board, type Token } from '../src/model'
+import { TEMPLATES } from '../src/templates'
+import { clipToSteps, clipView, stepsToClip, trackAt, trimPauses, type Clip, type Sample } from '../src/clip'
 
 // Rondo 4 contra 2 en el 40×30: los cuatro de fuera se mueven por la banda y se pasan el balón.
 function rondo(auto: boolean): Board {
@@ -105,5 +106,27 @@ describe('Jugada grabada', () => {
     const withPass = s.frames!.filter((f) => f.drawings.some((d) => d.type === 'pass'))
     expect(withPass.length).toBe(3)
     expect(withPass[0].note).toMatch(/(pasa al|passes to) 2/)
+  })
+
+  it('todas las plantillas animadas pasan a tiempo real sin saltos', () => {
+    let n = 0
+    for (const tpl of TEMPLATES) {
+      const b0 = tpl.build()
+      if ((b0.frames?.length ?? 0) < 2) continue
+      const b = stepsToClip(b0)
+      n++
+      const { r } = PITCH[b.pitch]
+      let prev = clipView(b, 0)
+      for (let f = 1; f * (1 / 15) <= b.clip!.dur; f++) {
+        const v = clipView(b, f / 15)
+        for (const tk of b.tokens) {
+          const a = prev.pos[tk.id], z = v.pos[tk.id]
+          // En 1/15 s nadie recorre más de ~2,5 m (un pase fuerte) salvo un tiro.
+          expect(Math.hypot(z[0] - a[0], z[1] - a[1]), `${tpl.name} ${tk.label}`).toBeLessThan(Math.max(2.6, r * 2))
+        }
+        prev = v
+      }
+    }
+    expect(n).toBeGreaterThan(10)
   })
 })

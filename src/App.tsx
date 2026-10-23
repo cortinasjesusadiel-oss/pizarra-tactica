@@ -8,7 +8,7 @@ import { Markers, TokenShape } from './Shapes'
 import { useArt } from './material'
 import { Scene } from './Scene'
 import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, paceAt, paceStart, sampleAt, shownStep, type Pace, type Speed } from './motion'
-import { Sim, clipToSteps, newClip, smoothTrack, trimPauses, type Clip, type ClipView } from './clip'
+import { Sim, clipToSteps, stepsToClip, newClip, smoothTrack, trimPauses, type Clip, type ClipView } from './clip'
 import { PRO } from './pro'
 import { carrier, movesFromArrows } from './steps'
 import { SESSIONS } from './sessions'
@@ -495,7 +495,8 @@ export default function App() {
     setSelected(null)
     setLive(null)
     let b = board
-    if (b.frames) {
+    if (b.frames && b.clip) b = { ...b, frames: undefined }
+    else if (b.frames) {
       // Se parte de cómo están las fichas en el paso que ves; los pasos se sustituyen por la grabación (se puede deshacer).
       b = { ...b, tokens: b.tokens.map((tk) => { const p = sampleAt(b, tk, cur); return { ...tk, x: p[0], y: p[1] } }), frames: undefined }
       commit(b)
@@ -650,6 +651,13 @@ export default function App() {
     setStep(0)
     setPace({ flow: true })
     setToast(t('Listo: {n} pasos. Escribe la explicación de cada uno. Si no te gusta, pulsa Deshacer.', { n: nb.frames!.length }))
+  }
+  const toLive = () => {
+    if (!board.frames) return
+    stopAnim()
+    commit(stepsToClip(board))
+    setClipT(0)
+    setAutoplay(true)
   }
   const clearClip = () => { stopAnim(); commit((b) => ({ ...b, clip: undefined })); setClipT(0) }
   const toggleAuto = () => commit((b) => (b.clip ? { ...b, clip: { ...b.clip, auto: !b.clip.auto } } : b))
@@ -996,7 +1004,7 @@ export default function App() {
             <Scene board={board} s={board.clip ? anim ?? clipT : anim ?? cur} view={recView} zones={zones} brand={mark} ident={ident} look={look} upright={vertical} selected={selected} live={live} ghost={anim === null && !playing} />
           </g>
         </svg>
-        {frames && frames[shown].note && !showHint && (
+        {frames && !board.clip && frames[shown].note && !showHint && (
           <div className="note" aria-live="polite"><b>{t('Paso')}{' '}{shown + 1}.</b> {tr(frames[shown].note)}</div>
         )}
         {noteOpen && frames && (
@@ -1121,7 +1129,7 @@ export default function App() {
               <label className="pick"><input type="checkbox" checked={!!board.clip.auto} onChange={toggleAuto} disabled={!!rec} /><span>{t('Defensa automática')}</span></label>
               <button onClick={cutPauses} disabled={!!rec}>{t('Quitar tiempos muertos')}</button>
               <button onClick={toSteps} disabled={!!rec}>{t('Convertir en pasos')}</button>
-              <button onClick={clearClip} disabled={!!rec}>{t('Borrar grabación')}</button>
+              <button onClick={clearClip} disabled={!!rec}>{board.frames ? t('Volver a pasos') : t('Borrar grabación')}</button>
               <button onClick={() => setSheet('export')} disabled={video !== null || !!rec}>{t('Exportar vídeo')}</button>
             </>
           ) : frames ? (
@@ -1140,6 +1148,7 @@ export default function App() {
               <button onClick={addStep}>{t('+ Paso')}</button>
               <button onClick={removeStep}>{t('Quitar paso')}</button>
               {PRO && <button onClick={startRec} disabled={!!rec} title={t('Grabar los movimientos en tiempo real')}>{t('● Grabar')}</button>}
+              {PRO && <button onClick={toLive} disabled={!!rec} title={t('Todos se mueven a la vez y de seguido, a velocidad real')}>{t('▶ Tiempo real')}</button>}
               <label className="pace">
                 <span className="muted small">{t('Cada paso')}</span>
                 <select value={pace.flow ? 0 : pace.step} onChange={(e) => setPace(+e.target.value ? { step: +e.target.value, flow: false } : { flow: true })} aria-label={t('Segundos por paso')}>

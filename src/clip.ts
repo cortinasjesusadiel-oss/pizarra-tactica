@@ -1,5 +1,5 @@
 import { t as tr } from './i18n'
-import { PITCH, line, type Board, type Frame, type Pt, type Token } from './model'
+import { posAt, PITCH, line, type Board, type Frame, type Pt, type Token } from './model'
 
 // «Jugada grabada» (función Pro): en vez de pasos, las fichas se mueven en tiempo real tal y como las arrastras
 // con el dedo, el ratón o el S Pen. Se graba por capas: primero unos jugadores, luego otros, mientras lo ya grabado
@@ -82,8 +82,9 @@ export class Sim {
     this.auto = new Set(clip.auto ? this.players.filter((t) => t.team === 'away').map((t) => t.id) : [])
     if (ball) {
       this.ball = [ball.x, ball.y]
+      // El que lleva el balón: el más cercano, dando preferencia a los nuestros si un rival está igual de pegado.
       let best = r * 1.8
-      for (const p of this.players) { const d = len(p.x - ball.x, p.y - ball.y); if (d < best) { best = d; this.holder = p.id } }
+      for (const p of this.players) { const d = len(p.x - ball.x, p.y - ball.y) + (p.team === 'away' ? r * 0.8 : 0); if (d < best) { best = d; this.holder = p.id } }
       this.got = -1
     }
     // Cada defensa automático marca al rival más cercano (sin repetir). El portero se queda en su portería.
@@ -282,7 +283,16 @@ export class Sim {
       }
       this.ball = [x, y]
       if (u >= 1) { this.flight = null; this.holder = f.recv; this.got = this.t }
-    } else if (this.holder) {
+    } else if (!this.holder) {
+      // Balón suelto: el primero que llega a él se lo queda (y sigue con él pegado al pie).
+      let best = this.r * 1.25, id: string | null = null
+      for (const p of this.players) {
+        const q = this.pos[p.id], d = len(q[0] - this.ball[0], q[1] - this.ball[1]) + (p.team === 'away' ? this.r * 0.3 : 0)
+        if (d < best) { best = d; id = p.id }
+      }
+      if (id) { this.holder = id; this.got = this.t }
+    }
+    if (!f && this.holder) {
       // Pegado al pie, delante del jugador hacia donde mira. Al recibir, el control lo coloca en 0,3 s.
       const q = this.pos[this.holder], a = this.face[this.holder]
       const sp = len(this.vel[this.holder][0], this.vel[this.holder][1])
@@ -468,4 +478,75 @@ export function clipToSteps(b0: Board): Board {
     frames[i].note = parts.join(' ')
   }
   return { ...b, tokens, clip: undefined, frames }
+}
+
+// Al revés: una jugada por pasos (las plantillas) pasa a tiempo real. Todos se mueven a la vez, de seguido, a
+// velocidad de persona, y el balón va al pie y viaja en los pases a velocidad real. Los pasos se guardan:
+// «Borrar grabación» vuelve a ellos.
+export function stepsToClip(b: Board): Board {
+  const n = b.frames?.length ?? 0
+  if (n < 2) return b
+  const { r } = PITCH[b.pitch]
+  const ball = b.tokens.find((t) => t.kind === 'ball')
+  const players = b.tokens.filter((t) => t.kind === 'player')
+  const near = (p: Pt, q: Pt) => Math.hypot(p[0] - q[0], p[1] - q[1])
+  // Cuánto dura cada paso: lo que tarde el que más corre (a unos 6 m/s) o el pase (a unos 14 m/s).
+  const dur: number[] = []
+  for (let i = 0; i < n - 1; i++) {
+    let run = 0, pass = 0
+    for (const t of b.tokens) {
+      const d = near(posAt(b, t, i), posAt(b, t, i + 1))
+      if (t.kind === 'ball') pass = d; else if (t.kind === 'player') run = Math.max(run, d)
+    }
+    dur.push(Math.max(1.1, run / 5.5, pass / 13))
+  }
+  const IN = 0.6, OUT = 1.6
+  const start = [IN]
+  for (const d of dur) start.push(start[start.length - 1] + d)
+  const total = start[n - 1] + OUT
+  const stepAt = (t: number) => {
+    if (t <= IN) return 0
+    for (let i = 0; i < n - 1; i++) if (t < start[i + 1]) return i + (t - start[i]) / dur[i]
+    return n - 1
+  }
+  const tracks: Record<string, Sample[]> = {}
+  for (const p of players) {
+    const tr: Sample[] = []
+    for (let k = 0; k <= Math.ceil(total * 60); k++) {
+      const t = k / 60, s = stepAt(t)
+      // Paso a paso con la misma curva suave de siempre (arrancan y frenan con naturalidad).
+      const i = Math.min(Math.floor(s), n - 2), u = s - i
+      const a = posAt(b, p, i), z = posAt(b, p, i + 1)
+      let x: number, y: number
+      if (a[0] === z[0] && a[1] === z[1]) { x = a[0]; y = a[1] } else {
+        const e = u * u * (3 - 2 * u)
+        const prevMoves = i > 0 && near(posAt(b, p, i - 1), a) > 0.3
+        const nextMoves = i + 2 < n && near(z, posAt(b, p, i + 2)) > 0.3
+        const k2 = prevMoves && nextMoves ? u : prevMoves ? 1 - (1 - u) * (1 - u) : nextMoves ? u * u : e
+        x = a[0] + (z[0] - a[0]) * k2; y = a[1] + (z[1] - a[1]) * k2
+      }
+      tr.push([+t.toFixed(3), +x.toFixed(3), +y.toFixed(3)])
+    }
+    tracks[p.id] = tr
+  }
+  // Pases: en cada paso en el que el balón cambia de dueño (o se va a un sitio sin nadie, como un tiro).
+  const passes: Pass[] = []
+  if (ball) {
+    // Dueño del balón en un paso: el más cercano (también un rival que corta el pase); si están igual de cerca,
+    // se lo queda el equipo que lo tenía.
+    const owner = (i: number, team?: Token['team']) => {
+      const bp = posAt(b, ball, i)
+      let best = r * 1.6, id: string | null = null
+      for (const p of players) { const d = near(posAt(b, p, i), bp) + (team && p.team !== team ? r * 0.25 : 0); if (d < best) { best = d; id = p.id } }
+      return id
+    }
+    const teamOf = (id: string | null) => players.find((p) => p.id === id)?.team
+    for (let i = 0; i < n - 1; i++) {
+      const a = owner(i, 'home'), z = owner(i + 1, teamOf(a) ?? 'home'), bp = posAt(b, ball, i), bz = posAt(b, ball, i + 1)
+      if (near(bp, bz) < 1) continue
+      if (z && z !== a) passes.push({ t: +start[i].toFixed(3), to: z })
+      else if (!z) passes.push({ t: +start[i].toFixed(3), to: null, at: bz })
+    }
+  }
+  return { ...b, clip: { dur: +total.toFixed(3), tracks, passes, auto: false } }
 }
