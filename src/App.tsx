@@ -305,6 +305,16 @@ export default function App() {
   const nextStep = () => glide(Math.min(nFrames - 1, Math.floor((animRef.current ?? cur) + 1e-6) + 1))
   const prevStep = () => glide(Math.max(0, Math.ceil((animRef.current ?? cur) - 1e-6) - 1))
 
+  // Pizarra personal: camisetas de marca (PRO junto al logo y bienvenida con las tres al abrir).
+  const [brandArt, setBrandArt] = useState<{ pro: string; trio: string } | null>(null)
+  const [welcome, setWelcome] = useState(PERSONAL)
+  useEffect(() => { if (PERSONAL) void import('./brandShirts').then((m) => setBrandArt(m.default)) }, [])
+  useEffect(() => {
+    if (!welcome || !brandArt) return
+    const id = setTimeout(() => setWelcome(false), 3200)
+    return () => clearTimeout(id)
+  }, [welcome, brandArt])
+
   // Aspecto de las fichas (forma, número/nombre y colores de cada equipo), guardado en el dispositivo.
   const [look, setLookState] = useState<Look>(() => {
     try {
@@ -1006,7 +1016,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="top">
-        <strong className="brand"><img src={tpSymbol} alt="" />{t('Tactical')}<span>{t('Pro')}</span>{PRO && <em className="pro-tag">PRO</em>}</strong>
+        <strong className="brand"><img src={tpSymbol} alt="" />{t('Tactical')}<span>{t('Pro')}</span>{PRO && (brandArt ? <img className="pro-shirt" src={brandArt.pro} alt="PRO" /> : <em className="pro-tag">PRO</em>)}</strong>
         <button className="primary" onClick={newBoard}>{t('+ Nueva')}</button>
         {/* La barra de arriba se agrupa en dos menús para que quepa en el móvil sin desplazarse. */}
         <button className={`top-group${topMenu?.id === 'pitch' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={topMenu?.id === 'pitch'}
@@ -1436,6 +1446,13 @@ export default function App() {
             </dl>
           </details>
         </Sheet>
+      )}
+      {welcome && brandArt && (
+        <button className="welcome" onClick={() => setWelcome(false)} aria-label={t('Abrir la pizarra')}>
+          <img src={brandArt.trio} alt="TacticalPro PRO · Jesús Cortinas" />
+          <span className="welcome-lema">{t('Aprende · Planifica · Entrena')}</span>
+          <span className="welcome-go">{t('Toca para empezar')}</span>
+        </button>
       )}
       {sheet === 'look' && <LookSheet look={look} setLook={setLook} onClose={() => setSheet(null)} />}
       {sheet === 'tips' && (
