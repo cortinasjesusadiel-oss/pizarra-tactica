@@ -918,7 +918,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="top">
-        <strong className="brand"><img src={tpSymbol} alt="" />{t('Tactical')}<span>{t('Pro')}</span></strong>
+        <strong className="brand"><img src={tpSymbol} alt="" />{t('Tactical')}<span>{t('Pro')}</span>{PRO && <em className="pro-tag">PRO</em>}</strong>
         <button className="primary" onClick={newBoard}>{t('+ Nueva')}</button>
         {/* La barra de arriba se agrupa en dos menús para que quepa en el móvil sin desplazarse. */}
         <button className={`top-group${topMenu?.id === 'pitch' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={topMenu?.id === 'pitch'}

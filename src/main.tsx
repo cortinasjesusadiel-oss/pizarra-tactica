@@ -4,7 +4,7 @@ import './index.css'
 import App from './App.tsx'
 
 // Instalar como app y funcionar sin conexión (solo en la versión publicada, no en desarrollo).
-if (import.meta.env.PROD && import.meta.env.MODE !== 'demo' && 'serviceWorker' in navigator) {
+if (import.meta.env.PROD && import.meta.env.MODE !== 'demo' && import.meta.env.MODE !== 'mia' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}))
 }
 

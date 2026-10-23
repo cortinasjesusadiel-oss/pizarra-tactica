@@ -333,3 +333,4 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 .rec-count { font-size: 30px; line-height: 1; color: var(--accent); min-width: 1ch; text-align: center; }
 .clip-time { flex: 1 1 160px; min-width: 120px; accent-color: var(--accent); }
 @media (max-width: 700px) { .recbar .muted { display: none; } }
+.pro-tag { font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .08em; color: #0f1712; background: var(--accent); border-radius: 4px; padding: 2px 5px; margin-left: 6px; vertical-align: middle; }

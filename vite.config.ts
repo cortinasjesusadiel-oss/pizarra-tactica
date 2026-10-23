@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   base: './',
   // Fecha de la versión, visible en la app para saber si ya se actualizó.
   define: { __BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ')) },
-  plugins: mode === 'demo' ? [react(), viteSingleFile()] : [react()],
-  build: mode === 'demo' ? { outDir: 'dist-demo' } : {},
+  plugins: mode === 'demo' || mode === 'mia' ? [react(), viteSingleFile()] : [react()],
+  // `mia`: la pizarra personal del dueño en un único archivo, con lo Pro encendido (vite build --mode mia).
+  build: mode === 'demo' ? { outDir: 'dist-demo' } : mode === 'mia' ? { outDir: 'dist-mia' } : {},
 }))

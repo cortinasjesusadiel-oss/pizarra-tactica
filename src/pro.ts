@@ -21,4 +21,6 @@ function leer(): boolean {
   } catch { return false }
 }
 
-export const PRO = typeof window !== 'undefined' && leer()
+// La pizarra personal del dueño (un archivo, build «mia») siempre lleva lo Pro.
+export const PERSONAL = import.meta.env.MODE === 'mia'
+export const PRO = PERSONAL || (typeof window !== 'undefined' && leer())

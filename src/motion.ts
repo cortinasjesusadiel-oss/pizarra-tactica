@@ -1,5 +1,6 @@
 import { PITCH, lobAt, posAt, type Board, type Drawing, type Pt, type Token } from './model'
 import { t } from './i18n'
+import { PRO } from './pro'
 
 // Posición continua de una ficha en el instante `s`, medido en pasos (1.5 = a mitad entre el paso 1 y el 2).
 // Los jugadores siguen una curva suave que pasa por todos los pasos (sin cambios bruscos de dirección):
@@ -15,7 +16,7 @@ export function sampleAt(b: Board, t: Token, s: number): Pt {
   if (p1[0] === p2[0] && p1[1] === p2[1]) return p1
   if (t.kind === 'ball') {
     // Conducción: el balón va pegado al pie del jugador que lo lleva (no por su cuenta, que se adelantaría o quedaría atrás).
-    const own = dribbler(b, i, p1, p2)
+    const own = PRO ? dribbler(b, i, p1, p2) : null
     if (own) {
       const q = sampleAt(b, own.t, c)
       return [q[0] + own.o1[0] + (own.o2[0] - own.o1[0]) * u, q[1] + own.o1[1] + (own.o2[1] - own.o1[1]) * u]
