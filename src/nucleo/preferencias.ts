@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { DEFAULT_LOOK, type Look } from '../model'
-import { DEFAULT_PACE, type Pace } from '../motion'
-import { loadEnd, loadIdentity, saveEnd, saveIdentity, type BrandMode, type EndCard, type IdentityStore } from '../identity'
+import { DEFAULT_LOOK, type Look } from './model'
+import { DEFAULT_PACE, type Pace } from './motion'
+import { loadEnd, loadIdentity, saveEnd, saveIdentity, type BrandMode, type EndCard, type IdentityStore } from './identity'
 import { guardar, leer, leerJson } from './memoria'
 
 // Preferencias del entrenador guardadas en el dispositivo. Cada una se lee al abrir y se guarda al cambiarla.

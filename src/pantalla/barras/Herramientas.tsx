@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type CSSProperties } from 'react'
-import { COLORS, DEFAULT_COLOR, TOOL_NAME, type DrawTool, type Tool } from '../../model'
+import { COLORS, DEFAULT_COLOR, TOOL_NAME, type DrawTool, type Tool } from '../../nucleo/model'
 import { lang, setLang, t } from '../../i18n'
 import { useCerrarAlGirar, type SheetId } from './comun'
 import { ToolIcon } from './iconos'

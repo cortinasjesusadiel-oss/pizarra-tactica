@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from 'react'
-import type { Board } from '../model'
+import type { Board } from './model'
 
 // Deshacer y rehacer: guarda hasta 100 pizarras anteriores.
 // `board`/`setBoard` es la pizarra abierta; `setBoard` la cambia sin dejar rastro en el historial

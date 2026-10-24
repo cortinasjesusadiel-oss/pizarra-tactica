@@ -1,4 +1,4 @@
-import { t } from './i18n'
+import { t } from '../i18n'
 // Todas las coordenadas están en metros, con el equipo local atacando hacia la derecha (+x).
 
 export type PitchKind = 'full' | 'half' | 'grid'

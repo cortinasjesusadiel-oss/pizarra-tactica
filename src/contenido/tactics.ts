@@ -1,8 +1,8 @@
 // Jugadas tácticas de equipo completo: bloques defensivos, presión alta, transiciones y cómo generar espacios.
 // Campo completo: nuestro equipo (amarillo) ataca hacia la derecha y defiende la portería de x=0.
-import { ballAt, line, player, type Pt, type Token } from './model'
+import { ballAt, line, player, type Pt, type Token } from '../nucleo/model'
 import { animate, press, type Step, type Template } from './anim'
-import { t } from './i18n'
+import { t } from '../i18n'
 
 type Shape = Record<string, Pt>
 

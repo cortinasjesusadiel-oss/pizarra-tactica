@@ -1,10 +1,10 @@
 // Regresiones de la primera entrega: atajos seguros al escribir, datos dañados que se apartan sin perderse.
 import { beforeEach, describe, expect, it } from 'vitest'
-import { isTyping } from '../src/keys'
-import { DAMAGED, damagedPlays, listPlays, loadLast, savePlay } from '../src/storage'
-import { describeImport, importBackup, parseBackup } from '../src/backup'
-import { cleanBoard } from '../src/validation'
-import { TEMPLATES } from '../src/templates'
+import { isTyping } from '../src/nucleo/keys'
+import { DAMAGED, damagedPlays, listPlays, loadLast, savePlay } from '../src/nucleo/storage'
+import { describeImport, importBackup, parseBackup } from '../src/nucleo/backup'
+import { cleanBoard } from '../src/nucleo/validation'
+import { TEMPLATES } from '../src/contenido/templates'
 
 const key = (target: EventTarget, init: KeyboardEventInit = { key: 'Backspace' }) => {
   const e = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init })

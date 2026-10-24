@@ -1,8 +1,8 @@
 import { memo } from 'react'
-import { PITCH, type PitchKind } from './model'
+import { PITCH, type PitchKind } from '../nucleo/model'
 import { LOGO, LOGO_RATIO } from './brandLogo'
-import type { LineKind, Mark } from './identity'
-import { t } from './i18n'
+import type { LineKind, Mark } from '../nucleo/identity'
+import { t } from '../i18n'
 
 const CHALK = 'rgba(255,255,255,.92)'
 const L = { fill: 'none', stroke: CHALK, strokeWidth: 0.22 }

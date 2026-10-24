@@ -1,9 +1,9 @@
 // Más jugadas tácticas animadas de equipo completo (fútbol 11).
 // Campo completo: nuestro equipo (amarillo) ataca hacia la derecha y defiende la portería de x=0.
 // Medio campo: x=0 es la línea central y la portería rival está en (52.5, 34).
-import { ballAt, line, player, type Board, type Drawing, type Pt, type Token } from '../model'
+import { ballAt, line, player, type Board, type Drawing, type Pt, type Token } from '../../nucleo/model'
 import { animate, press, type Step, type Template } from '../anim'
-import { t } from '../i18n'
+import { t } from '../../i18n'
 
 export type Shape = Record<string, Pt>
 // Una flecha de movimiento: el nombre de la ficha y, si hace falta, puntos intermedios para curvarla.

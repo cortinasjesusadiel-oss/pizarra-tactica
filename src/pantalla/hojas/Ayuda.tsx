@@ -1,4 +1,4 @@
-import { GUIDE_MANUAL, GUIDE_STEPS, type GuideSection } from '../../guia'
+import { GUIDE_MANUAL, GUIDE_STEPS, type GuideSection } from '../../contenido/guia'
 import { lang, t } from '../../i18n'
 import { Sheet } from './Hoja'
 

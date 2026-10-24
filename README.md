@@ -16,9 +16,9 @@ Pizarra táctica de fútbol 11 pensada para el móvil y el S Pen, con plantillas
 - Página web de presentación en `web/` (https://cortinasjesusadiel-oss.github.io/pizarra-tactica/web/).
 - Plantillas (63, 53 animadas) en grupos: sistemas, bloques defensivos (bajo, medio, alto y repliegue), presión alta (al saque del portero con trampa en banda), transiciones (ataque-defensa y defensa-ataque), generar espacios (arrastre del 9, fijar y soltar, cambio de orientación, tercer hombre), ABP y ejercicios.
 - Material de entrenamiento: conos, picas, vallas, aros, escalera, maniquíes, miniporterías, porterías y banderines, con giro de 45°.
-- Sesiones sugeridas (`src/sessions.ts`): 25 sesiones de fútbol 11 de adultos con bloques, minutos y consignas, enlazadas a los ejercicios animados.
-- Consejos (`src/tips.ts`): 126 consejos breves sobre sistemas, ataque, defensa, ABP, entrenamiento, gestión del grupo, análisis, posiciones, estrategia de partido, preparación física, cabeza y portero.
-- Fundamentos (`src/fundamentos.ts`): las 4 fases, carriles y zonas, posiciones y dorsales, sistemas, bloques, principios de ataque y defensa y un diccionario, cada tema enlazado a su plantilla.
+- Sesiones sugeridas (`src/contenido/sessions.ts`): 25 sesiones de fútbol 11 de adultos con bloques, minutos y consignas, enlazadas a los ejercicios animados.
+- Consejos (`src/contenido/tips.ts`): 126 consejos breves sobre sistemas, ataque, defensa, ABP, entrenamiento, gestión del grupo, análisis, posiciones, estrategia de partido, preparación física, cabeza y portero.
+- Fundamentos (`src/contenido/fundamentos.ts`): las 4 fases, carriles y zonas, posiciones y dorsales, sistemas, bloques, principios de ataque y defensa y un diccionario, cada tema enlazado a su plantilla.
 - Césped con corte profesional y botón Zonas para ver carriles y franjas del juego de posición.
 - Instalable como app en el móvil y funciona sin conexión.
 - Deshacer y rehacer, jugadas guardadas en el dispositivo y exportar a PNG (en Android abre el menú de compartir).
@@ -49,7 +49,13 @@ npm run control:capturas -- --comparar <carpeta>     # las vuelve a sacar y avis
 
 Si algo cambia, termina con error y deja las diferencias en rojo en `<carpeta>/diferencias`. Una rama puede añadir sus propias capturas y comprobaciones en `scripts/control-extra.mjs`.
 
-Código: `src/App.tsx` (pizarra e interacción), `src/Shapes.tsx` (fichas y trazos), `src/Pitch.tsx` (líneas del campo), `src/templates.ts` (plantillas), `src/storage.ts` (jugadas guardadas). Las coordenadas van en metros con el equipo local atacando hacia la derecha.
+Código, por carpetas (las coordenadas van en metros con el equipo local atacando hacia la derecha):
+- `src/App.tsx`: une todas las piezas de la pizarra.
+- `src/nucleo/`: datos y reglas sin pantalla: el modelo de la pizarra, pasos y animación, jugadas guardadas, copia de seguridad, preferencias, deshacer/rehacer y Mi identidad.
+- `src/pantalla/`: lo que se ve: campo, fichas y trazos (`Pitch.tsx`, `Shapes.tsx`, `Scene.tsx`), material, `barras/`, `hojas/` y `campo/` (tocar, arrastrar y dibujar).
+- `src/contenido/`: plantillas, sesiones, consejos, fundamentos y guía de uso.
+- `src/exportar/`: vídeo e imagen.
+- `src/i18n.ts` y `src/lang/`: idiomas.
 
 ## Próximas fases
 

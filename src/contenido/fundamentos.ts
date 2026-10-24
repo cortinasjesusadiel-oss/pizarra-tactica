@@ -1,8 +1,8 @@
 // Fundamentos: lo que hay que entender para leer un partido. Pensado para que cualquiera,
 // sepa o no de fútbol, se sienta cómodo con la app desde el primer día.
-import { ballAt, line, player, type Board, type Pt, type Token } from './model'
+import { ballAt, line, player, type Board, type Pt, type Token } from '../nucleo/model'
 import { animate, press, type Template } from './anim'
-import { t } from './i18n'
+import { t } from '../i18n'
 
 export interface Lesson {
   id: string
