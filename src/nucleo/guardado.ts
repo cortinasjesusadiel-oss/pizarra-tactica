@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { Board } from '../model'
-import { saveLast, type SaveResult } from '../storage'
+import type { Board } from './model'
+import { saveLast, type SaveResult } from './storage'
 
 // Autoguardado de la pizarra abierta en cada cambio.
 // Devuelve el fallo si el dispositivo no deja guardar (null si se guardó bien), para avisar con una franja fija.

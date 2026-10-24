@@ -1,5 +1,5 @@
 import { lobAt, posAt, type Board, type Drawing, type Pt, type Token } from './model'
-import { t } from './i18n'
+import { t } from '../i18n'
 
 // Posición continua de una ficha en el instante `s`, medido en pasos (1.5 = a mitad entre el paso 1 y el 2).
 // Los jugadores siguen una curva suave que pasa por todos los pasos (sin cambios bruscos de dirección):

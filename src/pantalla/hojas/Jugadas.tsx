@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
-import { PITCH, uid, type Board } from '../../model'
-import { damagedPlays, deletePlay, listPlays, savePlay, type SavedPlay, type SaveResult } from '../../storage'
-import { backupFile, describeImport, downloadBackup, importBackup, lastBackup, markBackupDone, parseBackup } from '../../backup'
+import { PITCH, uid, type Board } from '../../nucleo/model'
+import { damagedPlays, deletePlay, listPlays, savePlay, type SavedPlay, type SaveResult } from '../../nucleo/storage'
+import { backupFile, describeImport, downloadBackup, importBackup, lastBackup, markBackupDone, parseBackup } from '../../nucleo/backup'
 import { lang, t } from '../../i18n'
 import { Sheet } from './Hoja'
 

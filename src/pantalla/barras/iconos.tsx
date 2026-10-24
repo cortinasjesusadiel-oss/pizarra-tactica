@@ -1,4 +1,4 @@
-import type { Tool } from '../../model'
+import type { Tool } from '../../nucleo/model'
 
 // Dibujo de cada herramienta en su botón.
 export function ToolIcon({ t }: { t: Tool }) {

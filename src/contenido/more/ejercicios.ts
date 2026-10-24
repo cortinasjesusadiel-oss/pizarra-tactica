@@ -1,9 +1,9 @@
 // Más plantillas animadas: ejercicios de entrenamiento y acciones a balón parado (fútbol 11, adultos).
 // Coordenadas en metros. Medio campo: x=0 es la línea central y x=52.5 la línea de fondo, portería en (52.5, 34).
 // Espacio 40×30 para los ejercicios en espacio reducido.
-import { ballAt, coneAt, item, line, player, type Pt, type Token } from '../model'
+import { ballAt, coneAt, item, line, player, type Pt, type Token } from '../../nucleo/model'
 import { animate, press, type Template } from '../anim'
-import { t } from '../i18n'
+import { t } from '../../i18n'
 
 // Conos en las cuatro esquinas de un rectángulo.
 const corners = (x1: number, y1: number, x2: number, y2: number): Token[] =>

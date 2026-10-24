@@ -2,10 +2,10 @@
 // Mismo formato que tacticas.ts. Campo completo: nuestro equipo ataca hacia la derecha.
 // Medio campo: x=0 es la línea central y la portería está en (52.5, 34). En la "vista defensiva"
 // el rival ataca esa portería y nosotros la defendemos.
-import { coneAt, type Pt, type Token } from '../model'
+import { coneAt, type Pt, type Token } from '../../nucleo/model'
 import type { Template } from '../anim'
 import { T } from './tacticas'
-import { t } from '../i18n'
+import { t } from '../../i18n'
 
 const cones = (list: Pt[]): Token[] => list.map(([x, y]) => coneAt(x, y))
 

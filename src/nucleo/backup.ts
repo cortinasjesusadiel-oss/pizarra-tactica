@@ -8,7 +8,7 @@ import type { Board } from './model'
 import { cleanPlay, listPlays, type SavedPlay } from './storage'
 import { cleanBoard, cleanStrings } from './validation'
 import { DEFAULT_END, type EndCard, type IdentityStore, type Profile } from './identity'
-import { t } from './i18n'
+import { t } from '../i18n'
 
 const PLAYS = 'pizarra.jugadas.v1'
 const IDENTITY = 'pizarra.identidad.v1'

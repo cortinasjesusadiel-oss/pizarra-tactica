@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { leerJson } from '../src/nucleo/memoria'
 import { guardarEstiloLetrero, leerEstiloLetrero, loadVopts, primeraVez, ayudaVista } from '../src/nucleo/preferencias'
 import { useHistorial, type Historial } from '../src/nucleo/historial'
-import { TEMPLATES } from '../src/templates'
+import { TEMPLATES } from '../src/contenido/templates'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 

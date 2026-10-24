@@ -1,11 +1,11 @@
-import { type Board, type Pt, type Token, player, ballAt, coneAt, item, line } from './model'
+import { type Board, type Pt, type Token, player, ballAt, coneAt, item, line } from '../nucleo/model'
 import { animate, press, type Template } from './anim'
 import { TACTICS } from './tactics'
 import { FUND_TEMPLATES } from './fundamentos'
 import { EJERCICIOS } from './more/ejercicios'
 import { TACTICAS2 } from './more/tacticas'
 import { TACTICAS3 } from './more/tacticas3'
-import { t } from './i18n'
+import { t } from '../i18n'
 
 type P = [string, number, number]
 

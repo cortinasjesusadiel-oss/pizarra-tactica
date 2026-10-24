@@ -1,4 +1,4 @@
-import { t, tr } from './i18n'
+import { t, tr } from '../i18n'
 // «Mi identidad»: el nombre del entrenador, su cargo, su club con escudo y eslogan, y el mensaje final de los vídeos.
 // Todo se guarda en este dispositivo (sin cuenta ni conexión). Se pueden tener varios perfiles y cambiar entre ellos.
 

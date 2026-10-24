@@ -1,6 +1,6 @@
 // Carga de las imágenes del material (van en un archivo aparte para que la pizarra arranque rápido).
 import { useSyncExternalStore } from 'react'
-import type { Token } from './model'
+import type { Token } from '../nucleo/model'
 
 type Art = Record<string, { u: string; w: number; h: number; x: number; y: number }>
 let art: Art | null = null

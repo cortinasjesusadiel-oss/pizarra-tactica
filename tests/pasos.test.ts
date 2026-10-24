@@ -1,7 +1,7 @@
 // «+ Paso»: cada flecha lleva a su jugador (o el balón) al final del trazo.
 import { describe, expect, it } from 'vitest'
-import { ballAt, line, player, type Board } from '../src/model'
-import { carrier, movesFromArrows } from '../src/steps'
+import { ballAt, line, player, type Board } from '../src/nucleo/model'
+import { carrier, movesFromArrows } from '../src/nucleo/steps'
 
 const board = () => {
   const p10 = player('home', '10', 30, 34)

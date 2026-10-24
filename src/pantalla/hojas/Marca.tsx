@@ -1,5 +1,5 @@
-import { BRAND_MODES, isIdentityMode, markFor, type BrandMode, type EndCard, type Profile } from '../../identity'
-import { IdentityMark } from '../../Pitch'
+import { BRAND_MODES, isIdentityMode, markFor, type BrandMode, type EndCard, type Profile } from '../../nucleo/identity'
+import { IdentityMark } from '../Pitch'
 import { t } from '../../i18n'
 
 // Qué marca se ve abajo a la derecha. Las opciones de siempre (logo, texto, sin marca) siguen igual.

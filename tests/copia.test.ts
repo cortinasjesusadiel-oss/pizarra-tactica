@@ -1,8 +1,8 @@
 // Copia de seguridad: exportar e importar sin perder ni duplicar nada.
 import { beforeEach, describe, expect, it } from 'vitest'
-import { importBackup, makeBackup, parseBackup } from '../src/backup'
-import { listPlays, savePlay, type SavedPlay } from '../src/storage'
-import { TEMPLATES } from '../src/templates'
+import { importBackup, makeBackup, parseBackup } from '../src/nucleo/backup'
+import { listPlays, savePlay, type SavedPlay } from '../src/nucleo/storage'
+import { TEMPLATES } from '../src/contenido/templates'
 
 const play = (id: string, name: string): SavedPlay => ({ id, name, updated: Date.now(), board: TEMPLATES[0].build() })
 

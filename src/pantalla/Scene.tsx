@@ -1,7 +1,7 @@
-import { DEFAULT_LOOK, PITCH, posAt, type Board, type Drawing, type Look, type Pt } from './model'
-import { ballAir, drawParts, sampleAt } from './motion'
+import { DEFAULT_LOOK, PITCH, posAt, type Board, type Drawing, type Look, type Pt } from '../nucleo/model'
+import { ballAir, drawParts, sampleAt } from '../nucleo/motion'
 import { Pitch } from './Pitch'
-import type { Mark } from './identity'
+import type { Mark } from '../nucleo/identity'
 import { DrawingShape, TokenShape } from './Shapes'
 
 // Lo que se dibuja dentro del campo en el instante `s` (puede ser fraccionario): césped, trazos y fichas.

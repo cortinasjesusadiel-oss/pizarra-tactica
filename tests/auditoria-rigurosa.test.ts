@@ -1,16 +1,16 @@
 // Pruebas de la auditoría de Codex (24-10-2026, versión 8118d93). Dos casos de guardado esperaban una excepción:
 // se aceptan con un resultado explícito { ok: false }, que la interfaz muestra al usuario (acordado en el plan de acción).
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
-import { makeBackup, parseBackup, importBackup } from '../src/backup'
-import { listPlays, savePlay, deletePlay, saveLast, loadLast } from '../src/storage'
-import { PITCH, player, ballAt, line, posAt, type Board, type PitchKind } from '../src/model'
-import { carrier, movesFromArrows } from '../src/steps'
-import { paceAt, paceTotal, sampleAt, caption } from '../src/motion'
-import { TEMPLATES } from '../src/templates'
+import { makeBackup, parseBackup, importBackup } from '../src/nucleo/backup'
+import { listPlays, savePlay, deletePlay, saveLast, loadLast } from '../src/nucleo/storage'
+import { PITCH, player, ballAt, line, posAt, type Board, type PitchKind } from '../src/nucleo/model'
+import { carrier, movesFromArrows } from '../src/nucleo/steps'
+import { paceAt, paceTotal, sampleAt, caption } from '../src/nucleo/motion'
+import { TEMPLATES } from '../src/contenido/templates'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createElement } from 'react'
-import { Scene } from '../src/Scene'
-import { DEFAULT_END, saveIdentity, loadIdentity } from '../src/identity'
+import { Scene } from '../src/pantalla/Scene'
+import { DEFAULT_END, saveIdentity, loadIdentity } from '../src/nucleo/identity'
 
 const play = (id: string, board = TEMPLATES[0].build()) => ({ id, name: `QA ${id} Ñ ⚽`, updated: 1, board })
 const pack = (board: unknown) => JSON.stringify({app:'TacticalPro',kind:'copia-de-seguridad',version:1,plays:[{id:'qa',name:'QA',updated:1,board}]})
