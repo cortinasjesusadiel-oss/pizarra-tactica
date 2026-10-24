@@ -37,6 +37,18 @@ npm run build        # versión de producción en dist/
 npm run build:demo   # un único HTML autocontenido en dist-demo/
 ```
 
+### Red de seguridad (antes de reordenar código)
+
+Necesita Chromium con Playwright (en el equipo, no se instala con el proyecto).
+
+```bash
+npm run control:botones                              # comprueba lo que hace cada botón (17 comprobaciones)
+npm run control:capturas -- --guardar <carpeta>      # 60 capturas: computador, celular de pie y de lado
+npm run control:capturas -- --comparar <carpeta>     # las vuelve a sacar y avisa si cambia algún píxel
+```
+
+Si algo cambia, termina con error y deja las diferencias en rojo en `<carpeta>/diferencias`. Una rama puede añadir sus propias capturas y comprobaciones en `scripts/control-extra.mjs`.
+
 Código: `src/App.tsx` (pizarra e interacción), `src/Shapes.tsx` (fichas y trazos), `src/Pitch.tsx` (líneas del campo), `src/templates.ts` (plantillas), `src/storage.ts` (jugadas guardadas). Las coordenadas van en metros con el equipo local atacando hacia la derecha.
 
 ## Próximas fases
