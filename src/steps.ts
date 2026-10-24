@@ -18,6 +18,40 @@ export function carrier(b: Board, step: number): Token | null {
   return best
 }
 
+// Sitio del balón cuando lo lleva un jugador: a sus pies, hacia el lado al que ataca, sin tapar su número.
+const atFeet = (p: Pt, t: Token, r: number): Pt => [p[0] + r * 0.85 * (t.team === 'away' ? -1 : 1), p[1] + r * 0.42]
+
+// Si el balón se suelta encima de un jugador, dónde dejarlo para que quede a sus pies (o null si no está encima de nadie).
+export function ballToFeet(b: Board, step: number, ballId: string): Pt | null {
+  const ball = b.tokens.find((t) => t.id === ballId && t.kind === 'ball')
+  if (!ball) return null
+  const bp = posAt(b, ball, step)
+  const { r } = PITCH[b.pitch]
+  let best: Token | null = null, bd = r * 0.75
+  for (const t of b.tokens) {
+    if (t.kind !== 'player') continue
+    const d = dist(posAt(b, t, step), bp)
+    if (d < bd) { bd = d; best = t }
+  }
+  return best ? atFeet(posAt(b, best, step), best, r) : null
+}
+
+// Plantillas y sesiones: en cada paso, si el balón está encima de un jugador, se deja a sus pies.
+export function settleBall(b: Board): Board {
+  const ball = b.tokens.find((t) => t.kind === 'ball')
+  if (!ball || (b as { clip?: unknown }).clip) return b
+  let out = b
+  const steps = b.frames?.length ?? 1
+  for (let i = 0; i < steps; i++) {
+    const to = ballToFeet(out, i, ball.id)
+    if (!to) continue
+    out = i === 0
+      ? { ...out, tokens: out.tokens.map((t) => (t.id === ball.id ? { ...t, x: to[0], y: to[1] } : t)) }
+      : { ...out, frames: out.frames!.map((f, k) => (k === i ? { ...f, pos: { ...f.pos, [ball.id]: to } } : f)) }
+  }
+  return out
+}
+
 // Dónde queda cada ficha en el paso siguiente según las flechas dibujadas en este paso:
 // carrera y conducción llevan al jugador que está al inicio de la flecha hasta su final
 // (en la conducción, con el balón), y el pase lleva el balón hasta el final de la flecha.
@@ -57,8 +91,7 @@ export function movesFromArrows(b: Board, step: number, drawings: Drawing[]): Re
         if (dd < td) { td = dd; to = t }
       }
       if (to) {
-        const p = out[to.id] ?? posAt(b, to, step), dir = to.team === 'away' ? -1 : 1
-        out[ball.id] = [p[0] + r * 0.55 * dir, p[1] + r * 0.25]
+        out[ball.id] = atFeet(out[to.id] ?? posAt(b, to, step), to, r)
       } else out[ball.id] = [end[0], end[1]]
     }
   }

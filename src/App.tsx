@@ -8,7 +8,7 @@ import { Markers, TokenShape } from './Shapes'
 import { useArt } from './material'
 import { Scene } from './Scene'
 import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, paceAt, shownStep, type Pace, type Speed } from './motion'
-import { carrier, movesFromArrows } from './steps'
+import { ballToFeet, carrier, movesFromArrows, settleBall } from './steps'
 import { SESSIONS } from './sessions'
 import { TEMPLATES, emptyBoard } from './templates'
 import { GROUPS } from './anim'
@@ -18,7 +18,7 @@ import { GLOSSARY, LESSONS } from './fundamentos'
 import { GUIDE_MANUAL, GUIDE_STEPS, type GuideSection } from './guia'
 import { damagedPlays, deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay, type SaveResult } from './storage'
 import { isTyping } from './keys'
-import { numberPlayers } from './numbering'
+import { numberPlayers as numberOnly } from './numbering'
 import { backupFile, describeImport, downloadBackup, importBackup, lastBackup, markBackupDone, parseBackup } from './backup'
 import {
   BRAND_MODES, ROLES, endFor, isIdentityMode, loadEnd, loadIdentity, markFor, newProfile, profileLabel, readCrest, saveEnd, saveIdentity,
@@ -67,6 +67,9 @@ const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
 // Las notas de los pasos que vienen de plantillas se pasan al idioma actual al abrir la jugada; las escritas a mano no cambian.
 const inLang = (b: Board): Board => (b.frames ? { ...b, frames: b.frames.map((f) => ({ ...f, note: tr(f.note) })) } : b)
+
+// Al abrir una plantilla o sesión: todos los jugadores con número y el balón a los pies, sin tapar el dorsal.
+const numberPlayers = (b: Board) => settleBall(numberOnly(b))
 
 export default function App() {
   const [board, setBoard] = useState<Board>(() => { const l = loadLast(); return l ? inLang(l) : numberPlayers(TEMPLATES.find((t) => t.animated)!.build()) })
@@ -695,6 +698,17 @@ export default function App() {
     const a = action.current
     action.current = { kind: 'none' }
     if (pendingSel.current !== undefined) { setSelected(pendingSel.current); pendingSel.current = undefined }
+    // Balón soltado encima de un jugador: se deja a sus pies para que se siga viendo su número.
+    const feet = a.kind === 'move' && !a.ball ? ballToFeet(board, cur, a.id) : null
+    const now = a.kind === 'move' ? board.tokens.find((t) => t.id === a.id) : undefined
+    if (a.kind === 'move' && feet && now && posAt(board, now, cur).some((v, i) => Math.abs(v - feet[i]) > 0.01)) {
+      const id = a.id
+      setBoard((b) => (b.frames && cur > 0
+        ? { ...b, frames: b.frames.map((f, i) => (i === cur ? { ...f, pos: { ...f.pos, [id]: feet } } : f)) }
+        : { ...b, tokens: b.tokens.map((t) => (t.id === id ? { ...t, x: feet[0], y: feet[1] } : t)) }))
+      force((x) => x + 1)
+      return
+    }
     if (a.kind === 'draw') {
       setLive(null)
       const p = a.drawing.points
