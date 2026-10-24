@@ -405,3 +405,8 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
   .colors button::after, .animbar > button::after, .steps button::after { content: ''; position: absolute; inset: -7px -4px; }
   .animbar > button, .steps button { min-width: 40px; flex-shrink: 0; }
 }
+/* Móvil de lado (pizarra personal): en la columna izquierda caben el símbolo y la camiseta PRO, sin el texto. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .top .brand:has(.pro-shirt) { font-size: 0; gap: 8px; }
+  .top .brand .pro-shirt { height: 28px; }
+}
