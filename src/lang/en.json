@@ -1567,5 +1567,16 @@
  "Estilo de fichas": "Marker style",
  "Abrir la pizarra": "Open the board",
  "Toca para empezar": "Tap to start",
- "Fichas y colores": "Markers and colours"
+ "Fichas y colores": "Markers and colours",
+ "No se está guardando: este dispositivo no tiene espacio. Tu pizarra sigue abierta.": "Not saving: this device is out of space. Your board is still open.",
+ "No se está guardando: este navegador no deja guardar (¿modo incógnito?). Tu pizarra sigue abierta.": "Not saving: this browser doesn't allow saving (private mode?). Your board is still open.",
+ "Hacer una copia": "Make a backup",
+ "No se pudo eliminar: este navegador no deja guardar cambios.": "Couldn't delete: this browser doesn't allow saving changes.",
+ "Encontramos jugadas guardadas que no se pueden leer. Las apartamos sin borrarlas: descárgalas y escríbenos para ayudarte a recuperarlas.": "We found saved plays that can't be read. We set them aside without deleting them: download them and write to us so we can help you recover them.",
+ "Descargar lo apartado": "Download what was set aside",
+ "1 jugada estaba dañada y no se importó.": "1 play was damaged and wasn't imported.",
+ "{n} jugadas estaban dañadas y no se importaron.": "{n} plays were damaged and weren't imported.",
+ "No se importó nada.": "Nothing was imported.",
+ "No se pudo guardar: este dispositivo no tiene espacio. Tu jugada sigue abierta: pulsa «Exportar copia de seguridad» para no perderla.": "Couldn't save: this device is out of space. Your play is still open: tap «Export backup» so you don't lose it.",
+ "No se pudo guardar: este navegador no deja guardar (¿modo incógnito?). Tu jugada sigue abierta: pulsa «Exportar copia de seguridad» para no perderla.": "Couldn't save: this browser doesn't allow saving (private mode?). Your play is still open: tap «Export backup» so you don't lose it."
 }
