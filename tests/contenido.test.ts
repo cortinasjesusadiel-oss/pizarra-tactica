@@ -1,8 +1,8 @@
 // Contenido precargado: todas las plantillas se abren bien y las sesiones apuntan a plantillas que existen.
 import { describe, expect, it } from 'vitest'
-import { PITCH } from '../src/model'
-import { SESSIONS } from '../src/sessions'
-import { TEMPLATES } from '../src/templates'
+import { PITCH } from '../src/nucleo/model'
+import { SESSIONS } from '../src/contenido/sessions'
+import { TEMPLATES } from '../src/contenido/templates'
 import EN from '../src/lang/en.json'
 
 describe('Plantillas y sesiones', () => {

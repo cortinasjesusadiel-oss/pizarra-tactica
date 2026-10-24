@@ -1,7 +1,7 @@
-import type { Template } from '../anim'
-import type { Sample } from '../clip'
-import type { Board, Token } from '../model'
-import { PRO } from '../pro'
+import type { Template } from '../contenido/anim'
+import type { Sample } from './clip'
+import type { Board, Token } from '../nucleo/model'
+import { PRO } from './pro'
 import { t } from '../i18n'
 
 // Jugadas grabadas de ejemplo (Pro): se mueven en tiempo real, todos a la vez, con defensa automática.

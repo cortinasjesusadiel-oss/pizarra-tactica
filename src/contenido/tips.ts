@@ -1,4 +1,4 @@
-import { t } from './i18n'
+import { t } from '../i18n'
 // Consejos prácticos de táctica, entrenamiento, gestión y análisis para fútbol 11 adulto.
 export interface Tip { title: string; text: string; source?: string }
 export interface TipGroup { id: string; name: string; tips: Tip[] }

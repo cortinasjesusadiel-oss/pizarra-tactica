@@ -1,5 +1,5 @@
-import { t as tr } from './i18n'
-import { posAt, PITCH, line, type Board, type Frame, type Pt, type Token } from './model'
+import { t as tr } from '../i18n'
+import { posAt, PITCH, line, type Board, type Frame, type Pt, type Token } from '../nucleo/model'
 
 // «Jugada grabada» (función Pro): en vez de pasos, las fichas se mueven en tiempo real tal y como las arrastras
 // con el dedo, el ratón o el S Pen. Se graba por capas: primero unos jugadores, luego otros, mientras lo ya grabado

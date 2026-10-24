@@ -1,4 +1,4 @@
-import { t } from './i18n'
+import { t } from '../i18n'
 // Sesiones de entrenamiento sugeridas para fútbol 11 de adultos.
 // "MD-3" significa 3 días antes del partido (MD = match day, día de partido).
 

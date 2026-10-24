@@ -1,4 +1,4 @@
-import type { EndView, LineKind, Mark } from './identity'
+import type { EndView, LineKind, Mark } from '../nucleo/identity'
 
 // Dibuja la identidad del entrenador en las imágenes y los vídeos (en un lienzo), con la letra Montserrat.
 

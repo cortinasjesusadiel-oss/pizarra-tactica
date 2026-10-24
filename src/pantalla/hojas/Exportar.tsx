@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Board } from '../../model'
-import { TEMPLATES } from '../../templates'
-import { GROUPS } from '../../anim'
-import { listPlays } from '../../storage'
-import { BRAND_MODES, profileLabel, type BrandMode, type EndCard, type Profile } from '../../identity'
-import type { ExportOpts, Renderer } from '../../exportVideo'
+import type { Board } from '../../nucleo/model'
+import { TEMPLATES } from '../../contenido/templates'
+import { GROUPS } from '../../contenido/anim'
+import { listPlays } from '../../nucleo/storage'
+import { BRAND_MODES, profileLabel, type BrandMode, type EndCard, type Profile } from '../../nucleo/identity'
+import type { ExportOpts, Renderer } from '../../exportar/exportVideo'
 import { t } from '../../i18n'
 import type { VideoOpts } from '../../nucleo/preferencias'
 import { Sheet } from './Hoja'
@@ -139,7 +139,7 @@ export function Preview({ board, opts, vopts, setVopts, end, setEnd, brandMode, 
     let busy = false
     let id = 0
     ;(async () => {
-      const ex = await import('../../exportVideo')
+      const ex = await import('../../exportar/exportVideo')
       const r = await ex.videoRenderer(board, opts, canvas.current!)
       if (!alive) return
       rend.current = r

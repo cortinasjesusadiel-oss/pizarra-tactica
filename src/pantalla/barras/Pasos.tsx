@@ -1,5 +1,5 @@
-import { SPEEDS, STEP_SECONDS, type Pace, type Speed } from '../../motion'
-import type { Board } from '../../model'
+import { SPEEDS, STEP_SECONDS, type Pace, type Speed } from '../../nucleo/motion'
+import type { Board } from '../../nucleo/model'
 import { t } from '../../i18n'
 import type { ReactNode } from 'react'
 import type { SheetId } from './comun'

@@ -1,8 +1,8 @@
 // Jugada grabada (Pro): el balón llega al compañero aunque corra, nadie da saltos y la defensa automática presiona.
 import { describe, expect, it } from 'vitest'
-import { PITCH, ballAt, player, type Board, type Token } from '../src/model'
-import { TEMPLATES } from '../src/templates'
-import { HOLD, clipStep, holdAt, holdTotal, holdWall, keyPasses, clipToSteps, clipView, stepsToClip, trackAt, trimPauses, type Clip, type Sample } from '../src/clip'
+import { PITCH, ballAt, player, type Board, type Token } from '../src/nucleo/model'
+import { TEMPLATES } from '../src/contenido/templates'
+import { HOLD, clipStep, holdAt, holdTotal, holdWall, keyPasses, clipToSteps, clipView, stepsToClip, trackAt, trimPauses, type Clip, type Sample } from '../src/pro/clip'
 
 // Rondo 4 contra 2 en el 40×30: los cuatro de fuera se mueven por la banda y se pasan el balón.
 function rondo(auto: boolean): Board {

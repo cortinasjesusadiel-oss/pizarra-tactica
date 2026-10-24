@@ -1,9 +1,9 @@
 // Segunda entrega: dorsales de las plantillas.
 import { describe, expect, it } from 'vitest'
-import { numberPlayers } from '../src/numbering'
-import { TEMPLATES } from '../src/templates'
-import { ballToFeet, settleBall } from '../src/steps'
-import { PITCH, ballAt, player } from '../src/model'
+import { numberPlayers } from '../src/nucleo/numbering'
+import { TEMPLATES } from '../src/contenido/templates'
+import { ballToFeet, settleBall } from '../src/nucleo/steps'
+import { PITCH, ballAt, player } from '../src/nucleo/model'
 
 describe('Dorsales al cargar plantillas', () => {
   it('ningún jugador de ninguna plantilla queda sin número', () => {

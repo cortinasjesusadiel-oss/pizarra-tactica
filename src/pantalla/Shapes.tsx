@@ -1,8 +1,8 @@
 import { useId } from 'react'
 import { artPicks, equipmentRadius, SHOW, useArt, useKit } from './material'
-import { CAP, GLYPHS } from './kitGlyphs'
+import { CAP, GLYPHS } from '../pro/kitGlyphs'
 import { BALL_HEXAGONS, BALL_PENTAGONS } from './ball'
-import { COLORS, DEFAULT_LOOK, LABEL_DEFAULT_BG, lobAt, lobControl, type Drawing, type Look, type Pt, type Token } from './model'
+import { COLORS, DEFAULT_LOOK, LABEL_DEFAULT_BG, lobAt, lobControl, type Drawing, type Look, type Pt, type Token } from '../nucleo/model'
 
 export function Markers() {
   return (

@@ -1,8 +1,8 @@
 // Reproducir: el movimiento pasa por cada paso, es continuo (sin saltos) y respeta el ritmo elegido.
 import { describe, expect, it } from 'vitest'
-import { posAt } from '../src/model'
-import { DEFAULT_PACE, STEP_SECONDS, paceAt, paceTotal, sampleAt } from '../src/motion'
-import { TEMPLATES } from '../src/templates'
+import { posAt } from '../src/nucleo/model'
+import { DEFAULT_PACE, STEP_SECONDS, paceAt, paceTotal, sampleAt } from '../src/nucleo/motion'
+import { TEMPLATES } from '../src/contenido/templates'
 
 const animated = TEMPLATES.map((t) => ({ t, b: t.build() })).filter(({ b }) => (b.frames?.length ?? 0) > 1)
 

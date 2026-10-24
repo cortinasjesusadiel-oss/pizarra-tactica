@@ -1,6 +1,6 @@
 // Carga de las imágenes del material (van en un archivo aparte para que la pizarra arranque rápido).
 import { useSyncExternalStore } from 'react'
-import type { Token } from './model'
+import type { Token } from '../nucleo/model'
 
 type Art = Record<string, { u: string; w: number; h: number; x: number; y: number }>
 let art: Art | null = null
@@ -65,7 +65,7 @@ export function equipmentRadius(kind: Token['kind'], r: number, scale = 1): numb
 type Kit = Record<'yellow' | 'blue' | 'white', string>
 let kit: Kit | null = null
 let kitLoad: Promise<Kit> | null = null
-export const kitReady = (): Promise<Kit> => (kitLoad ??= import('./kitArt').then((m) => {
+export const kitReady = (): Promise<Kit> => (kitLoad ??= import('../pro/kitArt').then((m) => {
   kit = m.default
   subs.forEach((f) => f())
   return kit
@@ -78,7 +78,7 @@ export const useKit = (want: boolean) => {
 // Textura del césped realista (estilos de campo de la versión con funciones extra).
 let grass: string | null = null
 let grassLoad: Promise<string> | null = null
-export const grassReady = (): Promise<string> => (grassLoad ??= import('./grassArt').then((m) => {
+export const grassReady = (): Promise<string> => (grassLoad ??= import('../pro/grassArt').then((m) => {
   grass = m.GRASS_TILE
   subs.forEach((f) => f())
   return grass

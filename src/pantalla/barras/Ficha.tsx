@@ -1,4 +1,4 @@
-import { KIND_NAME, type Team, type Token } from '../../model'
+import { KIND_NAME, type Team, type Token } from '../../nucleo/model'
 import { t } from '../../i18n'
 
 // Barra de la ficha elegida: dorsal, nombre y equipo del jugador; girar y tamaño del material; eliminar.

@@ -1,5 +1,5 @@
-import { t } from './i18n'
-import type { Clip } from './clip'
+import { t } from '../i18n'
+import type { Clip } from '../pro/clip'
 // Todas las coordenadas están en metros, con el equipo local atacando hacia la derecha (+x).
 
 export type PitchKind = 'full' | 'half' | 'grid'

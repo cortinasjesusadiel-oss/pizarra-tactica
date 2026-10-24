@@ -1,6 +1,6 @@
 // Guía de uso: «Crea tu primera jugada» (5 pasos) y un manual por funciones. Se ve en «Ayuda».
 // Generado desde el contenido de la guía (también usado en la web: guia.html y en/guide.html). Las imágenes están en public/guia/<idioma>/.
-import { t } from './i18n'
+import { t } from '../i18n'
 
 export interface GuideItem { term?: string; text: string }
 export interface GuideSection { id: string; title: string; intro?: string; img?: string; items: GuideItem[] }

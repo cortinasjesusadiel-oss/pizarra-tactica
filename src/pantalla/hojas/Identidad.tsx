@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { ROLES, isIdentityMode, newProfile, profileLabel, readCrest, type BrandMode, type EndCard, type IdentityStore, type Profile } from '../../identity'
+import { ROLES, isIdentityMode, newProfile, profileLabel, readCrest, type BrandMode, type EndCard, type IdentityStore, type Profile } from '../../nucleo/identity'
 import { t } from '../../i18n'
 import { Sheet } from './Hoja'
 import { BrandPicker, EndEditor } from './Marca'

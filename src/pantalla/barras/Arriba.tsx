@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { PITCH, type Board, type PitchKind, type TokenKind } from '../../model'
+import { PITCH, type Board, type PitchKind, type TokenKind } from '../../nucleo/model'
 import tpSymbol from '../../tpSymbol.png'
 import { t } from '../../i18n'
 import { useCerrarAlGirar, type SheetId } from './comun'

@@ -1,6 +1,6 @@
-import { TEAM_COLORS, type GrassKind, type Look, type TokenShapeKind, type TokenText } from '../../model'
-import { Markers, TokenShape } from '../../Shapes'
-import { PRO } from '../../pro'
+import { TEAM_COLORS, type GrassKind, type Look, type TokenShapeKind, type TokenText } from '../../nucleo/model'
+import { Markers, TokenShape } from '../Shapes'
+import { PRO } from '../../pro/pro'
 import { t } from '../../i18n'
 import { Sheet } from './Hoja'
 

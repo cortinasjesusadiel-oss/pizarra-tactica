@@ -1,5 +1,5 @@
-import { line, type Board, type Drawing, type Frame, type Pt, type Token } from './model'
-import { t } from './i18n'
+import { line, type Board, type Drawing, type Frame, type Pt, type Token } from '../nucleo/model'
+import { t } from '../i18n'
 
 export const GROUPS = [
   { id: 'Fundamentos', name: t('Fundamentos') },
