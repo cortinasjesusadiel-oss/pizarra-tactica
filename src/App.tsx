@@ -16,7 +16,8 @@ import { TIPS } from './tips'
 import tpSymbol from './tpSymbol.png'
 import { GLOSSARY, LESSONS } from './fundamentos'
 import { GUIDE_MANUAL, GUIDE_STEPS, type GuideSection } from './guia'
-import { deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay } from './storage'
+import { damagedPlays, deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay, type SaveResult } from './storage'
+import { isTyping } from './keys'
 import { backupFile, describeImport, downloadBackup, importBackup, lastBackup, markBackupDone, parseBackup } from './backup'
 import {
   BRAND_MODES, ROLES, endFor, isIdentityMode, loadEnd, loadIdentity, markFor, newProfile, profileLabel, readCrest, saveEnd, saveIdentity,
@@ -140,7 +141,10 @@ export default function App() {
   })
   const toggleVertical = () => setVertical((v) => { try { localStorage.setItem('pizarra.orientacion', v ? 'h' : 'v') } catch { /* sin almacenamiento */ } return !v })
 
-  useEffect(() => { saveLast(board) }, [board])
+  // Autoguardado: si el dispositivo no deja guardar, se avisa con una franja fija (sin repetir avisos en cada movimiento).
+  // La pizarra sigue abierta en memoria y se ofrece hacer una copia.
+  const [saveFail, setSaveFail] = useState<SaveResult | null>(null)
+  useEffect(() => { const r = saveLast(board); setSaveFail(r.ok ? null : r) }, [board])
 
   // Tras importar una copia de seguridad se vuelve a leer lo guardado, para que «Mi identidad» y las preferencias nuevas se vean ya.
   const reloadSaved = () => {
@@ -434,6 +438,7 @@ export default function App() {
   useEffect(() => {
     if (!present) return
     const onKey = (e: KeyboardEvent) => {
+      if (isTyping(e)) return
       const k = presentKeys.current
       if (['ArrowRight', 'ArrowDown', 'PageDown', 'Enter'].includes(e.key)) { e.preventDefault(); k.nextStep() }
       else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); k.prevStep() }
@@ -446,7 +451,7 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).tagName === 'INPUT' || document.querySelector('.present')) return
+      if (isTyping(e) || document.querySelector('.present')) return
       const mod = e.ctrlKey || e.metaKey
       if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo() }
       else if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo() }
@@ -818,6 +823,12 @@ export default function App() {
           </div>
         )}
         {toast && <div className="toast" role="status">{toast}</div>}
+        {saveFail && !saveFail.ok && (
+          <div className="save-fail" role="alert">
+            <span>{saveFail.reason === 'lleno' ? t('No se está guardando: este dispositivo no tiene espacio. Tu pizarra sigue abierta.') : t('No se está guardando: este navegador no deja guardar (¿modo incógnito?). Tu pizarra sigue abierta.')}</span>
+            <button onClick={() => setSheet('plays')}>{t('Hacer una copia')}</button>
+          </div>
+        )}
         {label && (
           <div className="scrim" onClick={() => setLabel(null)}>
             <form className="sheet label-sheet" role="dialog" aria-label={t('Letrero')} onClick={(e) => e.stopPropagation()} onSubmit={(e) => { e.preventDefault(); saveLabel(label.text) }}>
@@ -1247,6 +1258,10 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
   )
 }
 
+const saveError = (r: SaveResult) => !r.ok && r.reason === 'lleno'
+  ? t('No se pudo guardar: este dispositivo no tiene espacio. Tu jugada sigue abierta: pulsa «Exportar copia de seguridad» para no perderla.')
+  : t('No se pudo guardar: este navegador no deja guardar (¿modo incógnito?). Tu jugada sigue abierta: pulsa «Exportar copia de seguridad» para no perderla.')
+
 function PlaysSheet({ board, onOpen, onClose, onSaved, onImported }: { board: Board; onOpen: (b: Board) => void; onClose: () => void; onSaved: () => void; onImported: () => void }) {
   const [plays, setPlays] = useState<SavedPlay[]>(listPlays)
   const [name, setName] = useState('')
@@ -1254,13 +1269,28 @@ function PlaysSheet({ board, onOpen, onClose, onSaved, onImported }: { board: Bo
   const save = (e: React.FormEvent) => {
     e.preventDefault()
     const n = name.trim() || t('Jugada {n}', { n: plays.length + 1 })
-    savePlay({ id: uid(), name: n, updated: Date.now(), board })
+    const r = savePlay({ id: uid(), name: n, updated: Date.now(), board })
     setPlays(listPlays())
+    // Solo se dice «guardada» si de verdad se escribió; si no, la jugada sigue abierta y se ofrece la copia.
+    if (!r.ok) { setSaveErr(saveError(r)); return }
+    setSaveErr(null)
     setName('')
     onSaved()
   }
   // Copia de seguridad: llevar las jugadas y «Mi identidad» a otro navegador o dispositivo con un archivo.
   const [backupMsg, setBackupMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [saveErr, setSaveErr] = useState<string | null>(null)
+  const damaged = damagedPlays()
+  const downloadDamaged = () => {
+    const url = URL.createObjectURL(new Blob([damaged ?? ''], { type: 'application/json' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'TacticalPro-jugadas-apartadas.json'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+  }
   const fileRef = useRef<HTMLInputElement>(null)
   const [last, setLast] = useState(lastBackup)
   const exportBackup = async () => {
@@ -1298,7 +1328,14 @@ function PlaysSheet({ board, onOpen, onClose, onSaved, onImported }: { board: Bo
         <input id="play-name" placeholder={t('Nombre, por ejemplo: Córner primer palo')} value={name} onChange={(e) => setName(e.target.value)} />
         <button className="primary" type="submit">{t('Guardar la pizarra actual')}</button>
       </form>
+      {saveErr && <p className="backup-msg error" role="alert">{saveErr}</p>}
       <p className="muted small">{t('Las jugadas se guardan en este dispositivo, con sus pasos de animación.')}</p>
+      {damaged && (
+        <div className="backup-msg error" role="status">
+          <p>{t('Encontramos jugadas guardadas que no se pueden leer. Las apartamos sin borrarlas: descárgalas y escríbenos para ayudarte a recuperarlas.')}</p>
+          <button onClick={downloadDamaged}>{t('Descargar lo apartado')}</button>
+        </div>
+      )}
       <div className="list">
         {plays.length === 0 && <p className="muted">{t('Todavía no hay jugadas guardadas.')}</p>}
         {plays.map((p) => (
@@ -1309,7 +1346,7 @@ function PlaysSheet({ board, onOpen, onClose, onSaved, onImported }: { board: Bo
             </div>
             <button onClick={() => onOpen(p.board)}>{t('Abrir')}</button>
             {confirm === p.id ? (
-              <button className="danger" onClick={() => { deletePlay(p.id); setPlays(listPlays()); setConfirm(null) }}>{t('Confirmar')}</button>
+              <button className="danger" onClick={() => { const r = deletePlay(p.id); setPlays(listPlays()); setConfirm(null); if (!r.ok) setBackupMsg({ ok: false, text: t('No se pudo eliminar: este navegador no deja guardar cambios.') }) }}>{t('Confirmar')}</button>
             ) : (
               <button onClick={() => setConfirm(p.id)}>{t('Eliminar')}</button>
             )}

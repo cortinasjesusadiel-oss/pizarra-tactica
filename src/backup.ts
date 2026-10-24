@@ -5,7 +5,8 @@
 // el mensaje final de los vídeos y las preferencias de marca, fichas, ritmo y vídeo.
 
 import type { Board } from './model'
-import type { SavedPlay } from './storage'
+import { cleanPlay, listPlays, type SavedPlay } from './storage'
+import { cleanBoard, cleanStrings } from './validation'
 import { DEFAULT_END, type EndCard, type IdentityStore, type Profile } from './identity'
 import { t } from './i18n'
 
@@ -29,9 +30,11 @@ export interface Backup {
   identity: IdentityStore
   end: EndCard | null
   settings: Record<string, string>
+  // Solo al leer un archivo: jugadas que venían dañadas y no se importan.
+  discarded?: number
 }
 
-export interface ImportResult { plays: number; playsSkipped: number; profiles: number; profilesSkipped: number; end: boolean; current: boolean }
+export interface ImportResult { damaged: number; plays: number; playsSkipped: number; profiles: number; profilesSkipped: number; end: boolean; current: boolean }
 
 function get<T>(key: string, fallback: T): T {
   try { const raw = localStorage.getItem(key); return raw ? (JSON.parse(raw) as T) : fallback } catch { return fallback }
@@ -47,7 +50,7 @@ const hasContent = (b: Board | null | undefined): b is Board => !!b && (b.tokens
 const sameContent = (a: Board, b: Board) => JSON.stringify(a) === JSON.stringify(b)
 
 export function makeBackup(open?: Board | null): Backup {
-  const plays = get<SavedPlay[]>(PLAYS, [])
+  const plays = listPlays()
   const cur = open ?? get<Board | null>(LAST, null)
   const current = hasContent(cur) && !plays.some((p) => sameContent(p.board, cur)) ? cur : null
   const settings: Record<string, string> = {}
@@ -98,25 +101,33 @@ export function parseBackup(text: string): Backup {
   const b = d as Partial<Backup>
   if (!b || b.app !== 'TacticalPro' || b.kind !== 'copia-de-seguridad') throw new Error(t('El archivo no es una copia de seguridad de TacticalPro'))
   if (typeof b.version !== 'number' || b.version > 1) throw new Error(t('Esta copia es de una versión más nueva de TacticalPro: actualiza la app y vuelve a intentarlo'))
-  const plays = Array.isArray(b.plays) ? b.plays.filter(isPlay) : []
+  const all = Array.isArray(b.plays) ? b.plays : []
+  const plays = all.map(cleanPlay).filter((p): p is SavedPlay => !!p)
   const profiles = Array.isArray(b.identity?.profiles) ? b.identity!.profiles.filter(isProfile) : []
   return {
     app: 'TacticalPro', kind: 'copia-de-seguridad', version: 1, created: String(b.created ?? ''),
     plays,
-    current: isBoard(b.current) ? b.current : null,
+    current: cleanBoard(b.current),
     identity: { profiles, active: typeof b.identity?.active === 'string' ? b.identity.active : null },
-    end: b.end && typeof b.end === 'object' ? { ...DEFAULT_END, ...b.end } : null,
-    settings: b.settings && typeof b.settings === 'object' ? b.settings : {},
+    end: b.end && typeof b.end === 'object' ? cleanEnd(b.end) : null,
+    settings: cleanSettings(b.settings),
+    discarded: all.length - plays.length,
   }
 }
 
-function isBoard(b: unknown): b is Board {
-  const x = b as Board
-  return !!x && typeof x === 'object' && Array.isArray(x.tokens) && Array.isArray(x.drawings) && typeof x.pitch === 'string'
+// Mensaje final de los vídeos: lo que no tenga el tipo esperado se cambia por el valor por defecto.
+function cleanEnd(v: object): EndCard {
+  const e = { ...DEFAULT_END, ...v } as EndCard
+  const d = DEFAULT_END as unknown as Record<string, unknown>
+  const out = e as unknown as Record<string, unknown>
+  for (const k of Object.keys(d)) if (typeof out[k] !== typeof d[k] || out[k] === null) out[k] = d[k]
+  e.favorites = cleanStrings((v as Partial<EndCard>).favorites)
+  return e
 }
-function isPlay(p: unknown): p is SavedPlay {
-  const x = p as SavedPlay
-  return !!x && typeof x.id === 'string' && typeof x.name === 'string' && isBoard(x.board)
+function cleanSettings(v: unknown): Record<string, string> {
+  const out: Record<string, string> = {}
+  if (v && typeof v === 'object' && !Array.isArray(v)) for (const [k, x] of Object.entries(v)) if (typeof x === 'string') out[k] = x
+  return out
 }
 function isProfile(p: unknown): p is Profile {
   const x = p as Profile
@@ -130,9 +141,9 @@ const endIsBlank = (e: EndCard | null) => !e || (!e.on && !e.phrase.trim())
 
 // Añade lo de la copia a lo que ya hay: nunca borra ni cambia nada existente y no repite lo que ya está.
 export function importBackup(b: Backup): ImportResult {
-  const r: ImportResult = { plays: 0, playsSkipped: 0, profiles: 0, profilesSkipped: 0, end: false, current: false }
+  const r: ImportResult = { damaged: b.discarded ?? 0, plays: 0, playsSkipped: 0, profiles: 0, profilesSkipped: 0, end: false, current: false }
 
-  const plays = get<SavedPlay[]>(PLAYS, [])
+  const plays = listPlays()
   for (const p of b.plays) {
     if (plays.some((q) => q.id === p.id || sameBoard(q, p))) { r.playsSkipped++; continue }
     plays.push(p)
@@ -194,9 +205,13 @@ export function importBackup(b: Backup): ImportResult {
 }
 
 export function describeImport(r: ImportResult) {
+  const damaged = !r.damaged ? '' : ' ' + (r.damaged === 1 ? t('1 jugada estaba dañada y no se importó.') : t('{n} jugadas estaban dañadas y no se importaron.', { n: r.damaged }))
+  return describeOk(r) + damaged
+}
+function describeOk(r: ImportResult) {
   const skipped = r.playsSkipped + r.profilesSkipped
   const same = skipped === 1 ? t('Había 1 elemento que ya tenías y no se ha duplicado.') : t('Había {n} elementos que ya tenías y no se han duplicado.', { n: skipped })
-  if (!r.plays && !r.profiles && !r.end && !r.current) return skipped ? t('No había nada nuevo en la copia.') + ' ' + same : t('La copia está vacía.')
+  if (!r.plays && !r.profiles && !r.end && !r.current) return skipped ? t('No había nada nuevo en la copia.') + ' ' + same : r.damaged ? t('No se importó nada.') : t('La copia está vacía.')
   const parts: string[] = []
   if (r.plays) parts.push(r.plays === 1 ? t('1 jugada nueva') : t('{n} jugadas nuevas', { n: r.plays }))
   if (r.current) parts.push(t('la pizarra que tenías abierta'))
