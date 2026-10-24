@@ -7,7 +7,7 @@ import { MOVES_BALL, MOVES_PLAYER, STRAIGHT,
 import { Markers, TokenShape } from './Shapes'
 import { useArt } from './material'
 import { Scene } from './Scene'
-import { DEFAULT_PACE, SPEEDS, STEP_SECONDS, caption, clipRate, paceAt, paceStart, sampleAt, shownStep, type Pace, type Speed } from './motion'
+import { SPEEDS, STEP_SECONDS, caption, clipRate, paceAt, paceStart, sampleAt, shownStep, type Speed } from './motion'
 import { Sim, HOLD, clipStep, holdAt, holdTotal, holdWall, keyPasses, readHolds, clipToSteps, stepsToClip, withMarks, newClip, smoothTrack, trimPauses, type Clip, type ClipView, type Focus } from './clip'
 import { PERSONAL, PRO, numberPlayers as numberOnly } from './pro'
 import { ballToFeet, carrier, movesFromArrows, settleBall } from './steps'
@@ -18,16 +18,19 @@ import { TIPS } from './tips'
 import tpSymbol from './tpSymbol.png'
 import { GLOSSARY, LESSONS } from './fundamentos'
 import { GUIDE_MANUAL, GUIDE_STEPS, type GuideSection } from './guia'
-import { damagedPlays, deletePlay, listPlays, loadLast, saveLast, savePlay, type SavedPlay, type SaveResult } from './storage'
+import { damagedPlays, deletePlay, listPlays, loadLast, savePlay, type SavedPlay, type SaveResult } from './storage'
 import { isTyping } from './keys'
 import { backupFile, describeImport, downloadBackup, importBackup, lastBackup, markBackupDone, parseBackup } from './backup'
 import {
-  BRAND_MODES, ROLES, endFor, isIdentityMode, loadEnd, loadIdentity, markFor, newProfile, profileLabel, readCrest, saveEnd, saveIdentity,
+  BRAND_MODES, ROLES, endFor, isIdentityMode, markFor, newProfile, profileLabel, readCrest,
   type BrandMode, type EndCard, type IdentityStore, type Profile,
 } from './identity'
 import { IdentityMark } from './Pitch'
 import type { ExportOpts, Renderer } from './exportVideo'
 import { lang, setLang, t, tr } from './i18n'
+import { useHistorial } from './nucleo/historial'
+import { useAutoguardado } from './nucleo/guardado'
+import { ayudaVista, guardarEstiloLetrero, leerEstiloLetrero, primeraVez, useOrientacion, usePreferencias, type VideoOpts } from './nucleo/preferencias'
 
 const PAD = 3
 // Barra de herramientas agrupada: cada grupo es un botón que despliega sus herramientas.
@@ -50,18 +53,12 @@ type Action =
 
 // Letrero que se está escribiendo o editando, con su estilo.
 type LabelEdit = { id: string; p: Pt; text: string; color: string; bg: string; fs: number }
-const LABEL_STYLE = 'pizarra.letrero'
 // Un letrero nuevo usa el último estilo elegido.
 function newLabel(p: Pt): LabelEdit {
-  let st: Partial<LabelEdit> = {}
-  try { st = JSON.parse(localStorage.getItem(LABEL_STYLE) ?? '{}') } catch { /* sin almacenamiento */ }
+  const st = leerEstiloLetrero()
   return { id: '', p, text: '', color: st.color ?? '#ffffff', bg: st.bg ?? LABEL_DEFAULT_BG, fs: st.fs ?? 2.1 }
 }
 const editLabel = (d: Drawing): LabelEdit => ({ id: d.id, p: d.points[0], text: d.text ?? '', color: d.color, bg: d.bg ?? LABEL_DEFAULT_BG, fs: d.fs ?? 2.1 })
-
-function hint(): boolean {
-  try { return !localStorage.getItem('pizarra.ayuda.v2') } catch { return true }
-}
 
 const ease = (k: number) => k * k * (3 - 2 * k)
 // Móvil de lado: menú a la izquierda, herramientas a la derecha y el campo con toda la altura (igual que en index.css).
@@ -88,11 +85,25 @@ const inLang = (b: Board): Board => (b.frames ? { ...b, frames: b.frames.map((f)
 // Al abrir una plantilla o sesión: todos los jugadores con número y el balón a los pies, sin tapar el dorsal.
 const numberPlayers = (b: Board) => settleBall(numberOnly(b))
 
+// Fichas al abrir la pizarra personal: se quitan formas que ya no existen y la primera vez se estrena la camiseta élite.
+function leerFichasPro(): Look {
+  try {
+    const l: Look = { ...DEFAULT_LOOK, ...JSON.parse(localStorage.getItem('pizarra.fichas') ?? '{}') }
+    // Las fichas con forma de muñeco se quitaron: quien las tuviera vuelve a la ficha pro.
+    if (!['pro', 'disc', 'shirt', 'kit', 'alu', 'perfil'].includes(l.shape) || (['kit', 'alu', 'perfil'].includes(l.shape) && !PRO)) { l.shape = 'pro'; localStorage.setItem('pizarra.fichas', JSON.stringify(l)) }
+    // Pizarra personal: la primera vez se estrena la camiseta élite (amarilla contra azul).
+    if (PERSONAL && !localStorage.getItem('pizarra.kitVisto')) {
+      Object.assign(l, { shape: 'kit', home: '#ffd23f', away: '#5bb6ff' })
+      localStorage.setItem('pizarra.kitVisto', '1'); localStorage.setItem('pizarra.fichas', JSON.stringify(l))
+    }
+    return l
+  } catch { return DEFAULT_LOOK }
+}
+
 export default function App() {
-  const [board, setBoard] = useState<Board>(() => { const l = loadLast(); return l ? withMarks(inLang(l)) : numberPlayers(TEMPLATES.find((t) => t.animated)!.build()) })
-  const past = useRef<Board[]>([])
-  const future = useRef<Board[]>([])
-  const [, force] = useState(0)
+  // La pizarra abierta y su historial para deshacer y rehacer.
+  const historial = useHistorial(() => { const l = loadLast(); return l ? withMarks(inLang(l)) : numberPlayers(TEMPLATES.find((t) => t.animated)!.build()) })
+  const { board, setBoard, commit, apuntar, olvidar, refrescar } = historial
 
   const art = useArt()
   const [tool, setTool] = useState<Tool>('move')
@@ -150,11 +161,12 @@ export default function App() {
   const [label, setLabel] = useState<LabelEdit | null>(null)
   const [penSeen, setPenSeen] = useState(false)
   const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | 'learn' | 'look' | 'identity' | 'help' | null>(null)
-  const [showHint, setShowHint] = useState(hint)
-  const closeHint = () => { setShowHint(false); try { localStorage.setItem('pizarra.ayuda.v2', '1') } catch { /* sin almacenamiento */ } }
+  const [showHint, setShowHint] = useState(primeraVez)
+  const closeHint = () => { setShowHint(false); ayudaVista() }
   const [toast, setToast] = useState<string | null>(null)
-  const [zones, setZones] = useState(() => { try { return localStorage.getItem('pizarra.zonas') === '1' } catch { return false } })
-  const toggleZones = () => setZones((z) => { try { localStorage.setItem('pizarra.zonas', z ? '0' : '1') } catch { /* sin almacenamiento */ } return !z })
+  // Preferencias guardadas en el dispositivo (zonas, ritmo, fichas, marca, Mi identidad, vídeo).
+  const prefs = usePreferencias(() => setToast(t('No se pudo guardar en el dispositivo: prueba con un escudo más ligero')), leerFichasPro)
+  const { zones, toggleZones, pace, setPace, look, setLook, brand, setBrand, brandMode, setBrandMode, idStore, setIdStore, endCard, setEnd, vopts, setVopts } = prefs
 
   // Animación
   const [step, setStep] = useState(0)
@@ -187,37 +199,17 @@ export default function App() {
   // Si nunca se eligió, un móvil sujeto en vertical muestra el campo en vertical (se ve más grande).
   // Con el móvil de lado el campo va siempre en horizontal, que es como más ocupa; al volver a ponerlo
   // de pie vuelve la orientación elegida. Girar el móvil no cambia nada más: la jugada, el paso y la ficha elegida siguen igual.
-  const [orientPref, setOrientPref] = useState<boolean | null>(() => {
-    try { const v = localStorage.getItem('pizarra.orientacion'); return v ? v === 'v' : null } catch { return null }
-  })
+  const [orientPref, setOrientPref] = useOrientacion()
   const side = useMedia(SIDE_QUERY)
   const portraitPhone = useMedia(PORTRAIT_PHONE_QUERY)
   const vertical = !side && (orientPref ?? portraitPhone)
   const toggleVertical = () => {
-    const v = !vertical
-    try { localStorage.setItem('pizarra.orientacion', v ? 'v' : 'h') } catch { /* sin almacenamiento */ }
-    setOrientPref(v)
+    setOrientPref(!vertical)
   }
 
   // Autoguardado: si el dispositivo no deja guardar, se avisa con una franja fija (sin repetir avisos en cada movimiento).
   // La pizarra sigue abierta en memoria y se ofrece hacer una copia.
-  const [saveFail, setSaveFail] = useState<SaveResult | null>(null)
-  useEffect(() => { const r = saveLast(board); setSaveFail(r.ok ? null : r) }, [board])
-
-  // Tras importar una copia de seguridad se vuelve a leer lo guardado, para que «Mi identidad» y las preferencias nuevas se vean ya.
-  const reloadSaved = () => {
-    const j = <T,>(k: string, f: T): T => { try { return { ...f, ...JSON.parse(localStorage.getItem(k) ?? '{}') } } catch { return f } }
-    setIdStoreState(loadIdentity())
-    setEndState(loadEnd())
-    setPaceState(j('pizarra.ritmo', DEFAULT_PACE))
-    setLookState(j('pizarra.fichas', DEFAULT_LOOK))
-    setVoptsState(loadVopts())
-    try {
-      setBrandState(localStorage.getItem('pizarra.marca') ?? 'TacticalPro')
-      setBrandModeState((localStorage.getItem('pizarra.marca.tipo') as BrandMode) || 'text')
-      setZones(localStorage.getItem('pizarra.zonas') === '1')
-    } catch { /* sin almacenamiento */ }
-  }
+  const saveFail = useAutoguardado(board)
 
   useEffect(() => {
     if (!toast) return
@@ -234,17 +226,6 @@ export default function App() {
     setPlaying(false)
   }, [])
 
-  const commit = useCallback((next: Board | ((b: Board) => Board)) => {
-    setBoard((b) => {
-      const n = typeof next === 'function' ? next(b) : next
-      past.current.push(b)
-      if (past.current.length > 100) past.current.shift()
-      future.current = []
-      return n
-    })
-    force((x) => x + 1)
-  }, [])
-
   // Cargar una pizarra nueva (plantilla, jugada guardada o campo vacío).
   const load = useCallback((b: Board) => {
     stopAnim()
@@ -253,21 +234,18 @@ export default function App() {
     setSelected(null)
   }, [commit, stopAnim])
 
+  const { deshacer, rehacer } = historial
   const undo = useCallback(() => {
-    const prev = past.current.pop()
-    if (!prev) return
+    if (!deshacer()) return
     stopAnim()
-    setBoard((b) => { future.current.push(b); return prev })
     setSelected(null)
-    force((x) => x + 1)
-  }, [stopAnim])
+    refrescar()
+  }, [deshacer, stopAnim, refrescar])
   const redo = useCallback(() => {
-    const next = future.current.pop()
-    if (!next) return
+    if (!rehacer()) return
     stopAnim()
-    setBoard((b) => { past.current.push(b); return next })
-    force((x) => x + 1)
-  }, [stopAnim])
+    refrescar()
+  }, [rehacer, stopAnim, refrescar])
 
   const removeSelected = useCallback(() => {
     if (!selected) return
@@ -290,16 +268,6 @@ export default function App() {
     }
     raf.current = requestAnimationFrame(tick)
   }
-
-  // Ritmo elegido (segundos por paso y velocidad), guardado en el dispositivo. Vale para reproducir y para el vídeo.
-  const [pace, setPaceState] = useState<Pace>(() => {
-    try { return { ...DEFAULT_PACE, ...JSON.parse(localStorage.getItem('pizarra.ritmo') ?? '{}') } } catch { return DEFAULT_PACE }
-  })
-  const setPace = (patch: Partial<Pace>) => setPaceState((p) => {
-    const next = { ...p, ...patch }
-    try { localStorage.setItem('pizarra.ritmo', JSON.stringify(next)) } catch { /* sin almacenamiento */ }
-    return next
-  })
 
   // Reproducción de principio a fin: en cada paso las fichas se paran para leer y luego van al siguiente.
   const startPlay = (fromStart = false) => {
@@ -372,49 +340,10 @@ export default function App() {
     return () => clearTimeout(id)
   }, [welcome, brandArt])
 
-  // Aspecto de las fichas (forma, número/nombre y colores de cada equipo), guardado en el dispositivo.
-  const [look, setLookState] = useState<Look>(() => {
-    try {
-      const l: Look = { ...DEFAULT_LOOK, ...JSON.parse(localStorage.getItem('pizarra.fichas') ?? '{}') }
-      // Las fichas con forma de muñeco se quitaron: quien las tuviera vuelve a la ficha pro.
-      if (!['pro', 'disc', 'shirt', 'kit', 'alu', 'perfil'].includes(l.shape) || (['kit', 'alu', 'perfil'].includes(l.shape) && !PRO)) { l.shape = 'pro'; localStorage.setItem('pizarra.fichas', JSON.stringify(l)) }
-      // Pizarra personal: la primera vez se estrena la camiseta élite (amarilla contra azul).
-      if (PERSONAL && !localStorage.getItem('pizarra.kitVisto')) {
-        Object.assign(l, { shape: 'kit', home: '#ffd23f', away: '#5bb6ff' })
-        localStorage.setItem('pizarra.kitVisto', '1'); localStorage.setItem('pizarra.fichas', JSON.stringify(l))
-      }
-      return l
-    } catch { return DEFAULT_LOOK }
-  })
-  const setLook = (patch: Partial<Look>) => setLookState((l) => {
-    const n = { ...l, ...patch }
-    try { localStorage.setItem('pizarra.fichas', JSON.stringify(n)) } catch { /* sin almacenamiento */ }
-    return n
-  })
-  useEffect(() => {
-    document.documentElement.style.setProperty('--home', look.home)
-    document.documentElement.style.setProperty('--away', look.away)
-  }, [look.home, look.away])
-
-  // Marca de agua (por defecto TacticalPro); vacía = sin marca.
-  const [brand, setBrandState] = useState(() => { try { return localStorage.getItem('pizarra.marca') ?? 'TacticalPro' } catch { return 'TacticalPro' } })
-  const setBrand = (v: string) => { setBrandState(v); try { localStorage.setItem('pizarra.marca', v) } catch { /* sin almacenamiento */ } }
-  // Tipo de marca: el texto «TacticalPro» por defecto (así nadie exporta con la firma de otra persona), el logo del autor, la identidad propia o ninguna.
-  const [brandMode, setBrandModeState] = useState<BrandMode>(() => { try { return (localStorage.getItem('pizarra.marca.tipo') as BrandMode) || 'text' } catch { return 'text' } })
-  const setBrandMode = (m: BrandMode) => { setBrandModeState(m); try { localStorage.setItem('pizarra.marca.tipo', m) } catch { /* sin almacenamiento */ } }
   const mark = brandMode === 'logo' ? 'logo' : brandMode === 'text' ? brand.trim() || undefined : undefined
 
-  // Mi identidad: perfiles del entrenador (nombre, cargo, club, escudo, eslogan) y el mensaje final de los vídeos.
-  const [idStore, setIdStoreState] = useState<IdentityStore>(loadIdentity)
-  const setIdStore = (f: (s: IdentityStore) => IdentityStore) => setIdStoreState((s) => {
-    const next = f(s)
-    if (!saveIdentity(next)) setToast(t('No se pudo guardar en el dispositivo: prueba con un escudo más ligero'))
-    return next
-  })
   const profile = idStore.profiles.find((p) => p.id === idStore.active) ?? null
   const ident = useMemo(() => (isIdentityMode(brandMode) ? markFor(brandMode, profile) : null), [brandMode, profile])
-  const [endCard, setEndState] = useState<EndCard>(loadEnd)
-  const setEnd = (patch: Partial<EndCard>) => setEndState((e) => { const next = { ...e, ...patch }; saveEnd(next); return next })
   // La frase se puede cambiar solo para el próximo vídeo sin tocar la guardada.
   const [oncePhrase, setOncePhrase] = useState<string | null>(null)
   const endView = useMemo(() => endFor(endCard, profile, oncePhrase ?? endCard.phrase), [endCard, profile, oncePhrase])
@@ -423,16 +352,6 @@ export default function App() {
   // Exportar: los vídeos se crean fotograma a fotograma; al terminar se ofrece compartir (WhatsApp, etc.) o guardar.
   const [ready, setReady] = useState<File[] | null>(null)
   const [progressLabel, setProgressLabel] = useState('')
-  // Opciones del vídeo, guardadas en el dispositivo: letra grande para el móvil y pantalla final con el logo.
-  const [vopts, setVoptsState] = useState<VideoOpts>(loadVopts)
-  const setVopts = (patch: Partial<VideoOpts>) => setVoptsState((v) => {
-    const next = { ...v, ...patch }
-    try {
-      localStorage.setItem('pizarra.video', JSON.stringify(next))
-      if ('outro' in patch) localStorage.setItem(OUTRO_KEY, next.outro ? '1' : '0')
-    } catch { /* sin almacenamiento */ }
-    return next
-  })
   const exportOpts: ExportOpts = useMemo(() => ({ zones, brand: mark, look, pace, ...vopts, ident, end: endView, vertical }), [zones, mark, look, pace, vopts, ident, endView, vertical])
   const runExport = async (items: { name: string; board: Board }[], image = false) => {
     if (video !== null || !items.length) return
@@ -849,8 +768,7 @@ export default function App() {
       const c = posAt(board, rt, cur)
       pointer.current = e.pointerId
       try { svg.current?.setPointerCapture(e.pointerId) } catch { /* puntero ya liberado */ }
-      past.current.push(board)
-      future.current = []
+      apuntar(board)
       startSnap.current = JSON.stringify(board)
       action.current = { kind: 'rotate', id: rt.id, c, d0: Math.max(0.5, Math.hypot(p[0] - c[0], p[1] - c[1])), size0: rt.size ?? 1 }
       return
@@ -887,8 +805,7 @@ export default function App() {
       // Sobre un letrero: arrastrarlo lo recoloca; tocarlo sin moverlo lo abre para editarlo.
       pointer.current = e.pointerId
       try { svg.current?.setPointerCapture(e.pointerId) } catch { /* puntero ya liberado */ }
-      past.current.push(board)
-      future.current = []
+      apuntar(board)
       startSnap.current = JSON.stringify(board)
       action.current = { kind: 'moveText', id: d.id, dx: d.points[0][0] - p[0], dy: d.points[0][1] - p[1], edit: d }
       return
@@ -910,8 +827,7 @@ export default function App() {
     pointer.current = e.pointerId
     if (isPen) penDown.current = true
     try { svg.current?.setPointerCapture(e.pointerId) } catch { /* puntero ya liberado */ }
-    past.current.push(board)
-    future.current = []
+    apuntar(board)
     startSnap.current = JSON.stringify(board)
 
     if (mode === 'move' && !tokenId && labelId) {
@@ -996,7 +912,7 @@ export default function App() {
   const saveLabel = (text: string, remove = false) => {
     if (!label) return
     const txt = text.replace(/\r/g, '').trim()
-    try { localStorage.setItem(LABEL_STYLE, JSON.stringify({ color: label.color, bg: label.bg, fs: label.fs })) } catch { /* sin almacenamiento */ }
+    guardarEstiloLetrero({ color: label.color, bg: label.bg, fs: label.fs })
     if (label.id) {
       const ed = (l: Drawing[]) => (remove || !txt ? l.filter((d) => d.id !== label.id) : l.map((d) => (d.id === label.id ? { ...d, text: txt, color: label.color, bg: label.bg, fs: label.fs } : d)))
       commit((b) => ({ ...b, drawings: ed(b.drawings), frames: b.frames?.map((f) => ({ ...f, drawings: ed(f.drawings) })) }))
@@ -1025,7 +941,7 @@ export default function App() {
       setBoard((b) => (b.frames && cur > 0
         ? { ...b, frames: b.frames.map((f, i) => (i === cur ? { ...f, pos: { ...f.pos, [id]: feet } } : f)) }
         : { ...b, tokens: b.tokens.map((t) => (t.id === id ? { ...t, x: feet[0], y: feet[1] } : t)) }))
-      force((x) => x + 1)
+      refrescar()
       return
     }
     if (a.kind === 'draw') {
@@ -1037,12 +953,12 @@ export default function App() {
         setBoard((b) => (b.frames
           ? { ...b, frames: b.frames.map((f, i) => (i === cur ? { ...f, drawings: [...f.drawings, a.drawing] } : f)) }
           : { ...b, drawings: [...b.drawings, a.drawing] }))
-      } else past.current.pop()
+      } else olvidar()
     } else if (JSON.stringify(board) === startSnap.current) {
-      past.current.pop()
+      olvidar()
       if (a.kind === 'moveText' && a.edit) setLabel(editLabel(a.edit))
     }
-    force((x) => x + 1)
+    refrescar()
   }
 
   const addToken = (kind: 'home' | 'away' | TokenKind) => {
@@ -1113,8 +1029,8 @@ export default function App() {
         <button onClick={() => addToken('ball')}>{t('+ Balón')}</button>
         <button className="wide-only" onClick={() => setSheet('material')}>{t('+ Material')}</button>
         <span className="sep" />
-        <button className="half" onClick={undo} disabled={!past.current.length} aria-label={t('Deshacer')}>↶</button>
-        <button className="half" onClick={redo} disabled={!future.current.length} aria-label={t('Rehacer')}>↷</button>
+        <button className="half" onClick={undo} disabled={!historial.puedeDeshacer} aria-label={t('Deshacer')}>↶</button>
+        <button className="half" onClick={redo} disabled={!historial.puedeRehacer} aria-label={t('Rehacer')}>↷</button>
         <button className="wide-only" onClick={() => setSheet('plays')}>{t('Jugadas')}</button>
         <button className="wide-only" onClick={openPresent}>{t('Proyectar')}</button>
         <button onClick={() => setSheet('export')}>{t('Exportar')}</button>
@@ -1638,7 +1554,7 @@ export default function App() {
           onExport={() => { setPreview(false); doVideo() }}
         />
       )}
-      {sheet === 'plays' && <PlaysSheet board={board} onOpen={(b) => { load(b); setSheet(null) }} onClose={() => setSheet(null)} onSaved={() => setToast(t('Jugada guardada'))} onImported={reloadSaved} />}
+      {sheet === 'plays' && <PlaysSheet board={board} onOpen={(b) => { load(b); setSheet(null) }} onClose={() => setSheet(null)} onSaved={() => setToast(t('Jugada guardada'))} onImported={prefs.recargar} />}
       {present && (
         <div className="present" ref={presentRef} role="dialog" aria-label={t('Modo proyector')}>
           {frames && frames.some((f) => f.note) && (
@@ -1835,20 +1751,6 @@ function ToolIcon({ t }: { t: Tool }) {
       {t === 'erase' && <><path d="M8 20h12" {...s} /><path d="M4 15l9-9 6 6-7 7H8z" {...s} /></>}
     </svg>
   )
-}
-
-type VideoOpts = { big: boolean; outro: boolean; full?: boolean }
-// El cierre con el logo de TacticalPro sale por defecto en todos los vídeos; el entrenador puede quitarlo
-// y entonces se recuerda su elección (se guarda aparte para que la opción antigua, apagada, no cuente).
-const OUTRO_KEY = 'pizarra.cierre'
-function loadVopts(): VideoOpts {
-  let v: VideoOpts = { big: false, outro: true }
-  try {
-    v = { ...v, ...JSON.parse(localStorage.getItem('pizarra.video') ?? '{}') }
-    const c = localStorage.getItem(OUTRO_KEY)
-    v.outro = c === null ? true : c === '1'
-  } catch { /* sin almacenamiento */ }
-  return v
 }
 
 function ExportSheet({ hasFrames, bothModes, videoLive, setVideoLive, brand, setBrand, brandMode, setBrandMode, profile, onIdentity, end, setEnd, phrase, setPhrase, onPreview, onClose, onImage, onVideo, onMany, vopts, setVopts }: {
