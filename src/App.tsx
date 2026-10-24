@@ -1,19 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MOVES_BALL, MOVES_PLAYER, STRAIGHT,
-  COLORS, DEFAULT_COLOR, TEAM_COLORS, type Look, type TokenShapeKind, type TokenText, EQUIPMENT, KIND_NAME, PITCH, TOOL_NAME, ballAt, item, player, posAt, uid,
-  type Board, type TokenKind, type DrawTool, type Drawing, type PitchKind, type Pt, type Team, type Token, type Tool,
+  DEFAULT_COLOR, TEAM_COLORS, type Look, type TokenShapeKind, type TokenText, EQUIPMENT, PITCH, ballAt, item, player, posAt, uid,
+  type Board, type TokenKind, type DrawTool, type Drawing, type PitchKind, type Pt, type Token, type Tool,
   LABEL_BG_COLORS, LABEL_DEFAULT_BG, lobBend, LABEL_SIZES, LABEL_TEXT_COLORS,
 } from './model'
 import { Markers, TokenShape } from './Shapes'
 import { useArt } from './material'
 import { Scene } from './Scene'
-import { SPEEDS, STEP_SECONDS, caption, paceAt, shownStep, type Speed } from './motion'
+import { caption, paceAt, shownStep } from './motion'
 import { ballToFeet, carrier, movesFromArrows, settleBall } from './steps'
 import { SESSIONS } from './sessions'
 import { TEMPLATES, emptyBoard } from './templates'
 import { GROUPS } from './anim'
 import { TIPS } from './tips'
-import tpSymbol from './tpSymbol.png'
 import { GLOSSARY, LESSONS } from './fundamentos'
 import { GUIDE_MANUAL, GUIDE_STEPS, type GuideSection } from './guia'
 import { damagedPlays, deletePlay, listPlays, loadLast, savePlay, type SavedPlay, type SaveResult } from './storage'
@@ -26,21 +25,13 @@ import {
 } from './identity'
 import { IdentityMark } from './Pitch'
 import type { ExportOpts, Renderer } from './exportVideo'
-import { lang, setLang, t, tr } from './i18n'
+import { lang, t, tr } from './i18n'
 import { useHistorial } from './nucleo/historial'
+import { SelBar, StepBar, ToolBar, TopBar, type SheetId } from './pantalla/barras'
 import { useAutoguardado } from './nucleo/guardado'
 import { ayudaVista, guardarEstiloLetrero, leerEstiloLetrero, primeraVez, useOrientacion, usePreferencias, type VideoOpts } from './nucleo/preferencias'
 
 const PAD = 3
-// Barra de herramientas agrupada: cada grupo es un botón que despliega sus herramientas.
-// Nombre corto del campo para el botón de la barra de arriba.
-const pitchName = (k: PitchKind) => (k === 'full' ? t('Campo') : k === 'half' ? t('Medio') : '40×30')
-const TOOL_GROUPS: { id: string; name: string; tools: DrawTool[] }[] = [
-  { id: 'pases', name: t('Pases'), tools: ['pass', 'lob', 'shot'] },
-  { id: 'mov', name: t('Movimientos'), tools: ['run', 'dribble', 'press'] },
-  { id: 'lineas', name: t('Flechas y líneas'), tools: ['arrow', 'darrow', 'line', 'dline', 'free'] },
-  { id: 'marcar', name: t('Marcar'), tools: ['text', 'zone', 'focus'] },
-]
 
 type Action =
   | { kind: 'move'; id: string; dx: number; dy: number; ball?: { id: string; ox: number; oy: number } }
@@ -91,32 +82,6 @@ export default function App() {
 
   const art = useArt()
   const [tool, setTool] = useState<Tool>('move')
-  // Última herramienta usada de cada grupo (es la que muestra su botón) y el menú abierto.
-  const [groupPick, setGroupPick] = useState<Record<string, DrawTool>>(() => Object.fromEntries(TOOL_GROUPS.map((g) => [g.id, g.tools[0]])))
-  const [menu, setMenu] = useState<{ id: string; rect: DOMRect } | null>(null)
-  useEffect(() => {
-    if (!menu) return
-    const close = (e: PointerEvent) => { if (!(e.target as Element).closest?.('.tool-menu, .tool-group')) setMenu(null) }
-    window.addEventListener('pointerdown', close)
-    return () => window.removeEventListener('pointerdown', close)
-  }, [menu])
-  // Menús de la barra de arriba (campo y vista, biblioteca).
-  const [topMenu, setTopMenu] = useState<{ id: 'pitch' | 'library' | 'more'; rect: DOMRect } | null>(null)
-  const openTopMenu = (id: 'pitch' | 'library' | 'more', el: HTMLElement) => setTopMenu(topMenu?.id === id ? null : { id, rect: el.getBoundingClientRect() })
-  useEffect(() => {
-    if (!topMenu) return
-    const close = (e: PointerEvent) => { if (!(e.target as Element).closest?.('.tool-menu, .top-group')) setTopMenu(null) }
-    window.addEventListener('pointerdown', close)
-    return () => window.removeEventListener('pointerdown', close)
-  }, [topMenu])
-  // Al girar el móvil los botones cambian de sitio: los menús abiertos se cierran para que no queden flotando en otro lugar.
-  useEffect(() => {
-    const close = () => { setMenu(null); setTopMenu(null) }
-    window.addEventListener('orientationchange', close)
-    const m = window.matchMedia?.('(orientation: landscape)')
-    m?.addEventListener('change', close)
-    return () => { window.removeEventListener('orientationchange', close); m?.removeEventListener('change', close) }
-  }, [])
 
   // Barras que se deslizan de lado: se difumina el borde por el que queda más contenido, para que se vea que sigue.
   useEffect(() => {
@@ -144,7 +109,7 @@ export default function App() {
   // Letrero que se está escribiendo o editando (id vacío = nuevo).
   const [label, setLabel] = useState<LabelEdit | null>(null)
   const [penSeen, setPenSeen] = useState(false)
-  const [sheet, setSheet] = useState<'templates' | 'plays' | 'material' | 'sessions' | 'tips' | 'export' | 'learn' | 'look' | 'identity' | 'help' | null>(null)
+  const [sheet, setSheet] = useState<SheetId | null>(null)
   const [showHint, setShowHint] = useState(primeraVez)
   const closeHint = () => { setShowHint(false); ayudaVista() }
   const [toast, setToast] = useState<string | null>(null)
@@ -723,58 +688,8 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="top">
-        <strong className="brand"><img src={tpSymbol} alt="" />{t('Tactical')}<span>{t('Pro')}</span></strong>
-        <button className="primary" onClick={newBoard}>{t('+ Nueva')}</button>
-        {/* La barra de arriba se agrupa en dos menús para que quepa en el móvil sin desplazarse. */}
-        <button className={`top-group${topMenu?.id === 'pitch' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={topMenu?.id === 'pitch'}
-          onClick={(e) => openTopMenu('pitch', e.currentTarget)}>{pitchName(board.pitch)} ▾</button>
-        <button className={`top-group${topMenu?.id === 'library' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={topMenu?.id === 'library'}
-          onClick={(e) => openTopMenu('library', e.currentTarget)}>{t('Biblioteca')} ▾</button>
-        {/* En el móvil la barra va en dos filas, sin nada escondido fuera de la pantalla: lo menos usado pasa a «Más». */}
-        <button className={`top-group narrow-only${topMenu?.id === 'more' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={topMenu?.id === 'more'}
-          onClick={(e) => openTopMenu('more', e.currentTarget)}>{t('Más')} ▾</button>
-        <span className="row-break narrow-only" />
-        <span className="sep" />
-        <button className="chip home half" onClick={() => addToken('home')} aria-label={t('Añadir jugador local')}>{t('+ Local')}</button>
-        <button className="chip away half" onClick={() => addToken('away')} aria-label={t('Añadir jugador rival')}>{t('+ Rival')}</button>
-        <button onClick={() => addToken('ball')}>{t('+ Balón')}</button>
-        <button className="wide-only" onClick={() => setSheet('material')}>{t('+ Material')}</button>
-        <span className="sep" />
-        <button className="half" onClick={undo} disabled={!historial.puedeDeshacer} aria-label={t('Deshacer')}>↶</button>
-        <button className="half" onClick={redo} disabled={!historial.puedeRehacer} aria-label={t('Rehacer')}>↷</button>
-        <button className="wide-only" onClick={() => setSheet('plays')}>{t('Jugadas')}</button>
-        <button className="wide-only" onClick={openPresent}>{t('Proyectar')}</button>
-        <button onClick={() => setSheet('export')}>{t('Exportar')}</button>
-      </header>
-      {topMenu && (
-        <div className="tool-menu" role="menu" aria-label={topMenu.id === 'pitch' ? t('Campo y vista') : topMenu.id === 'more' ? t('Más') : t('Biblioteca')}
-          style={side
-            // Móvil de lado: el menú está en la columna izquierda, así que se abre hacia la derecha, sobre el campo.
-            ? { left: topMenu.rect.right + 6, top: Math.max(8, Math.min(topMenu.rect.top, window.innerHeight - 330)), maxHeight: window.innerHeight - 8 - Math.max(8, Math.min(topMenu.rect.top, window.innerHeight - 330)), overflowY: 'auto' }
-            : { left: Math.max(8, Math.min(topMenu.rect.left, window.innerWidth - 240)), top: topMenu.rect.bottom + 6 }}>
-          {topMenu.id === 'pitch' ? (<>
-            <div className="tool-menu-title">{t('Tipo de campo')}</div>
-            {(Object.keys(PITCH) as PitchKind[]).map((k) => (
-              <button key={k} role="menuitemradio" aria-checked={board.pitch === k} className={board.pitch === k ? 'on' : ''}
-                onClick={() => { setPitch(k); setTopMenu(null) }}>{PITCH[k].name}</button>
-            ))}
-            <div className="tool-menu-title">{t('Vista')}</div>
-            <button role="menuitemcheckbox" aria-checked={zones} className={zones ? 'on' : ''} onClick={() => { toggleZones(); setTopMenu(null) }}>{zones ? '✓ ' : ''}{t('Zonas')}</button>
-            <button role="menuitem" onClick={() => { setSheet('look'); setTopMenu(null) }}>{t('Fichas')}</button>
-          </>) : topMenu.id === 'more' ? (<>
-            <button role="menuitem" onClick={() => { setSheet('plays'); setTopMenu(null) }}>{t('Jugadas')}</button>
-            <button role="menuitem" onClick={() => { openPresent(); setTopMenu(null) }}>{t('Proyectar')}</button>
-            <button role="menuitem" onClick={() => { setSheet('material'); setTopMenu(null) }}>{t('+ Material')}</button>
-          </>) : (<>
-            <div className="tool-menu-title">{t('Biblioteca')}</div>
-            <button role="menuitem" onClick={() => { setSheet('templates'); setTopMenu(null) }}>{t('Plantillas')}</button>
-            <button role="menuitem" onClick={() => { setSheet('sessions'); setTopMenu(null) }}>{t('Sesiones')}</button>
-            <button role="menuitem" onClick={() => { setSheet('learn'); setTopMenu(null) }}>{t('Fundamentos')}</button>
-            <button role="menuitem" onClick={() => { setSheet('tips'); setTopMenu(null) }}>{t('Consejos')}</button>
-          </>)}
-        </div>
-      )}
+      <TopBar board={board} side={side} zones={zones} toggleZones={toggleZones} newBoard={newBoard} setPitch={setPitch} addToken={addToken}
+        undo={undo} redo={redo} canUndo={historial.puedeDeshacer} canRedo={historial.puedeRehacer} openPresent={openPresent} setSheet={setSheet} />
 
       <main className="stage" ref={stage}>
         <svg
@@ -872,142 +787,14 @@ export default function App() {
       </main>
 
       {sel && !playing && (
-        <div className="selbar">
-          <span className="muted">{KIND_NAME(sel.kind)}</span>
-          {sel.kind === 'player' && (
-            <>
-              <label className="field">
-                
-                {t('Dorsal')}
-                <input id="dorsal" value={sel.label} maxLength={3} onChange={(e) => updateSel({ label: e.target.value.toUpperCase() })} />
-              </label>
-              <label className="field">
-                
-                {t('Nombre')}
-                <input id="nombre" className="name-input" value={sel.name ?? ''} maxLength={14} placeholder={t('Opcional')} onChange={(e) => updateSel({ name: e.target.value })} />
-              </label>
-              <div className="seg" role="group" aria-label={t('Equipo')}>
-                {(['home', 'away', 'neutral'] as Team[]).map((tm) => (
-                  <button key={tm} className={sel.team === tm ? 'on' : ''} onClick={() => updateSel({ team: tm })}>
-                    {tm === 'home' ? t('Local') : tm === 'away' ? t('Rival') : t('Comodín')}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          {sel.kind !== 'player' && sel.kind !== 'ball' && (<>
-            <button onClick={() => updateSel({ rot: ((sel.rot ?? 0) + 45) % 360 })}>{t('Girar 45°')}</button>
-            <button onClick={() => updateSel({ size: Math.max(0.4, +((sel.size ?? 1) - 0.2).toFixed(2)) })} aria-label={t('Más pequeño')} title={t('Más pequeño')}>−</button>
-            <button onClick={() => updateSel({ size: Math.min(2.5, +((sel.size ?? 1) + 0.2).toFixed(2)) })} aria-label={t('Más grande')} title={t('Más grande')}>+</button>
-          </>)}
-          <button className="danger" onClick={removeSelected}>{t('Eliminar')}</button>
-        </div>
+        <SelBar sel={sel} updateSel={updateSel} removeSelected={removeSelected} />
       )}
-      <div className="animbar">
-          {frames ? (
-            <>
-              <button className="primary" onClick={play} aria-label={playing ? t('Pausa') : t('Reproducir')}>{playing ? t('❚❚ Pausa') : t('▶ Reproducir')}</button>
-              <button onClick={prevStep} disabled={cur === 0} aria-label={t('Paso anterior')}>‹</button>
-              <div className="steps" role="group" aria-label={t('Pasos de la animación')}>
-                {frames.map((_, i) => (
-                  <button key={i} className={i === shown ? 'on' : ''} aria-label={t('Ir al paso {n}', { n: i + 1 })} onClick={() => glide(i)}>{i + 1}</button>
-                ))}
-              </div>
-              {/* Con el móvil de lado no caben todos los números: se ve «paso / total» entre las flechas. */}
-              <span className="step-count" aria-hidden="true">{shown + 1}/{nFrames}</span>
-              <button onClick={nextStep} disabled={cur >= nFrames - 1} aria-label={t('Paso siguiente')}>›</button>
-              <span className="sep" />
-              <input id="step-note" className="noteinput" placeholder={t('Explica este paso')} value={frames[cur].note} onChange={(e) => setNote(e.target.value)} />
-              <button className="note-open" onClick={() => setNoteOpen(true)} aria-label={t('Ampliar la explicación del paso')} title={t('Ampliar la explicación del paso')}>⤢</button>
-              <button onClick={addStep}>{t('+ Paso')}</button>
-              <button className="step-del" onClick={removeStep} aria-label={t('Quitar paso')} title={t('Quitar paso')}><span className="long">{t('Quitar paso')}</span><span className="short" aria-hidden="true">−</span></button>
-              <label className="pace">
-                <span className="muted small">{t('Cada paso')}</span>
-                <select value={pace.step} onChange={(e) => setPace({ step: +e.target.value })} aria-label={t('Segundos por paso')}>
-                  {STEP_SECONDS.map((x) => <option key={x} value={x}>{x} {' '}{t('s')}</option>)}
-                </select>
-              </label>
-              <label className="pace">
-                <span className="muted small">{t('Velocidad')}</span>
-                <select value={pace.speed} onChange={(e) => setPace({ speed: e.target.value as Speed })} aria-label={t('Velocidad del movimiento')}>
-                  {SPEEDS.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-                </select>
-              </label>
-              <button className="anim-export" onClick={() => setSheet('export')} disabled={video !== null}>{t('Exportar vídeo')}</button>
-            </>
-          ) : (
-            <>
-              <span className="muted small anim-help">{t('Para animar: coloca las fichas en su posición inicial y pulsa “+ Paso”. Después mueve las fichas a donde van en ese paso.')}</span>
-              <button onClick={addStep}>{t('+ Paso')}</button>
-            </>
-          )}
-      </div>
+      <StepBar frames={frames} cur={cur} shown={shown} playing={playing} play={play} prevStep={prevStep} nextStep={nextStep} glide={glide}
+        setNote={setNote} openNote={() => setNoteOpen(true)} addStep={addStep} removeStep={removeStep} pace={pace} setPace={setPace} exporting={video !== null} setSheet={setSheet} />
 
-      <footer className="tools">
-        <div className="seg big" role="group" aria-label={t('Herramienta')}>
-          <button className={tool === 'move' ? 'on' : ''} onClick={() => { pickTool('move'); setMenu(null) }} aria-pressed={tool === 'move'}>
-            <ToolIcon t="move" />
-            <span>{TOOL_NAME.move}</span>
-          </button>
-          {TOOL_GROUPS.map((g) => {
-            const on = g.tools.includes(tool as DrawTool)
-            const shownTool = on ? (tool as DrawTool) : groupPick[g.id]
-            return (
-              <button key={g.id} className={`tool-group${on ? ' on' : ''}${menu?.id === g.id ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={menu?.id === g.id}
-                aria-label={`${g.name}: ${TOOL_NAME[shownTool]}`}
-                onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setMenu(menu?.id === g.id ? null : { id: g.id, rect }) }}>
-                <ToolIcon t={shownTool} />
-                <span>{on ? TOOL_NAME[shownTool] : g.name} ▾</span>
-              </button>
-            )
-          })}
-          <button className={tool === 'erase' ? 'on' : ''} onClick={() => { pickTool('erase'); setMenu(null) }} aria-pressed={tool === 'erase'}>
-            <ToolIcon t="erase" />
-            <span>{TOOL_NAME.erase}</span>
-          </button>
-        </div>
-        {menu && (() => {
-          const g = TOOL_GROUPS.find((x) => x.id === menu.id)!
-          // En móvil horizontal la barra va a la derecha: el menú se abre hacia la izquierda.
-          const toLeft = side && menu.rect.left > window.innerWidth * 0.6
-          const style: CSSProperties = toLeft
-            ? { right: window.innerWidth - menu.rect.left + 6, top: Math.max(8, Math.min(menu.rect.top, window.innerHeight - 52 * g.tools.length - 40)) }
-            : { left: Math.max(8, Math.min(menu.rect.left, window.innerWidth - 230)), bottom: window.innerHeight - menu.rect.top + 6 }
-          return (
-            <div className="tool-menu" role="menu" aria-label={g.name} style={style}>
-              <div className="tool-menu-title">{g.name}</div>
-              {g.tools.map((x) => (
-                <button key={x} role="menuitemradio" aria-checked={tool === x} className={tool === x ? 'on' : ''}
-                  onClick={() => { pickTool(x); setGroupPick((p) => ({ ...p, [g.id]: x })); setMenu(null) }}>
-                  <ToolIcon t={x} />
-                  <span>{TOOL_NAME[x]}</span>
-                </button>
-              ))}
-            </div>
-          )
-        })()}
-        <div className="colors" role="group" aria-label={t('Color del trazo')}>
-          {COLORS.map((c) => (
-            <button key={c} aria-label={`Color ${c}`} className={(color ?? DEFAULT_COLOR[activeDraw]) === c ? 'on' : ''} style={{ background: c }} onClick={() => setColor(c)} />
-          ))}
-        </div>
-        <button
-          onClick={() => commit((b) => ({ ...b, drawings: [], frames: b.frames?.map((f, i) => (i === cur ? { ...f, drawings: [] } : f)) }))}
-          disabled={!board.drawings.length && !stepDrawings.length}
-        >{t('Borrar trazos')}</button>
-        {penSeen ? <span className="pen">{t('S Pen · ficha: mover · césped:')}{' '}{TOOL_NAME[activeDraw]}</span>
-          : null}
-        {/* Ajustes generales, a la derecha de la barra inferior: Mi identidad, orientación del campo e idioma. */}
-        <div className="tools-end">
-          <button onClick={() => setSheet('identity')}>{t('Mi identidad')}</button>
-          <button onClick={() => setSheet('help')}>{t('Ayuda')}</button>
-          <button className="orient" onClick={toggleVertical} aria-label={t('Orientación del campo')}>{vertical ? t('▭ Horizontal') : t('▯ Vertical')}</button>
-          <select id="lang" className="lang" aria-label={t('Idioma')} value={lang} onChange={(e) => setLang(e.target.value as 'es' | 'en')}>
-            <option value="es">Español</option>
-            <option value="en">English</option>
-          </select>
-        </div>
-      </footer>
+      <ToolBar tool={tool} pickTool={pickTool} side={side} color={color} setColor={setColor} activeDraw={activeDraw} penSeen={penSeen}
+        clearDrawings={() => commit((b) => ({ ...b, drawings: [], frames: b.frames?.map((f, i) => (i === cur ? { ...f, drawings: [] } : f)) }))}
+        canClear={!!board.drawings.length || !!stepDrawings.length} vertical={vertical} toggleVertical={toggleVertical} setSheet={setSheet} />
 
       {sheet === 'help' && (
         <Sheet title={t('Ayuda y sugerencias')} onClose={() => setSheet(null)}>
@@ -1372,29 +1159,6 @@ function PlaysSheet({ board, onOpen, onClose, onSaved, onImported }: { board: Bo
   )
 }
 
-function ToolIcon({ t }: { t: Tool }) {
-  const s = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-      {t === 'move' && <><circle cx="12" cy="12" r="5" {...s} /><path d="M12 2v4M12 18v4M2 12h4M18 12h4" {...s} /></>}
-      {t === 'pass' && <><path d="M4 18L18 6" {...s} /><path d="M12 6h6v6" {...s} /></>}
-      {t === 'run' && <><path d="M4 18L18 6" {...s} strokeDasharray="3 3" /><path d="M12 6h6v6" {...s} /></>}
-      {t === 'lob' && <><path d="M4 18Q10 2 19 14" {...s} /><path d="M19.5 8.5l-.5 5.5-5-1.5" {...s} /></>}
-      {t === 'text' && <><path d="M5 6h14M12 6v13M9 19h6" {...s} /></>}
-      {t === 'arrow' && <><path d="M4 18c3-8 8-11 14-12" {...s} /><path d="M13 4l5 2-3 4.5" {...s} /></>}
-      {t === 'press' && <><path d="M4 18L16 8" {...s} /><path d="M13.5 4.5l6 7" {...s} /></>}
-      {t === 'shot' && <><path d="M3 16L15 7M5 19L17 10" {...s} /><path d="M14 4.5l6 3-2.5 6" {...s} /></>}
-      {t === 'line' && <path d="M4 18L20 6" {...s} />}
-      {t === 'dline' && <path d="M4 18L20 6" {...s} strokeDasharray="0.1 4" strokeWidth={2.6} />}
-      {t === 'darrow' && <><path d="M4 18c3-8 8-11 14-12" {...s} strokeDasharray="0.1 4" strokeWidth={2.6} /><path d="M13 4l5 2-3 4.5" {...s} /></>}
-      {t === 'dribble' && <><path d="M3 14c2-4 4 4 6 0s4 4 6 0 3 2 4 0" {...s} /><path d="M17 9l3 4-4 2" {...s} /></>}
-      {t === 'zone' && <rect x="4" y="6" width="16" height="12" rx="1" {...s} strokeDasharray="3 2" />}
-      {t === 'focus' && <><circle cx="12" cy="12" r="7" {...s} /><circle cx="12" cy="12" r="2.5" {...s} /></>}
-      {t === 'free' && <path d="M4 17c3-6 6 2 9-3s4-6 7-5" {...s} />}
-      {t === 'erase' && <><path d="M8 20h12" {...s} /><path d="M4 15l9-9 6 6-7 7H8z" {...s} /></>}
-    </svg>
-  )
-}
 
 function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, profile, onIdentity, end, setEnd, phrase, setPhrase, onPreview, onClose, onImage, onVideo, onMany, vopts, setVopts }: {
   vopts: VideoOpts
