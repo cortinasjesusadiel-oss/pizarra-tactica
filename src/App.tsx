@@ -87,14 +87,27 @@ export default function App() {
     return () => window.removeEventListener('pointerdown', close)
   }, [menu])
   // Menús de la barra de arriba (campo y vista, biblioteca).
-  const [topMenu, setTopMenu] = useState<{ id: 'pitch' | 'library'; rect: DOMRect } | null>(null)
-  const openTopMenu = (id: 'pitch' | 'library', el: HTMLElement) => setTopMenu(topMenu?.id === id ? null : { id, rect: el.getBoundingClientRect() })
+  const [topMenu, setTopMenu] = useState<{ id: 'pitch' | 'library' | 'more'; rect: DOMRect } | null>(null)
+  const openTopMenu = (id: 'pitch' | 'library' | 'more', el: HTMLElement) => setTopMenu(topMenu?.id === id ? null : { id, rect: el.getBoundingClientRect() })
   useEffect(() => {
     if (!topMenu) return
     const close = (e: PointerEvent) => { if (!(e.target as Element).closest?.('.tool-menu, .top-group')) setTopMenu(null) }
     window.addEventListener('pointerdown', close)
     return () => window.removeEventListener('pointerdown', close)
   }, [topMenu])
+
+  // Barras que se deslizan de lado: se difumina el borde por el que queda más contenido, para que se vea que sigue.
+  useEffect(() => {
+    const upd = () => document.querySelectorAll<HTMLElement>('.top, .tools, .selbar, .animbar').forEach((el) => {
+      const f = (el.scrollLeft > 2 ? 'l' : '') + (el.scrollLeft + el.clientWidth < el.scrollWidth - 2 ? 'r' : '')
+      if (el.dataset.fade !== f) el.dataset.fade = f
+    })
+    upd()
+    document.addEventListener('scroll', upd, true)
+    window.addEventListener('resize', upd)
+    const id = setInterval(upd, 800)
+    return () => { document.removeEventListener('scroll', upd, true); window.removeEventListener('resize', upd); clearInterval(id) }
+  }, [])
   // Editor grande de la explicación del paso (en el móvil la casilla de la barra es pequeña).
   const [noteOpen, setNoteOpen] = useState(false)
   const [penTool, setPenTool] = useState<DrawTool>('pass')
@@ -814,6 +827,17 @@ export default function App() {
         if (d < best) { best = d; tokenId = t.id }
       }
     }
+    // El balón va dibujado a los pies de quien lo lleva y tapa parte de su ficha: si el toque está más cerca
+    // del centro del jugador que del centro del balón, se coge al jugador (y el balón va pegado a él).
+    // El balón se sigue pudiendo coger tocándolo por su lado de fuera.
+    const hit = tokenId ? board.tokens.find((x) => x.id === tokenId) : undefined
+    if (hit?.kind === 'ball') {
+      const c = carrier(board, cur)
+      if (c) {
+        const [cx, cy] = posAt(board, c, cur), [bx, by] = posAt(board, hit, cur)
+        if (Math.hypot(p[0] - cx, p[1] - cy) < Math.hypot(p[0] - bx, p[1] - by)) tokenId = c.id
+      }
+    }
     // Letreros: con la herramienta Texto se toca para escribir uno nuevo o para editar uno que ya está.
     const labelId = (e.target as Element).closest('g.label')?.getAttribute('data-draw') ?? null
     const allDrawings = [...board.drawings, ...(board.frames?.[cur]?.drawings ?? [])]
@@ -1028,20 +1052,24 @@ export default function App() {
           onClick={(e) => openTopMenu('pitch', e.currentTarget)}>{pitchName(board.pitch)} ▾</button>
         <button className={`top-group${topMenu?.id === 'library' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={topMenu?.id === 'library'}
           onClick={(e) => openTopMenu('library', e.currentTarget)}>{t('Biblioteca')} ▾</button>
+        {/* En el móvil la barra va en dos filas, sin nada escondido fuera de la pantalla: lo menos usado pasa a «Más». */}
+        <button className={`top-group narrow-only${topMenu?.id === 'more' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={topMenu?.id === 'more'}
+          onClick={(e) => openTopMenu('more', e.currentTarget)}>{t('Más')} ▾</button>
+        <span className="row-break narrow-only" />
         <span className="sep" />
         <button className="chip home" onClick={() => addToken('home')} aria-label={t('Añadir jugador local')}>{t('+ Local')}</button>
         <button className="chip away" onClick={() => addToken('away')} aria-label={t('Añadir jugador rival')}>{t('+ Rival')}</button>
         <button onClick={() => addToken('ball')}>{t('+ Balón')}</button>
-        <button onClick={() => setSheet('material')}>{t('+ Material')}</button>
+        <button className="wide-only" onClick={() => setSheet('material')}>{t('+ Material')}</button>
         <span className="sep" />
         <button onClick={undo} disabled={!past.current.length} aria-label={t('Deshacer')}>↶</button>
         <button onClick={redo} disabled={!future.current.length} aria-label={t('Rehacer')}>↷</button>
-        <button onClick={() => setSheet('plays')}>{t('Jugadas')}</button>
-        <button onClick={openPresent}>{t('Proyectar')}</button>
+        <button className="wide-only" onClick={() => setSheet('plays')}>{t('Jugadas')}</button>
+        <button className="wide-only" onClick={openPresent}>{t('Proyectar')}</button>
         <button onClick={() => setSheet('export')}>{t('Exportar')}</button>
       </header>
       {topMenu && (
-        <div className="tool-menu" role="menu" aria-label={topMenu.id === 'pitch' ? t('Campo y vista') : t('Biblioteca')}
+        <div className="tool-menu" role="menu" aria-label={topMenu.id === 'pitch' ? t('Campo y vista') : topMenu.id === 'more' ? t('Más') : t('Biblioteca')}
           style={{ left: Math.max(8, Math.min(topMenu.rect.left, window.innerWidth - 240)), top: topMenu.rect.bottom + 6 }}>
           {topMenu.id === 'pitch' ? (<>
             <div className="tool-menu-title">{t('Tipo de campo')}</div>
@@ -1061,6 +1089,10 @@ export default function App() {
               ))}
             </>)}
             <button role="menuitem" onClick={() => { setSheet('look'); setTopMenu(null) }}>{PRO ? t('Fichas y colores') : t('Fichas')}</button>
+          </>) : topMenu.id === 'more' ? (<>
+            <button role="menuitem" onClick={() => { setSheet('plays'); setTopMenu(null) }}>{t('Jugadas')}</button>
+            <button role="menuitem" onClick={() => { openPresent(); setTopMenu(null) }}>{t('Proyectar')}</button>
+            <button role="menuitem" onClick={() => { setSheet('material'); setTopMenu(null) }}>{t('+ Material')}</button>
           </>) : (<>
             <div className="tool-menu-title">{t('Biblioteca')}</div>
             <button role="menuitem" onClick={() => { setSheet('templates'); setTopMenu(null) }}>{t('Plantillas')}</button>

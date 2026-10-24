@@ -348,3 +348,24 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 .save-fail span { flex: 1 1 220px; }
 .save-fail button { flex: none; }
 .backup-msg p { margin: 0 0 8px; }
+
+/* Móvil en vertical y tabletas pequeñas: la barra de arriba en filas, sin botones escondidos fuera de la pantalla. */
+.narrow-only { display: none; }
+@media (max-width: 760px) and (min-height: 501px) {
+  .top { flex-wrap: wrap; overflow-x: visible; gap: 6px; padding: 6px 8px; }
+  .top .wide-only, .top .sep { display: none; }
+  .top .narrow-only { display: inline-flex; align-items: center; }
+  .top .row-break { flex-basis: 100%; height: 0; }
+  .top button { padding: 7px 8px; font-size: 13px; }
+  .top .brand img { height: 26px; }
+}
+/* Borde difuminado cuando una barra sigue más allá de la pantalla. */
+[data-fade="r"] { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+[data-fade="l"] { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent); }
+[data-fade="lr"] { -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); }
+/* Con el dedo: zona táctil de al menos 44 px sin cambiar el dibujo de los botones pequeños. */
+@media (pointer: coarse) {
+  .colors button, .animbar > button, .steps button { position: relative; }
+  .colors button::after, .animbar > button::after, .steps button::after { content: ''; position: absolute; inset: -7px -4px; }
+  .animbar > button, .steps button { min-width: 40px; flex-shrink: 0; }
+}
