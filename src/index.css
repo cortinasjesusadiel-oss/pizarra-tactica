@@ -323,3 +323,7 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
 @media (min-width: 760px) and (max-width: 1440px) and (min-height: 501px) {
   .animbar .pace > .muted { display: none; }
 }
+.save-fail { position: absolute; left: 12px; right: 12px; top: 56px; margin: 0 auto; width: fit-content; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; background: var(--panel-2); border: 1px solid #e0a43a; border-radius: 12px; padding: 8px 10px 8px 14px; font-size: 14px; line-height: 1.35; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); }
+.save-fail span { flex: 1 1 220px; }
+.save-fail button { flex: none; }
+.backup-msg p { margin: 0 0 8px; }
