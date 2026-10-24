@@ -2,6 +2,8 @@
 import { describe, expect, it } from 'vitest'
 import { numberPlayers } from '../src/numbering'
 import { TEMPLATES } from '../src/templates'
+import { ballToFeet, settleBall } from '../src/steps'
+import { PITCH, ballAt, player } from '../src/model'
 
 describe('Dorsales al cargar plantillas', () => {
   it('ningún jugador de ninguna plantilla queda sin número', () => {
@@ -43,5 +45,28 @@ describe('Dorsales al cargar plantillas', () => {
     const a = TEMPLATES[20].build(), before = JSON.stringify(a)
     numberPlayers(a)
     expect(JSON.stringify(a)).toBe(before)
+  })
+})
+
+describe('Balón soltado encima de un jugador', () => {
+  const r = PITCH.full.r
+  const b = (bx: number, by: number, team: 'home' | 'away' = 'home') => ({ pitch: 'full' as const, tokens: [player(team, '3', 50, 30), { ...ballAt(bx, by), id: 'B' }], drawings: [] })
+  it('encima del jugador: se va a sus pies, hacia donde ataca su equipo', () => {
+    expect(ballToFeet(b(50, 30), 0, 'B')).toEqual([50 + r * 0.85, 30 + r * 0.42])
+    expect(ballToFeet(b(50.3, 30, 'away'), 0, 'B')).toEqual([50 - r * 0.85, 30 + r * 0.42])
+  })
+  it('lejos de los jugadores: no se toca', () => {
+    expect(ballToFeet(b(60, 30), 0, 'B')).toBeNull()
+  })
+})
+
+describe('Plantillas: el balón no tapa el dorsal', () => {
+  it('en ningún paso de ninguna plantilla el balón queda encima de un jugador', () => {
+    for (const t of TEMPLATES) {
+      const b = settleBall(t.build())
+      const ball = b.tokens.find((k) => k.kind === 'ball')
+      if (!ball) continue
+      for (let i = 0; i < (b.frames?.length ?? 1); i++) expect(ballToFeet(b, i, ball.id), `${t.name}, paso ${i + 1}`).toBeNull()
+    }
   })
 })
