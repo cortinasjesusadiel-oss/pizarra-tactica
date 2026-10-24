@@ -73,6 +73,8 @@ button.danger { color: var(--danger); }
 .top { border-bottom: 1px solid var(--line); }
 .tools { border-top: 1px solid var(--line); }
 .selbar, .animbar { border-top: 1px solid var(--line); background: var(--panel-2); }
+.step-count { display: none; }
+.step-del .short { display: none; }
 .stepno { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); white-space: nowrap; }
 .noteinput { flex: 1 0 200px; min-width: 200px; }
 .note {
@@ -292,24 +294,58 @@ select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent);
   .hint { bottom: 6px; padding: 10px; font-size: 13px; }
 }
 
-/* Móvil en horizontal: menú a la izquierda, herramientas a la derecha y el campo en el centro con toda la altura.
-   La barra de la ficha seleccionada ocupa el sitio de la barra de animación mientras hay una ficha elegida. */
+/* Móvil en horizontal: menú y animación a la izquierda, herramientas a la derecha y el campo en el centro
+   con TODA la altura de la pantalla (antes la barra de animación le quitaba una franja por abajo).
+   La barra de la ficha seleccionada flota sobre el borde inferior del campo, como en vertical. */
 @media (max-height: 500px) and (orientation: landscape) {
-  .app { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr) 44px; }
-  .app > .top, .app > .tools { grid-row: 1 / span 2; flex-direction: column; align-items: stretch; overflow-x: hidden; overflow-y: auto; border: 0; }
-  .app > .top { grid-column: 1; border-right: 1px solid var(--line); }
-  .app > .tools { grid-column: 3; border-left: 1px solid var(--line); }
-  .app > .stage { grid-column: 2; grid-row: 1; }
-  .app > .animbar { grid-column: 2; grid-row: 2; }
-  .app > .selbar { grid-column: 2; grid-row: 2; align-self: stretch; background: var(--panel-2); }
-  .top > *, .tools > * { flex: none; }
-  .top .sep, .tools .sep { width: auto; height: 1px; }
-  .top .seg, .tools .seg.big { flex-direction: column; }
-  .tools .seg.big button { justify-content: flex-start; }
-  .tools .colors { flex-wrap: wrap; justify-content: center; max-width: 116px; align-self: center; }
+  .app { grid-template-columns: 138px minmax(0, 1fr) 146px; grid-template-rows: minmax(0, 1fr) auto; }
+  .app > .top, .app > .tools, .app > .animbar { overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; border: 0; }
+  .app > .top { grid-column: 1; grid-row: 1; display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: 5px; border-right: 1px solid var(--line); }
+  .top > * { grid-column: span 2; min-width: 0; }
+  .top > .half { grid-column: span 1; padding-left: 4px; padding-right: 4px; }
+  .top .sep { height: 1px; width: auto; margin: 1px 0; }
+  .app > .animbar { grid-column: 1; grid-row: 2; flex-wrap: wrap; gap: 5px; max-height: 52vh; border-top: 1px solid var(--line); border-right: 1px solid var(--line); background: var(--panel); }
+  .animbar > * { flex: none; }
+  .app > .animbar > button { min-width: 0; padding: 4px 6px; }
+  .app > .animbar > .primary { flex: 1 0 100%; }
+  .animbar .steps, .animbar > .sep, .animbar > .noteinput, .animbar > .anim-export, .animbar .pace > .muted, .animbar > .anim-help { display: none; }
+  .animbar > .step-count { display: block; flex: 1 0 40px; text-align: center; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .app > .animbar > .note-open { flex: 0 0 30px; padding: 0; }
+  .app > .animbar > .note-open + button { flex: 1 1 44px; }
+  .app > .animbar > .step-del { flex: 0 0 30px; padding: 0; }
+  .step-del .short { display: none; }
+  .animbar > .step-del .long { display: none; }
+  .animbar > .step-del .short { display: inline; font-size: 18px; }
+  .animbar > .pace { flex: 1 1 45px; min-width: 45px; }
+  .animbar > .pace:first-of-type { flex: 0 0 42px; min-width: 42px; }
+  .animbar > .pace select { width: 100%; padding-left: 3px; padding-right: 0; }
+  @supports not (-webkit-touch-callout: none) { .animbar > .pace select { font-size: 13px; } }
+  .app > .animbar > button:only-of-type { flex: 1 0 100%; }
+  .app > .animbar > .pro-anim { flex: 1 1 100%; }
+  /* La explicación del paso flota sobre el borde de arriba del campo, sin quitarle altura. Se pliega al tocarla. */
+  .stage > .note { position: absolute; top: 4px; left: 8px; right: 8px; width: fit-content; max-width: calc(100% - 16px); margin: 0 auto; z-index: 2; cursor: pointer;
+    padding: 4px 10px; font-size: 13px; line-height: 1.3; border: 1px solid var(--line); border-radius: 10px;
+    background: rgba(15, 23, 18, .8); max-height: calc(2.6em + 10px); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .stage > .note.mini { left: auto; right: 8px; margin: 0; padding: 2px 10px; }
+  .app > .stage { grid-column: 2; grid-row: 1 / span 2; }
+  .app > .selbar { grid-column: 2; grid-row: 1 / span 2; align-self: end; flex-wrap: nowrap; overflow-x: auto; }
+  .selbar > .muted:first-child { display: none; }
+  .app > .tools { grid-column: 3; grid-row: 1 / span 2; flex-direction: column; align-items: stretch; border-left: 1px solid var(--line); }
+  .tools > * { flex: none; }
+  .tools .sep { width: auto; height: 1px; }
+  .tools .seg.big { flex-direction: column; }
+  .tools .seg.big button { justify-content: flex-start; padding-left: 6px; padding-right: 4px; }
+  .tools .seg.big button { font-size: 12.5px; gap: 5px; }
+  .tools .seg.big button span { white-space: normal; text-align: left; line-height: 1.15; }
+  .tools .colors { flex-wrap: wrap; justify-content: center; gap: 5px; align-self: center; }
   .tools-end { flex-direction: column; align-items: stretch; margin: 0; padding: 0; }
+  /* Con el móvil de lado el campo siempre va en horizontal: el botón de orientación no hace falta. */
+  .tools-end .orient { display: none; }
   .brand { justify-content: center; margin: 0; }
 }
+[data-fade="b"] { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
+[data-fade="t"] { -webkit-mask-image: linear-gradient(to top, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to top, #000 calc(100% - 28px), transparent); }
+[data-fade="tb"] { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 28px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
 
 /* En el móvil la barra de arriba muestra solo el símbolo del logo, así caben más botones a la vista. */
 @media (max-width: 600px) { .top .brand { font-size: 0; margin-right: 0; } }

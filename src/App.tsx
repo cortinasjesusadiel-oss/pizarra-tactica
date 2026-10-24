@@ -64,6 +64,22 @@ function hint(): boolean {
 }
 
 const ease = (k: number) => k * k * (3 - 2 * k)
+// Móvil de lado: menú a la izquierda, herramientas a la derecha y el campo con toda la altura (igual que en index.css).
+const SIDE_QUERY = '(max-height: 500px) and (orientation: landscape)'
+const PORTRAIT_PHONE_QUERY = '(max-width: 599px) and (orientation: portrait)'
+function useMedia(q: string) {
+  const [on, setOn] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && matchMedia(q).matches)
+  useEffect(() => {
+    if (!window.matchMedia) return
+    const m = matchMedia(q)
+    const upd = () => setOn(m.matches)
+    upd()
+    m.addEventListener('change', upd)
+    return () => m.removeEventListener('change', upd)
+  }, [q])
+  return on
+}
+
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
 // Las notas de los pasos que vienen de plantillas se pasan al idioma actual al abrir la jugada; las escritas a mano no cambian.
@@ -98,11 +114,23 @@ export default function App() {
     window.addEventListener('pointerdown', close)
     return () => window.removeEventListener('pointerdown', close)
   }, [topMenu])
+  // Al girar el móvil los botones cambian de sitio: los menús abiertos se cierran para que no queden flotando en otro lugar.
+  useEffect(() => {
+    const close = () => { setMenu(null); setTopMenu(null) }
+    window.addEventListener('orientationchange', close)
+    const m = window.matchMedia?.('(orientation: landscape)')
+    m?.addEventListener('change', close)
+    return () => { window.removeEventListener('orientationchange', close); m?.removeEventListener('change', close) }
+  }, [])
 
   // Barras que se deslizan de lado: se difumina el borde por el que queda más contenido, para que se vea que sigue.
   useEffect(() => {
     const upd = () => document.querySelectorAll<HTMLElement>('.top, .tools, .selbar, .animbar').forEach((el) => {
-      const f = (el.scrollLeft > 2 ? 'l' : '') + (el.scrollLeft + el.clientWidth < el.scrollWidth - 2 ? 'r' : '')
+      // Con el móvil de lado las barras van en columnas y se deslizan hacia abajo.
+      // La columna de herramientas no se difumina: sus menús salen por fuera de la columna y el difuminado los taparía.
+      const f = el.scrollHeight > el.clientHeight + 2 && !el.classList.contains('tools')
+        ? (el.scrollTop > 2 ? 't' : '') + (el.scrollTop + el.clientHeight < el.scrollHeight - 2 ? 'b' : '')
+        : (el.scrollLeft > 2 ? 'l' : '') + (el.scrollLeft + el.clientWidth < el.scrollWidth - 2 ? 'r' : '')
       if (el.dataset.fade !== f) el.dataset.fade = f
     })
     upd()
@@ -113,6 +141,7 @@ export default function App() {
   }, [])
   // Editor grande de la explicación del paso (en el móvil la casilla de la barra es pequeña).
   const [noteOpen, setNoteOpen] = useState(false)
+  const [noteMini, setNoteMini] = useState(false)
   const [penTool, setPenTool] = useState<DrawTool>('pass')
   const [color, setColor] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
@@ -155,12 +184,20 @@ export default function App() {
   const { w: W, h: H } = PITCH[board.pitch]
   // Orientación del campo: horizontal por defecto (el equipo ataca hacia la derecha), también el medio campo.
   // Se puede girar a vertical, sobre todo para el móvil en vertical. Se guarda en el dispositivo.
-  // Si nunca se eligió, un móvil sujeto en vertical empieza con el campo en vertical (se ve más grande).
-  const [vertical, setVertical] = useState(() => {
-    const portraitPhone = typeof window !== 'undefined' && window.innerWidth < 600 && window.innerHeight > window.innerWidth
-    try { const v = localStorage.getItem('pizarra.orientacion'); return v ? v === 'v' : portraitPhone } catch { return portraitPhone }
+  // Si nunca se eligió, un móvil sujeto en vertical muestra el campo en vertical (se ve más grande).
+  // Con el móvil de lado el campo va siempre en horizontal, que es como más ocupa; al volver a ponerlo
+  // de pie vuelve la orientación elegida. Girar el móvil no cambia nada más: la jugada, el paso y la ficha elegida siguen igual.
+  const [orientPref, setOrientPref] = useState<boolean | null>(() => {
+    try { const v = localStorage.getItem('pizarra.orientacion'); return v ? v === 'v' : null } catch { return null }
   })
-  const toggleVertical = () => setVertical((v) => { try { localStorage.setItem('pizarra.orientacion', v ? 'h' : 'v') } catch { /* sin almacenamiento */ } return !v })
+  const side = useMedia(SIDE_QUERY)
+  const portraitPhone = useMedia(PORTRAIT_PHONE_QUERY)
+  const vertical = !side && (orientPref ?? portraitPhone)
+  const toggleVertical = () => {
+    const v = !vertical
+    try { localStorage.setItem('pizarra.orientacion', v ? 'v' : 'h') } catch { /* sin almacenamiento */ }
+    setOrientPref(v)
+  }
 
   // Autoguardado: si el dispositivo no deja guardar, se avisa con una franja fija (sin repetir avisos en cada movimiento).
   // La pizarra sigue abierta en memoria y se ofrece hacer una copia.
@@ -1071,20 +1108,23 @@ export default function App() {
           onClick={(e) => openTopMenu('more', e.currentTarget)}>{t('Más')} ▾</button>
         <span className="row-break narrow-only" />
         <span className="sep" />
-        <button className="chip home" onClick={() => addToken('home')} aria-label={t('Añadir jugador local')}>{t('+ Local')}</button>
-        <button className="chip away" onClick={() => addToken('away')} aria-label={t('Añadir jugador rival')}>{t('+ Rival')}</button>
+        <button className="chip home half" onClick={() => addToken('home')} aria-label={t('Añadir jugador local')}>{t('+ Local')}</button>
+        <button className="chip away half" onClick={() => addToken('away')} aria-label={t('Añadir jugador rival')}>{t('+ Rival')}</button>
         <button onClick={() => addToken('ball')}>{t('+ Balón')}</button>
         <button className="wide-only" onClick={() => setSheet('material')}>{t('+ Material')}</button>
         <span className="sep" />
-        <button onClick={undo} disabled={!past.current.length} aria-label={t('Deshacer')}>↶</button>
-        <button onClick={redo} disabled={!future.current.length} aria-label={t('Rehacer')}>↷</button>
+        <button className="half" onClick={undo} disabled={!past.current.length} aria-label={t('Deshacer')}>↶</button>
+        <button className="half" onClick={redo} disabled={!future.current.length} aria-label={t('Rehacer')}>↷</button>
         <button className="wide-only" onClick={() => setSheet('plays')}>{t('Jugadas')}</button>
         <button className="wide-only" onClick={openPresent}>{t('Proyectar')}</button>
         <button onClick={() => setSheet('export')}>{t('Exportar')}</button>
       </header>
       {topMenu && (
         <div className="tool-menu" role="menu" aria-label={topMenu.id === 'pitch' ? t('Campo y vista') : topMenu.id === 'more' ? t('Más') : t('Biblioteca')}
-          style={{ left: Math.max(8, Math.min(topMenu.rect.left, window.innerWidth - 240)), top: topMenu.rect.bottom + 6 }}>
+          style={side
+            // Móvil de lado: el menú está en la columna izquierda, así que se abre hacia la derecha, sobre el campo.
+            ? { left: topMenu.rect.right + 6, top: Math.max(8, Math.min(topMenu.rect.top, window.innerHeight - 330)), maxHeight: window.innerHeight - 16, overflowY: 'auto' }
+            : { left: Math.max(8, Math.min(topMenu.rect.left, window.innerWidth - 240)), top: topMenu.rect.bottom + 6 }}>
           {topMenu.id === 'pitch' ? (<>
             <div className="tool-menu-title">{t('Tipo de campo')}</div>
             {(Object.keys(PITCH) as PitchKind[]).map((k) => (
@@ -1134,7 +1174,10 @@ export default function App() {
           </g>
         </svg>
         {frames && !board.clip && frames[shown].note && !showHint && (
-          <div className="note" aria-live="polite"><b>{t('Paso')}{' '}{shown + 1}.</b> {tr(frames[shown].note)}</div>
+          // Con el móvil de lado la explicación flota sobre el campo: al tocarla se pliega para ver todo el campo y al tocarla otra vez vuelve.
+          <div className={`note${side && noteMini ? ' mini' : ''}`} aria-live="polite" onClick={side ? () => setNoteMini((m) => !m) : undefined}>
+            <b>{t('Paso')}{' '}{shown + 1}.</b>{side && noteMini ? ' ▾' : <> {tr(frames[shown].note)}</>}
+          </div>
         )}
         {frames && clipSt && frames[clipSt.i]?.note && !showHint && !rec && (
           <div className="note" aria-live="polite"><b>{t('Paso')}{' '}{clipSt.i + 1}.</b> {tr(frames[clipSt.i].note)}</div>
@@ -1296,14 +1339,16 @@ export default function App() {
                   <button key={i} className={i === shown ? 'on' : ''} aria-label={t('Ir al paso {n}', { n: i + 1 })} onClick={() => glide(i)}>{i + 1}</button>
                 ))}
               </div>
+              {/* Con el móvil de lado no caben todos los números: se ve «paso / total» entre las flechas. */}
+              <span className="step-count" aria-hidden="true">{shown + 1}/{nFrames}</span>
               <button onClick={nextStep} disabled={cur >= nFrames - 1} aria-label={t('Paso siguiente')}>›</button>
               <span className="sep" />
               <input id="step-note" className="noteinput" placeholder={t('Explica este paso')} value={frames[cur].note} onChange={(e) => setNote(e.target.value)} />
-              <button onClick={() => setNoteOpen(true)} aria-label={t('Ampliar la explicación del paso')} title={t('Ampliar la explicación del paso')}>⤢</button>
+              <button className="note-open" onClick={() => setNoteOpen(true)} aria-label={t('Ampliar la explicación del paso')} title={t('Ampliar la explicación del paso')}>⤢</button>
               <button onClick={addStep}>{t('+ Paso')}</button>
-              <button onClick={removeStep}>{t('Quitar paso')}</button>
-              {PRO && <button onClick={startRec} disabled={!!rec} title={t('Grabar los movimientos en tiempo real')}>{t('● Grabar')}</button>}
-              {PRO && <button onClick={toLive} disabled={!!rec} title={t('Todos se mueven a la vez y de seguido, a velocidad real')}>{t('▶ Tiempo real')}</button>}
+              <button className="step-del" onClick={removeStep} aria-label={t('Quitar paso')} title={t('Quitar paso')}><span className="long">{t('Quitar paso')}</span><span className="short" aria-hidden="true">−</span></button>
+              {PRO && <button className="pro-anim" onClick={startRec} disabled={!!rec} title={t('Grabar los movimientos en tiempo real')}>{t('● Grabar')}</button>}
+              {PRO && <button className="pro-anim" onClick={toLive} disabled={!!rec} title={t('Todos se mueven a la vez y de seguido, a velocidad real')}>{t('▶ Tiempo real')}</button>}
               <label className="pace">
                 <span className="muted small">{t('Cada paso')}</span>
                 <select value={pace.flow ? 0 : pace.step} onChange={(e) => setPace(+e.target.value ? { step: +e.target.value, flow: false } : { flow: true })} aria-label={t('Segundos por paso')}>
@@ -1317,11 +1362,11 @@ export default function App() {
                   {SPEEDS.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                 </select>
               </label>
-              <button onClick={() => setSheet('export')} disabled={video !== null}>{t('Exportar vídeo')}</button>
+              <button className="anim-export" onClick={() => setSheet('export')} disabled={video !== null}>{t('Exportar vídeo')}</button>
             </>
           ) : (
             <>
-              <span className="muted small">{t('Para animar: coloca las fichas en su posición inicial y pulsa “+ Paso”. Después mueve las fichas a donde van en ese paso.')}</span>
+              <span className="muted small anim-help">{t('Para animar: coloca las fichas en su posición inicial y pulsa “+ Paso”. Después mueve las fichas a donde van en ese paso.')}</span>
               <button onClick={addStep}>{t('+ Paso')}</button>
               {PRO && <button onClick={startRec} disabled={!!rec} title={t('Grabar los movimientos en tiempo real')}>{t('● Grabar')}</button>}
             </>
@@ -1354,8 +1399,8 @@ export default function App() {
         {menu && (() => {
           const g = TOOL_GROUPS.find((x) => x.id === menu.id)!
           // En móvil horizontal la barra va a la derecha: el menú se abre hacia la izquierda.
-          const side = menu.rect.left > window.innerWidth * 0.6 && window.innerHeight < 520
-          const style: CSSProperties = side
+          const toLeft = side && menu.rect.left > window.innerWidth * 0.6
+          const style: CSSProperties = toLeft
             ? { right: window.innerWidth - menu.rect.left + 6, top: Math.max(8, Math.min(menu.rect.top, window.innerHeight - 52 * g.tools.length - 40)) }
             : { left: Math.max(8, Math.min(menu.rect.left, window.innerWidth - 230)), bottom: window.innerHeight - menu.rect.top + 6 }
           return (
@@ -1386,7 +1431,7 @@ export default function App() {
         <div className="tools-end">
           <button onClick={() => setSheet('identity')}>{t('Mi identidad')}</button>
           <button onClick={() => setSheet('help')}>{t('Ayuda')}</button>
-          <button onClick={toggleVertical} aria-label={t('Orientación del campo')}>{vertical ? t('▭ Horizontal') : t('▯ Vertical')}</button>
+          <button className="orient" onClick={toggleVertical} aria-label={t('Orientación del campo')}>{vertical ? t('▭ Horizontal') : t('▯ Vertical')}</button>
           <select id="lang" className="lang" aria-label={t('Idioma')} value={lang} onChange={(e) => setLang(e.target.value as 'es' | 'en')}>
             <option value="es">Español</option>
             <option value="en">English</option>
