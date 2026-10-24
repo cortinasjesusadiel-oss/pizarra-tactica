@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "build:demo": "tsc -b && vite build --mode demo",
-    "test": "vitest run"
+    "test": "vitest run",
+    "control:botones": "node scripts/control.mjs botones --mode mia",
+    "control:capturas": "node scripts/control.mjs capturas --mode mia"
   },
   "dependencies": {
     "mp4-muxer": "^5.1.3",

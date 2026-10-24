@@ -1123,7 +1123,7 @@ export default function App() {
         <div className="tool-menu" role="menu" aria-label={topMenu.id === 'pitch' ? t('Campo y vista') : topMenu.id === 'more' ? t('Más') : t('Biblioteca')}
           style={side
             // Móvil de lado: el menú está en la columna izquierda, así que se abre hacia la derecha, sobre el campo.
-            ? { left: topMenu.rect.right + 6, top: Math.max(8, Math.min(topMenu.rect.top, window.innerHeight - 330)), maxHeight: window.innerHeight - 16, overflowY: 'auto' }
+            ? { left: topMenu.rect.right + 6, top: Math.max(8, Math.min(topMenu.rect.top, window.innerHeight - 330)), maxHeight: window.innerHeight - 8 - Math.max(8, Math.min(topMenu.rect.top, window.innerHeight - 330)), overflowY: 'auto' }
             : { left: Math.max(8, Math.min(topMenu.rect.left, window.innerWidth - 240)), top: topMenu.rect.bottom + 6 }}>
           {topMenu.id === 'pitch' ? (<>
             <div className="tool-menu-title">{t('Tipo de campo')}</div>
