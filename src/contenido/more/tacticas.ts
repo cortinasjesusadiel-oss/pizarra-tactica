@@ -20,6 +20,7 @@ export interface S {
   dv?: Pt[] // puntos intermedios de la conducción
   run?: Mv[] // carreras (amarillo)
   pr?: Mv[] // salidas a presionar (rojo)
+  x?: Drawing[] // marcas fijas de este paso (recuadro, flecha punteada…), sin texto
 }
 
 // Las fichas de casa se llaman h + dorsal (h9 es el 9). El portero rival se llama g. Si un rival se llama
@@ -63,7 +64,7 @@ function play(pitch: Board['pitch'], home: Shape, away: Shape, b0: string | Pt, 
     }
     const move: Record<string, Pt> = {}
     for (const [k, p] of Object.entries(s.m ?? {})) move[k] = cp(p)
-    steps.push({ note: s.n, move: i ? { ...move, b: nb } : undefined, draw: [] as Drawing[] })
+    steps.push({ note: s.n, move: i ? { ...move, b: nb } : undefined, draw: [...(s.x ?? [])] as Drawing[] })
     holder = h
     ball = nb
   })
