@@ -51,6 +51,8 @@ Las comprobaciones propias de esta rama están en `scripts/control-extra.mjs`.
 
 Código: `src/App.tsx` (pizarra e interacción), `src/Shapes.tsx` (fichas y trazos), `src/Pitch.tsx` (líneas del campo), `src/templates.ts` (plantillas), `src/storage.ts` (jugadas guardadas). Las coordenadas van en metros con el equipo local atacando hacia la derecha.
 
+Más detalle (reglas, enchufes y cómo comprobar antes de publicar) en [docs/MANUAL-TECNICO.md](docs/MANUAL-TECNICO.md).
+
 ## Próximas fases
 
 2. Biblioteca de ejercicios. 3. Sesiones e IA. 4. Vídeo, cuentas de usuario y venta.
