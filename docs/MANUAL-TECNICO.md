@@ -50,3 +50,19 @@ npm run control:capturas -- --comparar <carpeta>          # 60 capturas, avisa s
 Las capturas de referencia de la web están en `control/web` (carpeta del proyecto). Si un cambio es visual a propósito, se vuelven a guardar con `--guardar` después de que el dueño lo apruebe.
 
 Publicar: cada cambio en `main` se publica solo en tacticalpro.app (GitHub Pages, `.github/workflows/deploy.yml`), que antes pasa las pruebas. Nada se une a `main` sin el OK del dueño.
+
+## Pizarra personal (rama Pro, nunca en la web)
+
+Todo lo Pro está en `src/pro/` y entra por los enchufes: `src/extras.ts` de esta rama conecta `pro/extras.tsx` (grabar en vivo, barra de la jugada grabada, camisetas de marca, bienvenida, césped, fichas élite, vídeo por pasos o en tiempo real), `pro/reproduccion.ts` (reproducir la jugada grabada) y `pro/grabadas.ts` (plantillas grabadas).
+
+Además, unos pocos archivos del núcleo llevan cambios propios, marcados en el código: `App.tsx` (unas 50 líneas), `nucleo/model.ts` y `motion.ts` (jugada grabada, «Sin pausas»), `pantalla/Scene.tsx`, `Pitch.tsx`, `Shapes.tsx` y `material.ts` (césped, fichas élite, fuera de juego, visión), `exportar/exportVideo.ts` (vídeo en tiempo real), `index.css`, `lang/en.json`, `main.tsx` y `vite.config.ts`. `tests/separacion.test.ts` de esta rama solo deja usar `src/pro` a esa lista.
+
+Para traer un cambio de la web: aplicarlo aquí aparte (cherry-pick) y comprobar. Nada de esta rama va a `main`.
+
+```bash
+npm run control:botones -- --mode mia                                  # 22 comprobaciones (las de la web y las Pro)
+npm run control:capturas -- --mode mia --comparar <carpeta control/pro> # 66 capturas
+npx vite build --mode mia     # un solo HTML en dist-mia/index.html
+```
+
+El archivo personal (`mi-pizarra/TacticalPro-Jesus-Pro.html`) es ese HTML sin el enlace al manifest ni el contador de visitas de Cloudflare.
