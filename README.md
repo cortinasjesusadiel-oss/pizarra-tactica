@@ -57,6 +57,8 @@ Código, por carpetas (las coordenadas van en metros con el equipo local atacand
 - `src/exportar/`: vídeo e imagen.
 - `src/i18n.ts` y `src/lang/`: idiomas.
 
+Más detalle (reglas, enchufes y cómo comprobar antes de publicar) en [docs/MANUAL-TECNICO.md](docs/MANUAL-TECNICO.md).
+
 ## Próximas fases
 
 2. Biblioteca de ejercicios. 3. Sesiones e IA. 4. Vídeo, cuentas de usuario y venta.
