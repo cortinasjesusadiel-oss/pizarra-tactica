@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Board } from '../../nucleo/model'
 import { TEMPLATES } from '../../contenido/templates'
 import { GROUPS } from '../../contenido/anim'
@@ -10,7 +10,9 @@ import type { VideoOpts } from '../../nucleo/preferencias'
 import { Sheet } from './Hoja'
 import { BrandPicker, EndEditor } from './Marca'
 
-export function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, profile, onIdentity, end, setEnd, phrase, setPhrase, onPreview, onClose, onImage, onVideo, onMany, vopts, setVopts }: {
+export function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, profile, onIdentity, end, setEnd, phrase, setPhrase, onPreview, onClose, onImage, onVideo, onMany, vopts, setVopts, extra }: {
+  // Enchufe (vacío en la web): una sección extra tras «Esta pizarra».
+  extra?: ReactNode
   vopts: VideoOpts
   setVopts: (p: Partial<VideoOpts>) => void
   hasFrames: boolean
@@ -55,6 +57,7 @@ export function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMod
           <button onClick={onPreview} disabled={!hasFrames}>{t('Vista previa')}</button>
         </div>
         {!hasFrames && <p className="muted small">{t('El vídeo y la vista previa necesitan una jugada con pasos (pulsa + Paso).')}</p>}
+        {extra}
       </section>
       <section>
         <h3>{t('Mi identidad')}</h3>

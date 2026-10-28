@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { PITCH, type Board, type PitchKind, type TokenKind } from '../../nucleo/model'
 import tpSymbol from '../../tpSymbol.png'
 import { t } from '../../i18n'
@@ -8,7 +8,7 @@ import { useCerrarAlGirar, type SheetId } from './comun'
 const pitchName = (k: PitchKind) => (k === 'full' ? t('Campo') : k === 'half' ? t('Medio') : '40×30')
 
 // Barra de arriba: nueva pizarra, campo y vista, biblioteca, añadir fichas, deshacer y exportar.
-export function TopBar({ board, side, zones, toggleZones, newBoard, setPitch, addToken, undo, redo, canUndo, canRedo, openPresent, setSheet }: {
+export function TopBar({ board, side, zones, toggleZones, newBoard, setPitch, addToken, undo, redo, canUndo, canRedo, openPresent, setSheet, brandExtra, vistaExtra, fichasLabel }: {
   board: Board
   side: boolean
   zones: boolean
@@ -22,6 +22,10 @@ export function TopBar({ board, side, zones, toggleZones, newBoard, setPitch, ad
   canRedo: boolean
   openPresent: () => void
   setSheet: (s: SheetId) => void
+  // Enchufes (vacíos en la web): algo junto al nombre, opciones extra en «Vista» y otro nombre para «Fichas».
+  brandExtra?: ReactNode
+  vistaExtra?: (close: () => void) => ReactNode
+  fichasLabel?: string
 }) {
   // Menús de la barra de arriba (campo y vista, biblioteca).
   const [topMenu, setTopMenu] = useState<{ id: 'pitch' | 'library' | 'more'; rect: DOMRect } | null>(null)
@@ -37,7 +41,7 @@ export function TopBar({ board, side, zones, toggleZones, newBoard, setPitch, ad
   return (
     <>
       <header className="top">
-        <strong className="brand"><img src={tpSymbol} alt="" />{t('Tactical')}<span>{t('Pro')}</span></strong>
+        <strong className="brand"><img src={tpSymbol} alt="" />{t('Tactical')}<span>{t('Pro')}</span>{brandExtra}</strong>
         <button className="primary" onClick={newBoard}>{t('+ Nueva')}</button>
         {/* La barra de arriba se agrupa en dos menús para que quepa en el móvil sin desplazarse. */}
         <button className={`top-group${topMenu?.id === 'pitch' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={topMenu?.id === 'pitch'}
@@ -74,7 +78,8 @@ export function TopBar({ board, side, zones, toggleZones, newBoard, setPitch, ad
             ))}
             <div className="tool-menu-title">{t('Vista')}</div>
             <button role="menuitemcheckbox" aria-checked={zones} className={zones ? 'on' : ''} onClick={() => { toggleZones(); setTopMenu(null) }}>{zones ? '✓ ' : ''}{t('Zonas')}</button>
-            <button role="menuitem" onClick={() => { setSheet('look'); setTopMenu(null) }}>{t('Fichas')}</button>
+            {vistaExtra?.(() => setTopMenu(null))}
+            <button role="menuitem" onClick={() => { setSheet('look'); setTopMenu(null) }}>{fichasLabel ?? t('Fichas')}</button>
           </>) : topMenu.id === 'more' ? (<>
             <button role="menuitem" onClick={() => { setSheet('plays'); setTopMenu(null) }}>{t('Jugadas')}</button>
             <button role="menuitem" onClick={() => { openPresent(); setTopMenu(null) }}>{t('Proyectar')}</button>

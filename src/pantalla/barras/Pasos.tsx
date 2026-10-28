@@ -1,10 +1,11 @@
 import { SPEEDS, STEP_SECONDS, type Pace, type Speed } from '../../nucleo/motion'
 import type { Board } from '../../nucleo/model'
 import { t } from '../../i18n'
+import type { ReactNode } from 'react'
 import type { SheetId } from './comun'
 
 // Barra de la animación: reproducir, pasos, explicación del paso, añadir y quitar pasos, ritmo.
-export function StepBar({ frames, cur, shown, playing, play, prevStep, nextStep, glide, setNote, openNote, addStep, removeStep, pace, setPace, exporting, setSheet }: {
+export function StepBar({ frames, cur, shown, playing, play, prevStep, nextStep, glide, setNote, openNote, addStep, removeStep, pace, setPace, exporting, setSheet, clipBar, stepExtra, emptyExtra, ritmo }: {
   frames: Board['frames']
   cur: number
   shown: number
@@ -21,11 +22,17 @@ export function StepBar({ frames, cur, shown, playing, play, prevStep, nextStep,
   setPace: (p: Partial<Pace>) => void
   exporting: boolean
   setSheet: (s: SheetId) => void
+  // Enchufes (vacíos en la web): otra barra en lugar de esta, botones tras «Quitar paso» o tras «+ Paso» sin pasos,
+  // y otro manejo del ritmo de cada paso con opciones añadidas.
+  clipBar?: ReactNode
+  stepExtra?: ReactNode
+  emptyExtra?: ReactNode
+  ritmo?: { valor: number; elegir: (v: number) => void; opciones: ReactNode }
 }) {
   const nFrames = frames?.length ?? 0
   return (
       <div className="animbar">
-          {frames ? (
+          {clipBar ? clipBar : frames ? (
             <>
               <button className="primary" onClick={play} aria-label={playing ? t('Pausa') : t('Reproducir')}>{playing ? t('❚❚ Pausa') : t('▶ Reproducir')}</button>
               <button onClick={prevStep} disabled={cur === 0} aria-label={t('Paso anterior')}>‹</button>
@@ -42,10 +49,12 @@ export function StepBar({ frames, cur, shown, playing, play, prevStep, nextStep,
               <button className="note-open" onClick={openNote} aria-label={t('Ampliar la explicación del paso')} title={t('Ampliar la explicación del paso')}>⤢</button>
               <button onClick={addStep}>{t('+ Paso')}</button>
               <button className="step-del" onClick={removeStep} aria-label={t('Quitar paso')} title={t('Quitar paso')}><span className="long">{t('Quitar paso')}</span><span className="short" aria-hidden="true">−</span></button>
+              {stepExtra}
               <label className="pace">
                 <span className="muted small">{t('Cada paso')}</span>
-                <select value={pace.step} onChange={(e) => setPace({ step: +e.target.value })} aria-label={t('Segundos por paso')}>
+                <select value={ritmo ? ritmo.valor : pace.step} onChange={(e) => (ritmo ? ritmo.elegir(+e.target.value) : setPace({ step: +e.target.value }))} aria-label={t('Segundos por paso')}>
                   {STEP_SECONDS.map((x) => <option key={x} value={x}>{x} {' '}{t('s')}</option>)}
+                  {ritmo?.opciones}
                 </select>
               </label>
               <label className="pace">
@@ -60,6 +69,7 @@ export function StepBar({ frames, cur, shown, playing, play, prevStep, nextStep,
             <>
               <span className="muted small anim-help">{t('Para animar: coloca las fichas en su posición inicial y pulsa “+ Paso”. Después mueve las fichas a donde van en ese paso.')}</span>
               <button onClick={addStep}>{t('+ Paso')}</button>
+              {emptyExtra}
             </>
           )}
       </div>
