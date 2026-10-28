@@ -1,10 +1,11 @@
-import { TEAM_COLORS, type GrassKind, type Look, type TokenShapeKind, type TokenText } from '../../nucleo/model'
+import { TEAM_COLORS, type Look, type TokenShapeKind, type TokenText } from '../../nucleo/model'
 import { Markers, TokenShape } from '../Shapes'
-import { PRO } from '../../pro/pro'
 import { t } from '../../i18n'
+import type { ReactNode } from 'react'
 import { Sheet } from './Hoja'
 
-export function LookSheet({ look, setLook, onClose }: { look: Look; setLook: (p: Partial<Look>) => void; onClose: () => void }) {
+// Enchufes (vacíos en la web): otro título para la forma, formas añadidas delante y una sección extra.
+export function LookSheet({ look, setLook, onClose, extra }: { look: Look; setLook: (p: Partial<Look>) => void; onClose: () => void; extra?: { titulo?: string; formas?: { id: string; nombre: string }[]; extra?: ReactNode } }) {
   const preview = (shape: TokenShapeKind) => (
     <svg viewBox="-6 -3.2 12 7.4" width="120" height="74" aria-hidden="true">
       <Markers />
@@ -23,28 +24,23 @@ export function LookSheet({ look, setLook, onClose }: { look: Look; setLook: (p:
   return (
     <Sheet title={t('Fichas')} onClose={onClose}>
       <section>
-        <h3>{t('Estilo de fichas')}</h3>
+        <h3>{extra?.titulo ?? t('Forma')}</h3>
         <div className="shapes">
-          {((PRO ? ['kit', 'alu', 'perfil', 'pro', 'disc', 'shirt'] : ['pro', 'disc', 'shirt']) as TokenShapeKind[]).map((sh) => (
+          {extra?.formas?.map(({ id, nombre }) => (
+            <button key={id} className={look.shape === id ? 'on' : ''} onClick={() => setLook({ shape: id as TokenShapeKind })}>
+              {preview(id as TokenShapeKind)}
+              <span>{nombre}</span>
+            </button>
+          ))}
+          {(['pro', 'disc', 'shirt'] as TokenShapeKind[]).map((sh) => (
             <button key={sh} className={look.shape === sh ? 'on' : ''} onClick={() => setLook({ shape: sh })}>
               {preview(sh)}
-              <span>{sh === 'kit' ? t('Camiseta élite') : sh === 'alu' ? t('Aluminio técnico') : sh === 'perfil' ? t('Perfil táctico') : sh === 'pro' ? t('Ficha pro') : sh === 'disc' ? t('Clásica') : t('Camiseta')}</span>
+              <span>{sh === 'pro' ? t('Ficha pro') : sh === 'disc' ? t('Clásica') : t('Camiseta')}</span>
             </button>
           ))}
         </div>
       </section>
-      {PRO && (
-        <section>
-          <h3>{t('Césped')}</h3>
-          <div className="seg" role="group" aria-label={t('Césped')}>
-            {(['clasico', 'dia', 'cuadros', 'noche'] as GrassKind[]).map((g) => (
-              <button key={g} className={(look.grass ?? 'clasico') === g ? 'on' : ''} onClick={() => setLook({ grass: g })}>
-                {g === 'clasico' ? t('Clásico') : g === 'dia' ? t('Estadio de día') : g === 'cuadros' ? t('Cuadros') : t('Noche')}
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
+      {extra?.extra}
       <section>
         <h3>{t('Mostrar')}</h3>
         <div className="seg" role="group" aria-label={t('Qué mostrar')}>

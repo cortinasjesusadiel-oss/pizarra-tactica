@@ -1,7 +1,6 @@
 import { useRef, type Dispatch, type RefObject, type SetStateAction } from 'react'
 import { DEFAULT_COLOR, STRAIGHT, lobBend, posAt, uid, type Board, type DrawTool, type Drawing, type Pt, type Tool } from '../../nucleo/model'
 import { ballToFeet, carrier } from '../../nucleo/steps'
-import { t } from '../../i18n'
 import { editLabel, newLabel, type LabelEdit } from './letrero'
 
 // Lo que se está haciendo con el puntero apoyado en el campo.
@@ -36,30 +35,27 @@ export type ContextoCampo = {
   apuntar: (b: Board) => void
   olvidar: () => void
   refrescar: () => void
-  // Pizarra personal: mientras se graba en tiempo real el puntero va a la grabación; avisos en pantalla.
-  rec?: { down: (e: React.PointerEvent) => void; move: (e: React.PointerEvent) => void; up: (e: React.PointerEvent) => void } | null
-  avisar?: (msg: string) => void
-}
-
-// Punto del campo (en metros) bajo el puntero.
-export function aCampo(layer: RefObject<SVGGElement>, e: React.PointerEvent): Pt {
-  const m = layer.current!.getScreenCTM()!.inverse()
-  const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m)
-  return [p.x, p.y]
+  // Enchufes (vacíos en la web): desviar el puntero a otra función, o impedir mover una ficha (true = no se mueve).
+  desvio?: { down: (e: React.PointerEvent) => void; move: (e: React.PointerEvent) => void; up: (e: React.PointerEvent) => void } | null
+  noMover?: (tokenId: string) => boolean
 }
 
 // Tocar, arrastrar, dibujar y borrar sobre el campo.
 // Mover una ficha, dibujar un trazo, borrar, girar el material o recolocar un letrero se apunta una sola vez en el historial.
 export function useEntradaCampo(c: ContextoCampo) {
   const { board, setBoard, cur, W, H, layer, svg, tool, penTool, color, penSeen, setPenSeen, playing, anim, stopAnim,
-    setSelected, setLive, setLabel, apuntar, olvidar, refrescar, rec, avisar } = c
+    setSelected, setLive, setLabel, apuntar, olvidar, refrescar, desvio, noMover } = c
   const pendingSel = useRef<string | null | undefined>(undefined)
   const action = useRef<Action>({ kind: 'none' })
   const pointer = useRef<number | null>(null)
   const penDown = useRef(false)
   const startSnap = useRef<string>('')
 
-  const toBoard = (e: React.PointerEvent): Pt => aCampo(layer, e)
+  const toBoard = (e: React.PointerEvent): Pt => {
+    const m = layer.current!.getScreenCTM()!.inverse()
+    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m)
+    return [p.x, p.y]
+  }
   const widthFor = (e: React.PointerEvent) => {
     const p = e.pointerType === 'pen' && e.pressure > 0 ? e.pressure : 0.5
     return +(0.22 + p * 0.4).toFixed(2)
@@ -101,7 +97,7 @@ export function useEntradaCampo(c: ContextoCampo) {
   }
 
   const onDown = (e: React.PointerEvent) => {
-    if (rec) { rec.down(e); return }
+    if (desvio) { desvio.down(e); return }
     if (pointer.current !== null) return
     const isPen = e.pointerType === 'pen'
     // Con el lápiz apoyado se ignora la palma de la mano.
@@ -183,12 +179,7 @@ export function useEntradaCampo(c: ContextoCampo) {
       const d = allDrawings.find((x) => x.id === labelId)
       if (d) { action.current = { kind: 'moveText', id: d.id, dx: d.points[0][0] - p[0], dy: d.points[0][1] - p[1] }; return }
     }
-    if (mode === 'move' && board.clip && tokenId && board.tokens.find((x) => x.id === tokenId)?.kind === 'player') {
-      // En una jugada grabada los jugadores se mueven grabando otra capa.
-      action.current = { kind: 'none' }
-      avisar?.(t('Jugada grabada: para cambiar un movimiento pulsa ● Grabar capa y arrástralo de nuevo.'))
-      return
-    }
+    if (mode === 'move' && tokenId && noMover?.(tokenId)) { action.current = { kind: 'none' }; return }
     if (mode === 'move') {
       const t = board.tokens.find((x) => x.id === tokenId)
       // La barra de la ficha aparece al soltar: si apareciera ya, la pizarra se movería bajo el dedo.
@@ -212,7 +203,7 @@ export function useEntradaCampo(c: ContextoCampo) {
   }
 
   const onMove = (e: React.PointerEvent) => {
-    if (rec) { rec.move(e); return }
+    if (desvio) { desvio.move(e); return }
     if (e.pointerId !== pointer.current) return
     const a = action.current
     if (a.kind === 'move') {
@@ -257,7 +248,7 @@ export function useEntradaCampo(c: ContextoCampo) {
   }
 
   const onUp = (e: React.PointerEvent) => {
-    if (rec) { rec.up(e); return }
+    if (desvio) { desvio.up(e); return }
     if (e.pointerId !== pointer.current) return
     pointer.current = null
     if (e.pointerType === 'pen') penDown.current = false

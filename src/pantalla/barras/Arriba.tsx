@@ -22,7 +22,7 @@ export function TopBar({ board, side, zones, toggleZones, newBoard, setPitch, ad
   canRedo: boolean
   openPresent: () => void
   setSheet: (s: SheetId) => void
-  // Pizarra personal: camiseta PRO junto al nombre, opciones de césped en «Vista» y nombre del botón de fichas.
+  // Enchufes (vacíos en la web): algo junto al nombre, opciones extra en «Vista» y otro nombre para «Fichas».
   brandExtra?: ReactNode
   vistaExtra?: (close: () => void) => ReactNode
   fichasLabel?: string

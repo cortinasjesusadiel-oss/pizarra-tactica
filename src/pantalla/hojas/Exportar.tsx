@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Board } from '../../nucleo/model'
 import { TEMPLATES } from '../../contenido/templates'
 import { GROUPS } from '../../contenido/anim'
@@ -10,13 +10,12 @@ import type { VideoOpts } from '../../nucleo/preferencias'
 import { Sheet } from './Hoja'
 import { BrandPicker, EndEditor } from './Marca'
 
-export function ExportSheet({ hasFrames, bothModes, videoLive, setVideoLive, brand, setBrand, brandMode, setBrandMode, profile, onIdentity, end, setEnd, phrase, setPhrase, onPreview, onClose, onImage, onVideo, onMany, vopts, setVopts }: {
+export function ExportSheet({ hasFrames, brand, setBrand, brandMode, setBrandMode, profile, onIdentity, end, setEnd, phrase, setPhrase, onPreview, onClose, onImage, onVideo, onMany, vopts, setVopts, extra }: {
+  // Enchufe (vacío en la web): una sección extra tras «Esta pizarra».
+  extra?: ReactNode
   vopts: VideoOpts
   setVopts: (p: Partial<VideoOpts>) => void
   hasFrames: boolean
-  bothModes: boolean
-  videoLive: boolean
-  setVideoLive: (v: boolean) => void
   brand: string
   setBrand: (v: string) => void
   brandMode: BrandMode
@@ -58,12 +57,7 @@ export function ExportSheet({ hasFrames, bothModes, videoLive, setVideoLive, bra
           <button onClick={onPreview} disabled={!hasFrames}>{t('Vista previa')}</button>
         </div>
         {!hasFrames && <p className="muted small">{t('El vídeo y la vista previa necesitan una jugada con pasos (pulsa + Paso).')}</p>}
-        {bothModes && (
-          <div className="seg" role="group" aria-label={t('Cómo sale el vídeo')}>
-            <button className={!videoLive ? 'on' : ''} aria-pressed={!videoLive} onClick={() => setVideoLive(false)}>{t('Por pasos, con tiempo para leer')}</button>
-            <button className={videoLive ? 'on' : ''} aria-pressed={videoLive} onClick={() => setVideoLive(true)}>{t('En tiempo real')}</button>
-          </div>
-        )}
+        {extra}
       </section>
       <section>
         <h3>{t('Mi identidad')}</h3>

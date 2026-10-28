@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import type { SheetId } from './comun'
 
 // Barra de la animación: reproducir, pasos, explicación del paso, añadir y quitar pasos, ritmo.
-export function StepBar({ frames, cur, shown, playing, play, prevStep, nextStep, glide, setNote, openNote, addStep, removeStep, pace, setPace, exporting, setSheet, clipBar, stepExtra, emptyExtra, sinPausas }: {
+export function StepBar({ frames, cur, shown, playing, play, prevStep, nextStep, glide, setNote, openNote, addStep, removeStep, pace, setPace, exporting, setSheet, clipBar, stepExtra, emptyExtra, ritmo }: {
   frames: Board['frames']
   cur: number
   shown: number
@@ -22,12 +22,12 @@ export function StepBar({ frames, cur, shown, playing, play, prevStep, nextStep,
   setPace: (p: Partial<Pace>) => void
   exporting: boolean
   setSheet: (s: SheetId) => void
-  // Pizarra personal: barra de la jugada grabada en tiempo real (sustituye a la de pasos),
-  // botones que van tras «Quitar paso» o tras «+ Paso» sin pasos, y la opción «Sin pausas» del ritmo.
+  // Enchufes (vacíos en la web): otra barra en lugar de esta, botones tras «Quitar paso» o tras «+ Paso» sin pasos,
+  // y otro manejo del ritmo de cada paso con opciones añadidas.
   clipBar?: ReactNode
   stepExtra?: ReactNode
   emptyExtra?: ReactNode
-  sinPausas?: boolean
+  ritmo?: { valor: number; elegir: (v: number) => void; opciones: ReactNode }
 }) {
   const nFrames = frames?.length ?? 0
   return (
@@ -52,9 +52,9 @@ export function StepBar({ frames, cur, shown, playing, play, prevStep, nextStep,
               {stepExtra}
               <label className="pace">
                 <span className="muted small">{t('Cada paso')}</span>
-                <select value={pace.flow ? 0 : pace.step} onChange={(e) => setPace(+e.target.value ? { step: +e.target.value, flow: false } : { flow: true })} aria-label={t('Segundos por paso')}>
+                <select value={ritmo ? ritmo.valor : pace.step} onChange={(e) => (ritmo ? ritmo.elegir(+e.target.value) : setPace({ step: +e.target.value }))} aria-label={t('Segundos por paso')}>
                   {STEP_SECONDS.map((x) => <option key={x} value={x}>{x} {' '}{t('s')}</option>)}
-                  {sinPausas && <option value={0}>{t('Sin pausas')}</option>}
+                  {ritmo?.opciones}
                 </select>
               </label>
               <label className="pace">
