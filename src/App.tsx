@@ -12,6 +12,7 @@ import { movesFromArrows, settleBall } from './nucleo/steps'
 import { TEMPLATES, emptyBoard } from './contenido/templates'
 import type { Template } from './contenido/anim'
 import { loadLast } from './nucleo/storage'
+import { leerJugadaDelEnlace } from './nucleo/enlace'
 import { isTyping } from './nucleo/keys'
 import { numberPlayers as numberOnly } from './nucleo/numbering'
 import { endFor, isIdentityMode, markFor } from './nucleo/identity'
@@ -54,8 +55,17 @@ const inLang = (b: Board): Board => (b.frames ? { ...b, frames: b.frames.map((f)
 const numberPlayers = (b: Board) => settleBall(numberOnly(b))
 
 export default function App() {
+  // Enlace directo a una plantilla (?jugada=…): se lee una vez al arrancar.
+  const [enlace] = useState(() => {
+    const e = leerJugadaDelEnlace()
+    return e ? { ...e, tpl: TEMPLATES.find((x) => x.id === e.id) ?? null } : null
+  })
   // La pizarra abierta y su historial para deshacer y rehacer.
-  const historial = useHistorial(() => { const l = loadLast(); return l ? inLang(l) : numberPlayers(TEMPLATES.find((t) => t.animated)!.build()) })
+  const historial = useHistorial(() => {
+    if (enlace?.tpl) return numberPlayers(enlace.tpl.build())
+    const l = loadLast()
+    return l ? inLang(l) : numberPlayers(TEMPLATES.find((t) => t.animated)!.build())
+  })
   const { board, setBoard, commit, apuntar, olvidar, refrescar } = historial
 
   const art = useArt()
@@ -88,7 +98,8 @@ export default function App() {
   const [label, setLabel] = useState<LabelEdit | null>(null)
   const [penSeen, setPenSeen] = useState(false)
   const [sheet, setSheet] = useState<SheetId | null>(null)
-  const [showHint, setShowHint] = useState(primeraVez)
+  // Quien llega por un enlace a una jugada la ve sin el aviso de bienvenida encima (sale la próxima vez).
+  const [showHint, setShowHint] = useState(() => !enlace?.tpl && primeraVez())
   const closeHint = () => { setShowHint(false); ayudaVista() }
   const [toast, setToast] = useState<string | null>(null)
   // Preferencias guardadas en el dispositivo (zonas, ritmo, fichas, marca, Mi identidad, vídeo).
@@ -217,6 +228,19 @@ export default function App() {
   }, [autoplay, board])
 
   useEffect(() => () => cancelAnimationFrame(raf.current), [])
+
+  // Al llegar por un enlace a una jugada: la pizarra que había queda en ↶, se avisa y, si es animada, se reproduce.
+  const enlaceHecho = useRef(false)
+  useEffect(() => {
+    if (!enlace || enlaceHecho.current) return
+    enlaceHecho.current = true
+    if (!enlace.tpl) { setToast(t('No encontramos esa jugada. Búscala en Plantillas')); return }
+    if (enlace.previa) { apuntar(inLang(enlace.previa)); refrescar() }
+    setToast(enlace.previa
+      ? t('Jugada abierta. Tu pizarra anterior sigue en ↶')
+      : t('Jugada abierta. Cámbiala y guárdala como tuya'))
+    if (enlace.tpl.animated) setAutoplay(true)
+  }, [enlace, apuntar, refrescar])
 
   const play = () => {
     // Pausa: termina de llegar al paso que estaba en camino.

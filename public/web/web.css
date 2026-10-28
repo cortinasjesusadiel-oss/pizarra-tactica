@@ -246,3 +246,29 @@ nav .links a[aria-current="page"]{color:var(--g)}
 .gend{padding:50px 0 80px;text-align:center}
 .gend .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px}
 @media (max-width:860px){.gtoc,.ggrid,.gstep{grid-template-columns:1fr}.gstep{gap:18px}.ghero{padding:36px 0 10px}}
+
+/* Biblioteca de jugadas */
+.lmiga{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g)}
+.lmiga a{text-decoration:none}
+.lmiga a:hover{text-decoration:underline}
+.lsub{margin-top:8px;font-size:14px;font-weight:600;color:var(--mut)}
+.lplay{padding:10px 0 20px}
+.lvideo{display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:16px;border:1px solid var(--line);background:#0b1510}
+.lcta{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:20px}
+.lcta p{flex:1 1 280px;font-size:14px;color:var(--mut);font-weight:500}
+.lcols{display:grid;grid-template-columns:1fr 1.3fr;gap:20px;align-items:start}
+.lcols .lvar{grid-column:1/-1}
+.gsec h2{font-size:24px;margin-bottom:12px}
+.lpasos{padding-left:22px;display:grid;gap:10px;color:var(--mut);font-weight:500}
+.lpasos li::marker{color:var(--g);font-weight:800}
+.lvar .btn{margin:2px 0 14px}
+.lnota{font-size:13px;color:var(--mut);margin-top:14px}
+.lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+.lcard{display:block;text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:border-color .15s,transform .15s}
+.lcard:hover{border-color:var(--g);transform:translateY(-2px)}
+.lcard img{width:100%;height:auto;aspect-ratio:16/9;object-fit:cover}
+.lcard .ltema{display:block;margin:16px 20px 0;font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--g)}
+.lcard h3{font-size:20px;margin:6px 20px 8px}
+.lcard p{margin:0 20px 20px;color:var(--mut);font-size:14px;font-weight:500}
+.lmas h2{margin-bottom:20px}
+@media (max-width:860px){.lcols{grid-template-columns:1fr}.lcta .btn{width:100%;justify-content:center}}

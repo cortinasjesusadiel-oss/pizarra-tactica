@@ -1528,5 +1528,8 @@
  "No se importó nada.": "Nothing was imported.",
  "No se pudo guardar: este dispositivo no tiene espacio. Tu jugada sigue abierta: pulsa «Exportar copia de seguridad» para no perderla.": "Couldn't save: this device is out of space. Your play is still open: tap «Export backup» so you don't lose it.",
  "No se pudo guardar: este navegador no deja guardar (¿modo incógnito?). Tu jugada sigue abierta: pulsa «Exportar copia de seguridad» para no perderla.": "Couldn't save: this browser doesn't allow saving (private mode?). Your play is still open: tap «Export backup» so you don't lose it.",
- "Más": "More"
+ "Más": "More",
+ "No encontramos esa jugada. Búscala en Plantillas": "We couldn't find that play. Look for it in Templates",
+ "Jugada abierta. Tu pizarra anterior sigue en ↶": "Play opened. Your previous board is still under ↶",
+ "Jugada abierta. Cámbiala y guárdala como tuya": "Play opened. Change it and save it as your own"
 }
