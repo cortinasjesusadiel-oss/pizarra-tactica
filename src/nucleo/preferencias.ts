@@ -52,7 +52,8 @@ const leerMarca = () => leer(MARCA) ?? 'TacticalPro'
 const leerMarcaTipo = () => (leer(MARCA_TIPO) as BrandMode) || 'text'
 
 // Todas las preferencias juntas. `onIdentityFail` avisa si «Mi identidad» no cabe en el dispositivo.
-export function usePreferencias(onIdentityFail: () => void) {
+// `leerFichas` permite leer las fichas de otra forma al abrir (enchufe; en la web se leen las guardadas).
+export function usePreferencias(onIdentityFail: () => void, leerFichas: () => Look = () => leerJson(FICHAS, DEFAULT_LOOK)) {
   // Zonas del campo (carriles y alturas) encima del césped.
   const [zones, setZones] = useState(() => leer(ZONAS) === '1')
   const toggleZones = () => setZones((z) => { guardar(ZONAS, z ? '0' : '1'); return !z })
@@ -66,7 +67,7 @@ export function usePreferencias(onIdentityFail: () => void) {
   })
 
   // Aspecto de las fichas (forma, número/nombre y colores de cada equipo).
-  const [look, setLookState] = useState<Look>(() => leerJson(FICHAS, DEFAULT_LOOK))
+  const [look, setLookState] = useState<Look>(leerFichas)
   const setLook = (patch: Partial<Look>) => setLookState((l) => {
     const n = { ...l, ...patch }
     guardar(FICHAS, JSON.stringify(n))

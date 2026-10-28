@@ -6,6 +6,7 @@ import { EJERCICIOS } from './more/ejercicios'
 import { TACTICAS2 } from './more/tacticas'
 import { TACTICAS3 } from './more/tacticas3'
 import { t } from '../i18n'
+import { PLANTILLAS_EXTRA } from '../extras'
 
 type P = [string, number, number]
 
@@ -307,6 +308,8 @@ export const TEMPLATES: Template[] = [
   ...EJERCICIOS,
   ...TACTICAS2,
   ...TACTICAS3,
+  // Enchufe (vacío en la web): plantillas de una versión con funciones extra.
+  ...PLANTILLAS_EXTRA,
 ]
 
 export const emptyBoard = (pitch: Board['pitch'] = 'full'): Board => ({ pitch, tokens: [], drawings: [] })

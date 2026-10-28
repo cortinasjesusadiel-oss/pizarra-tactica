@@ -18,6 +18,7 @@ import { endFor, isIdentityMode, markFor } from './nucleo/identity'
 import type { ExportOpts } from './exportar/exportVideo'
 import { t, tr } from './i18n'
 import { useHistorial } from './nucleo/historial'
+import { leerFichasExtra, useExtras } from './extras'
 import { useEntradaCampo } from './pantalla/campo/entrada'
 import type { LabelEdit } from './pantalla/campo/letrero'
 import { SelBar, StepBar, ToolBar, TopBar, type SheetId } from './pantalla/barras'
@@ -91,7 +92,7 @@ export default function App() {
   const closeHint = () => { setShowHint(false); ayudaVista() }
   const [toast, setToast] = useState<string | null>(null)
   // Preferencias guardadas en el dispositivo (zonas, ritmo, fichas, marca, Mi identidad, vídeo).
-  const prefs = usePreferencias(() => setToast(t('No se pudo guardar en el dispositivo: prueba con un escudo más ligero')))
+  const prefs = usePreferencias(() => setToast(t('No se pudo guardar en el dispositivo: prueba con un escudo más ligero')), leerFichasExtra)
   const { zones, toggleZones, pace, setPace, look, setLook, brand, setBrand, brandMode, setBrandMode, idStore, setIdStore, endCard, setEnd, vopts, setVopts } = prefs
 
   // Animación
@@ -366,10 +367,13 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [undo, redo, removeSelected])
 
+  // Enchufes para funciones extra (en la web están vacíos y no cambian nada).
+  const ex = useExtras({ board, commit, cur, playing, stopAnim, look, setLook, pace, setPace, exporting: video !== null, setSheet, avisar: setToast })
+
   // Tocar, arrastrar, dibujar y borrar sobre el campo (dedo, ratón o lápiz).
   const { onDown, onMove, onUp } = useEntradaCampo({
     board, setBoard, cur, W, H, layer, svg, tool, penTool, color, penSeen, setPenSeen, playing, anim, stopAnim,
-    setSelected, setLive, setLabel, apuntar, olvidar, refrescar,
+    setSelected, setLive, setLabel, apuntar, olvidar, refrescar, desvio: ex.desvio, noMover: ex.noMover,
   })
 
   // Guardar el letrero: nuevo (en el paso actual si hay pasos) o editado; vacío lo quita.
@@ -448,7 +452,8 @@ export default function App() {
   return (
     <div className="app">
       <TopBar board={board} side={side} zones={zones} toggleZones={toggleZones} newBoard={newBoard} setPitch={setPitch} addToken={addToken}
-        undo={undo} redo={redo} canUndo={historial.puedeDeshacer} canRedo={historial.puedeRehacer} openPresent={openPresent} setSheet={setSheet} />
+        undo={undo} redo={redo} canUndo={historial.puedeDeshacer} canRedo={historial.puedeRehacer} openPresent={openPresent} setSheet={setSheet}
+        brandExtra={ex.marca} vistaExtra={ex.vista} fichasLabel={ex.nombreFichas} />
 
       <main className="stage" ref={stage}>
         <svg
@@ -549,7 +554,8 @@ export default function App() {
         <SelBar sel={sel} updateSel={updateSel} removeSelected={removeSelected} />
       )}
       <StepBar frames={frames} cur={cur} shown={shown} playing={playing} play={play} prevStep={prevStep} nextStep={nextStep} glide={glide}
-        setNote={setNote} openNote={() => setNoteOpen(true)} addStep={addStep} removeStep={removeStep} pace={pace} setPace={setPace} exporting={video !== null} setSheet={setSheet} />
+        setNote={setNote} openNote={() => setNoteOpen(true)} addStep={addStep} removeStep={removeStep} pace={pace} setPace={setPace} exporting={video !== null} setSheet={setSheet}
+        clipBar={ex.barraPasos} stepExtra={ex.trasPasos} emptyExtra={ex.sinPasos} ritmo={ex.ritmo} />
 
       <ToolBar tool={tool} pickTool={pickTool} side={side} color={color} setColor={setColor} activeDraw={activeDraw} penSeen={penSeen}
         clearDrawings={() => commit((b) => ({ ...b, drawings: [], frames: b.frames?.map((f, i) => (i === cur ? { ...f, drawings: [] } : f)) }))}
@@ -560,7 +566,8 @@ export default function App() {
       {sheet === 'material' && <MaterialSheet art={art} onPick={(k) => { addToken(k); setSheet(null) }} onClose={() => setSheet(null)} />}
       {sheet === 'sessions' && <SessionsSheet onOpen={(tpl) => openTemplate(tpl)} onClose={() => setSheet(null)} />}
       {sheet === 'learn' && <LearnSheet onOpen={openTemplate} onClose={() => setSheet(null)} />}
-      {sheet === 'look' && <LookSheet look={look} setLook={setLook} onClose={() => setSheet(null)} />}
+      {ex.bienvenida}
+      {sheet === 'look' && <LookSheet look={look} setLook={setLook} onClose={() => setSheet(null)} extra={ex.fichas} />}
       {sheet === 'tips' && <TipsSheet onClose={() => setSheet(null)} />}
       {sheet === 'export' && (
         <ExportSheet
@@ -582,6 +589,7 @@ export default function App() {
           onMany={runExport}
           vopts={vopts}
           setVopts={setVopts}
+          extra={ex.exportar}
         />
       )}
       {sheet === 'identity' && (
