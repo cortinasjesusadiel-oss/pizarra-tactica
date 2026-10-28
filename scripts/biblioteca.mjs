@@ -18,7 +18,7 @@ const JUGADAS = [
     titulo: 'Salida de balón ante presión alta',
     sub: '4-3-3 contra 4-4-2 · campo completo · 6 pasos',
     tema: 'Salida de balón',
-    pregunta: 'El rival presiona arriba con dos delanteros sobre tus centrales. ¿Cómo sales jugando sin rifar el balón?',
+    pregunta: 'El rival presiona arriba con dos delanteros sobre tus centrales. ¿Cómo sales jugando sin perder el balón?',
     resumen: 'Superar la primera presión con tres pases: el 6 atrae, el 8 recibe de cara y el 11 ataca el espacio.',
     objetivo: [
       'Salir jugando desde el portero cuando el rival presiona en 4-4-2, sin recurrir al pelotazo.',
