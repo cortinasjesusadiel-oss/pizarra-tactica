@@ -21,10 +21,15 @@ for (const f of readdirSync(join(dist, 'en')).filter((x) => x.endsWith('.html'))
   const p = join(dist, 'en', f)
   writeFileSync(p, readFileSync(p, 'utf8').replace(/(href|src)="\.\.\/\.\.\/([^"]*)"/g, '$1="../pizarra/$2"'))
 }
+// Biblioteca de jugadas (biblioteca/): igual que en/, la pizarra está en "../../algo" y pasa a "../pizarra/algo".
+for (const f of readdirSync(join(dist, 'biblioteca')).filter((x) => x.endsWith('.html'))) {
+  const p = join(dist, 'biblioteca', f)
+  writeFileSync(p, readFileSync(p, 'utf8').replace(/(href|src)="\.\.\/\.\.\/([^"]*)"/g, '$1="../pizarra/$2"'))
+}
 // web.js y web.css llevan ?v=<huella> para que el navegador no siga usando una versión anterior guardada.
 const huella = (f) => createHash('sha1').update(readFileSync(join(dist, f))).digest('hex').slice(0, 8)
 const ver = { 'web.js': huella('web.js'), 'web.css': huella('web.css') }
-for (const p of [...readdirSync(dist).filter((x) => x.endsWith('.html')).map((f) => join(dist, f)), ...readdirSync(join(dist, 'en')).filter((x) => x.endsWith('.html')).map((f) => join(dist, 'en', f))]) {
+for (const p of [...readdirSync(dist).filter((x) => x.endsWith('.html')).map((f) => join(dist, f)), ...readdirSync(join(dist, 'en')).filter((x) => x.endsWith('.html')).map((f) => join(dist, 'en', f)), ...readdirSync(join(dist, 'biblioteca')).filter((x) => x.endsWith('.html')).map((f) => join(dist, 'biblioteca', f))]) {
   writeFileSync(p, readFileSync(p, 'utf8').replace(/((?:href|src)="(?:\.\.\/)?)(web\.(?:js|css))"/g, (_, a, f) => `${a}${f}?v=${ver[f]}"`))
 }
 // Enlaces antiguos /web/ y /web/privacidad.html
