@@ -26,15 +26,15 @@ const JUGADAS = [
     ],
     pasos: [
       'Saque de meta. El rival presiona alto en 4-4-2: sus dos delanteros vigilan a nuestros centrales y sus extremos saltan sobre los laterales.',
-      'El arquero juega con el central 4. Un delantero rival sale a presionarle y el otro tapa el pase al otro central.',
-      'El 6 baja a dar apoyo y recibe. Su marcador (el 8 rival) le persigue y deja un hueco a su espalda. Nuestro 8 se mete en ese hueco.',
+      'El arquero juega con el central 4. Un delantero rival sale a presionarlo y el otro tapa el pase al otro central.',
+      'El 6 baja a dar apoyo y recibe. Su marcador (el 8 rival) lo persigue y deja un hueco a su espalda. Nuestro 8 se mete en ese hueco.',
       'Tercer hombre: el 6, de cara, toca de primeras para el 8, que recibe libre y de frente.',
       'El 8 conduce hacia delante. El 9 baja para arrastrar a un central y el 11 ataca la espalda del lateral rival.',
       'Pase al espacio para el 11, que llega lanzado. Presión superada con tres pases y ataque con ventaja.',
     ],
     variante: {
       titulo: 'Si el rival cierra el pase por dentro',
-      texto: 'Si el 8 rival no persigue al 6 y se queda tapando el centro, el pase al 8 no existe. Entonces la ventaja está fuera: el central conduce unos metros para atraer al extremo rival y suelta al lateral, que recibe libre por fuera. Puedes probarlo en la pizarra moviendo al 8 rival y añadiendo un paso.',
+      texto: 'Si el 8 rival no persigue al 6 y se queda cerrando el centro, el hueco para nuestro 8 no aparece. A cambio, el 6 recibe con más tiempo y puede girarse él mismo. Si el rival cierra todo el centro, la ventaja está fuera: el central conduce unos metros para atraer al extremo rival y suelta al lateral, que recibe libre. Puedes probarlo en la pizarra moviendo al 8 rival y añadiendo un paso.',
     },
   },
   {
@@ -51,8 +51,8 @@ const JUGADAS = [
     ],
     pasos: [
       'Presionamos en campo rival con la defensa adelantada cerca del centro del campo. Queremos robar cerca de su arco.',
-      'Pase al lateral: el extremo salta a presionarle y el delantero tapa el pase de vuelta al central. Todo el equipo se acerca al balón.',
-      'El lateral devuelve al central: el delantero de ese lado le presiona en curva para empujarle hacia la banda.',
+      'Pase al lateral: el extremo salta a presionarlo y el delantero tapa el pase de vuelta al central. Todo el equipo se acerca al balón.',
+      'El lateral devuelve al central: el delantero de ese lado lo presiona en curva para empujarlo hacia la banda.',
       'Cambio al otro central: salta el otro delantero. Los mediocentros vigilan a los interiores rivales.',
       'Lateral presionado contra la banda. El riesgo es el espacio a la espalda de la defensa: por eso el arquero juega adelantado y la presión tiene que ser de todos a la vez.',
     ],
@@ -76,7 +76,7 @@ const JUGADAS = [
     ],
     pasos: [
       'El 9 está junto a los centrales rivales y así no puede recibir. Pero si viene hacia el balón, arrastra a un defensa.',
-      'Desmarque de apoyo: el 9 viene hacia el balón. Su central le sigue para no dejarle girar y abre un hueco detrás.',
+      'Desmarque de apoyo: el 9 viene hacia el balón. Su central lo sigue para no dejarlo girar y abre un hueco detrás.',
       'Pase al 9, que recibe de espaldas con el central encima. No intenta girar: juega de cara con un compañero.',
       'El 9 descarga para el 8, que recibe de cara. Mientras, el extremo (11) empieza su carrera hacia dentro, a la espalda de la defensa.',
       'Desmarque de ruptura: pase al espacio y el 11 llega solo dentro del área.',
@@ -84,7 +84,7 @@ const JUGADAS = [
     ],
     variante: {
       titulo: 'Cambiar los papeles',
-      texto: 'Ahora el extremo viene a recibir al pie y el 9 ataca el espacio entre central y lateral. Recuerda que quien hace la ruptura tiene que estar en posición legal en el momento del pase (Regla 11): la carrera empieza a la altura del último defensor, no por delante.',
+      texto: 'Ahora el extremo viene a recibir al pie y el 9 ataca el espacio entre central y lateral. Recuerda que quien hace la ruptura tiene que estar en posición legal en el momento del pase (Regla 11): cuando sale el balón, no puede estar por delante del último defensa. La carrera empieza en línea con él.',
     },
   },
 ]
