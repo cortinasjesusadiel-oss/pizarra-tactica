@@ -91,13 +91,13 @@ const salida3 = T('t2-salida-3', 'Generar espacios', t('Salida de balón con 3: 
   ])
 
 const lateralDentro = T('t2-lateral-dentro', 'Generar espacios', t('Lateral por dentro (lateral invertido)'), 'full',
-  { h1: [8, 34], h5: [28, 22], h4: [28, 46], h6: [38, 34], h3: [40, 6], h2: [36, 60], h8: [50, 22], h10: [52, 44], h11: [70, 5], h9: [78, 34], h7: [68, 63] },
+  { h1: [8, 34], h5: [28, 22], h4: [28, 46], h6: [38, 34], h3: [40, 6], h2: [36, 60], h8: [50, 22], h10: [52, 44], h11: [68, 6], h9: [72, 34], h7: [66, 63] },
   { f1: [46, 29], f2: [46, 40], m1: [58, 13], m2: [57, 27], m3: [57, 41], m4: [58, 55], d1: [73, 12], d2: [75, 27], d3: [75, 41], d4: [73, 56], g: [100, 34] },
   'h5', [
-    { n: t('Salimos contra un 4-4-2. Nuestro lateral derecho (2) está abierto y el extremo rival de ese lado le vigila.') },
-    { n: t('El lateral (2) se mete por dentro, al lado del pivote. El extremo (7) se queda muy abierto. El extremo rival duda: ¿sigue al lateral o se queda con el extremo?'), m: { h2: [42, 44], m4: [55, 50] }, run: ['h2'] },
-    { n: t('Pase al central. El extremo rival se mete por dentro para tapar al lateral… y deja solo a nuestro extremo en la banda.'), b: 'h4', m: { m4: [49, 46] } },
-    { n: t('Pase largo al extremo, que recibe solo y con espacio para encarar al lateral rival. Regla: si el rival sigue al lateral por dentro, el balón va fuera; si se queda fuera, el balón entra por dentro al lateral.'), b: 'h7', m: { h7: [64, 62], d4: [70, 58] } },
+    { n: t('Salimos contra un 4-4-2. Nuestro lateral derecho (2) está abierto y el extremo rival de ese lado le vigila. Sus dos delanteros esperan a nuestros centrales.') },
+    { n: t('El lateral (2) se mete por dentro, al lado del pivote. El extremo (7) se queda muy abierto. El extremo rival duda: ¿sigue al lateral o se queda con el extremo? Su bloque se ajusta unos metros.'), m: { h2: [42, 44], h10: [53, 38], m4: [55, 50], m3: [56, 44], f2: [44, 39], d4: [72, 55] }, run: ['h2', 'h10'] },
+    { n: t('Pase al central (4). Un delantero rival sale a presionarle y el otro cierra el pase al pivote. El extremo rival se mete por dentro para tapar al lateral… y deja solo a nuestro extremo en la banda.'), b: 'h4', m: { f2: [34, 44], f1: [43, 31], m4: [49, 46], m3: [55, 46], m2: [57, 30], m1: [57, 18], d1: [73, 16], d2: [74, 30], d3: [74, 43], d4: [72, 54], h9: [71, 37] }, pr: ['f2', 'm4'] },
+    { n: t('Pase largo al extremo, que recibe solo, por detrás de la línea de la defensa rival (no hay fuera de juego), y con espacio para encarar al lateral. El 10 llega por dentro para ayudarle. Regla: si el rival sigue al lateral por dentro, el balón va fuera; si se queda fuera, el balón entra por dentro al lateral.'), b: 'h7', m: { h7: [64, 62], d4: [68, 59], h10: [62, 51], h9: [71, 38], h11: [68, 14], m4: [53, 51], d3: [73, 46] }, pr: ['d4'], run: ['h10', 'h9'] },
   ])
 
 const intervalo = T('t2-intervalo', 'Generar espacios', t('Atacar el hueco entre central y lateral'), 'half',
