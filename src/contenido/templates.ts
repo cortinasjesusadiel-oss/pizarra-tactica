@@ -269,7 +269,7 @@ const pressingAnim: Template = {
     }
     return animate('full', c, [
       { note: t('Saque de portería del rival. Nuestros delanteros esperan para saltar a presionar cuando el portero pase.'), draw: [line('pass', [[100.1, 34.5], [91.9, 43.5]])] },
-      { note: t('Pase al central. El 9 salta en curva, tapando el pase de vuelta al portero. El 7 cierra el pase al lateral y el 10 marca al pivote.'), move: { b: [91.9, 43.5], n9: [87, 39], n7: [84, 54], n10: [81, 35], n8: [74, 44], n11: [84, 22] }, draw: [press([[87, 39], [90.5, 42.5]])] },
+      { note: t('Pase al central. El 9 salta a presionar y cierra la línea de pase de vuelta al portero. El 7 cierra el pase al lateral y el 10 marca al pivote.'), move: { b: [91.9, 43.5], n9: [87, 39], n7: [84, 54], n10: [81, 35], n8: [74, 44], n11: [84, 22] }, draw: [press([[87, 39], [90.5, 42.5]])] },
       { note: t('El central queda encerrado contra la banda y sin pases seguros.'), move: { n9: [89.5, 42], c2: [92.5, 46], b: [93.2, 45.6] }, draw: [line('pass', [[93.2, 45.6], [66, 50]])] },
       { note: t('Tiene que dar un pase largo sin ver bien, y nuestro 8 recupera el balón.'), move: { b: [66, 50], n8: [66.5, 49], l2: [72, 56] } },
     ])

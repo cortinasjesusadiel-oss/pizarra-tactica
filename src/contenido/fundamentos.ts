@@ -144,7 +144,7 @@ export const LESSONS: Lesson[] = [
     points: [
       t('Presión: un jugador sale al que tiene el balón para que no pueda pensar ni girarse.'),
       t('Cobertura: un compañero se coloca detrás del que presiona por si le superan.'),
-      t('Basculación: todo el bloque se desliza hacia el lado del balón.'),
+      t('Basculación: todo el bloque se desplaza a la vez hacia el lado del balón.'),
       t('Repliegue: correr hacia la propia portería para colocarse cuando el rival ha superado la presión.'),
       t('Temporizar: frenar al rival sin lanzarse, ganando tiempo hasta que lleguen las ayudas.'),
     ],
@@ -153,7 +153,7 @@ export const LESSONS: Lesson[] = [
 ]
 
 export const GLOSSARY: [string, string][] = [
-  [t('Basculación'), t('El bloque se desliza hacia el lado donde está el balón.')],
+  [t('Basculación'), t('El bloque se desplaza a la vez hacia el lado donde está el balón.')],
   [t('Bloque'), t('La forma y la altura del equipo cuando defiende.')],
   [t('Cambio de orientación'), t('Pase largo de un lado al otro del campo para atacar donde hay espacio.')],
   [t('Carril'), t('Cada una de las 5 franjas a lo largo del campo.')],

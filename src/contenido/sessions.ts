@@ -96,7 +96,7 @@ export const SESSIONS: Session[] = [
   {
     id: 'ses-bloque-medio',
     name: t('Bloque medio y basculación'),
-    goal: t('Defender juntos en el centro del campo, deslizarse hacia el balón y saber cuándo replegar.'),
+    goal: t('Defender juntos en el centro del campo, bascular hacia el balón y saber cuándo replegar.'),
     day: t('MD-4'),
     blocks: [
       { title: t('Rondo 4 contra 2'), minutes: 10, template: 'anim-rondo', tips: t('Los dos defensores trabajan juntos: uno presiona y el otro tapa.') },
